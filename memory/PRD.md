@@ -49,6 +49,9 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
 - Section baru "Cara Kerja Kami" (#proses): 4 kartu ilustrasi SVG beranimasi CSS murni — mesin cuci tersenyum (drum berputar, air bergoyang, gelembung naik), dryer (pakaian berputar), setrika geser dengan uap & percikan, dan pakaian yang melipat rapi. Ditutup banner "Sementara kami mencuci, kamu bebas bermain bersama keluarga" + CTA WA.
 - Navbar menambah link "Cara Kerja". Keyframes animasi di index.css (drum-spin, water-slosh, bubble-rise, iron-slide, steam-puff, fold-flip, sparkle-twinkle).
 
+## Update 19 Sep 2026 (iterasi 5)
+- Section Cara Kerja diganti jadi LINE ART STORY stickman (permintaan user): 5 panel berurutan — (1) stickman jalan bawa keranjang ke mesin cuci (kaki bergantian + drum berputar), (2) dryer sampai kering sempurna + stickman bahagia melompat di bawah matahari, (3) setrika dengan happy (lengan menyetrika + nada musik), (4) tumpukan pakaian terlipat rapi muncul berlapis + stickman bangga, (5) animasi 5 bintang emas muncul berurutan. Keyframes baru: leg-swing, walk-drift, happy-bounce, stack-pop, star-pop.
+
 ## Backlog
 - P0: Kirim ulasan asli Google Maps ★5 untuk outlet Ujungberung & Kalimulya (format: link share ulasan seperti yang Pulomas) — tambahkan ke TESTIMONIALS di data/laundry.js.
 - P1: Embed Google Maps interaktif di kartu outlet.

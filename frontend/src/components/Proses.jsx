@@ -2,97 +2,129 @@ import { motion } from "framer-motion";
 import { Heart, MessageCircle } from "lucide-react";
 import { waLink } from "@/data/laundry";
 
-const WasherSvg = () => (
-  <svg viewBox="0 0 120 100" className="h-36 w-auto" aria-hidden="true">
-    <defs>
-      <clipPath id="washer-door"><circle cx="60" cy="58" r="21" /></clipPath>
-    </defs>
-    <circle cx="33" cy="14" r="3.5" fill="#D8B4FE" className="animate-bubble svg-origin" />
-    <circle cx="87" cy="10" r="2.8" fill="#C084FC" className="animate-bubble svg-origin" style={{ animationDelay: "0.8s" }} />
-    <circle cx="95" cy="20" r="3.2" fill="#E9D5FF" className="animate-bubble svg-origin" style={{ animationDelay: "1.5s" }} />
-    <rect x="28" y="6" width="64" height="88" rx="12" fill="#7E22CE" />
-    <rect x="28" y="6" width="64" height="16" rx="8" fill="#581C87" />
-    <circle cx="37" cy="14" r="3" fill="#D8B4FE" />
-    <rect x="74" y="11" width="13" height="6" rx="3" fill="#D8B4FE" />
-    <circle cx="60" cy="58" r="23" fill="#F3E8FF" stroke="#581C87" strokeWidth="3" />
-    <g clipPath="url(#washer-door)">
-      <path
-        d="M36 62 q6 -5 12 0 t12 0 t12 0 t12 0 V86 H36 Z"
-        fill="#C084FC"
-        opacity="0.85"
-        className="animate-water svg-origin"
-      />
+const STROKE = "#581C87";
+const ACCENT = "#7E22CE";
+const SOFT = "#D8B4FE";
+const GOLD = "#F59E0B";
+
+const SceneCuci = () => (
+  <svg viewBox="0 0 160 120" className="h-32 w-auto" aria-hidden="true">
+    <rect x="106" y="34" width="44" height="62" rx="8" fill="none" stroke={STROKE} strokeWidth="3" />
+    <line x1="106" y1="46" x2="150" y2="46" stroke={STROKE} strokeWidth="3" />
+    <circle cx="113" cy="40" r="2" fill={STROKE} />
+    <circle cx="128" cy="70" r="14" fill="none" stroke={STROKE} strokeWidth="3" />
+    <circle cx="128" cy="70" r="7.5" fill="none" stroke={ACCENT} strokeWidth="2.5" strokeDasharray="4 5" className="animate-drum svg-origin" />
+    <g className="animate-walk svg-origin">
+      <circle cx="52" cy="38" r="8" fill="none" stroke={STROKE} strokeWidth="3" />
+      <line x1="52" y1="46" x2="52" y2="70" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+      <line x1="52" y1="52" x2="68" y2="60" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+      <path d="M64 58 h18 l-3 14 h-12 z" fill="none" stroke={ACCENT} strokeWidth="2.5" strokeLinejoin="round" />
+      <line x1="52" y1="70" x2="44" y2="94" stroke={STROKE} strokeWidth="3" strokeLinecap="round" className="animate-leg svg-origin origin-hip" />
+      <line x1="52" y1="70" x2="60" y2="94" stroke={STROKE} strokeWidth="3" strokeLinecap="round" className="animate-leg-rev svg-origin origin-hip" />
     </g>
-    <g className="animate-drum svg-origin">
-      <circle cx="60" cy="58" r="14" fill="none" stroke="#7E22CE" strokeWidth="2.5" strokeDasharray="6 8" strokeLinecap="round" />
-    </g>
-    <circle cx="53" cy="52" r="2.2" fill="#1E1329" />
-    <circle cx="67" cy="52" r="2.2" fill="#1E1329" />
-    <path d="M54 63 q6 5 12 0" stroke="#1E1329" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+    <circle cx="100" cy="24" r="3" fill="none" stroke={SOFT} strokeWidth="2" className="animate-bubble svg-origin" />
+    <circle cx="92" cy="16" r="2.2" fill="none" stroke={SOFT} strokeWidth="2" className="animate-bubble svg-origin" style={{ animationDelay: "1.1s" }} />
+    <line x1="8" y1="100" x2="152" y2="100" stroke={SOFT} strokeWidth="3" strokeLinecap="round" />
   </svg>
 );
 
-const DryerSvg = () => (
-  <svg viewBox="0 0 120 100" className="h-36 w-auto" aria-hidden="true">
-    <defs>
-      <clipPath id="dryer-door"><circle cx="60" cy="58" r="21" /></clipPath>
-    </defs>
-    <path d="M34 2 q3 -6 6 0" stroke="#C084FC" strokeWidth="2.5" fill="none" strokeLinecap="round" className="animate-steam svg-origin" />
-    <path d="M84 2 q3 -6 6 0" stroke="#C084FC" strokeWidth="2.5" fill="none" strokeLinecap="round" className="animate-steam svg-origin" style={{ animationDelay: "1s" }} />
-    <rect x="28" y="6" width="64" height="88" rx="12" fill="#581C87" />
-    <rect x="28" y="6" width="64" height="16" rx="8" fill="#3B0764" />
-    <rect x="34" y="11" width="14" height="6" rx="3" fill="#A855F7" />
-    <rect x="52" y="11" width="14" height="6" rx="3" fill="#A855F7" />
-    <circle cx="60" cy="58" r="23" fill="#F3E8FF" stroke="#3B0764" strokeWidth="3" />
-    <g clipPath="url(#dryer-door)">
-      <g className="animate-drum svg-origin" style={{ animationDuration: "3.8s", animationDirection: "reverse" }}>
-        <rect x="46" y="46" width="13" height="13" rx="3.5" fill="#A855F7" />
-        <rect x="62" y="60" width="12" height="12" rx="3.5" fill="#C084FC" />
-        <rect x="60" y="40" width="10" height="10" rx="3" fill="#E9D5FF" />
-      </g>
+const SceneKering = () => (
+  <svg viewBox="0 0 160 120" className="h-32 w-auto" aria-hidden="true">
+    <rect x="14" y="40" width="46" height="64" rx="8" fill="none" stroke={STROKE} strokeWidth="3" />
+    <line x1="14" y1="52" x2="60" y2="52" stroke={STROKE} strokeWidth="3" />
+    <circle cx="21" cy="46" r="2" fill={STROKE} />
+    <circle cx="37" cy="76" r="14" fill="none" stroke={STROKE} strokeWidth="3" />
+    <g className="animate-drum svg-origin" style={{ animationDuration: "3.4s" }}>
+      <path d="M31 74 l6 -6 M39 82 l8 -4 M33 82 l5 4" stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round" />
     </g>
-    <circle cx="53" cy="52" r="2.2" fill="#1E1329" />
-    <circle cx="67" cy="52" r="2.2" fill="#1E1329" />
-    <path d="M54 63 q6 5 12 0" stroke="#1E1329" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+    <g className="animate-sparkle svg-origin" style={{ animationDuration: "3s" }}>
+      <circle cx="130" cy="18" r="7" fill="none" stroke={GOLD} strokeWidth="2.5" />
+      <path d="M130 6 v4 M130 26 v4 M118 18 h4 M138 18 h4 M121 9 l3 3 M139 9 l-3 3 M121 27 l3 -3 M139 27 l-3 -3" stroke={GOLD} strokeWidth="2" strokeLinecap="round" />
+    </g>
+    <g className="animate-bounce svg-origin">
+      <circle cx="106" cy="52" r="8" fill="none" stroke={STROKE} strokeWidth="3" />
+      <path d="M102 54 q4 3.5 8 0" stroke={STROKE} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      <line x1="106" y1="60" x2="106" y2="84" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+      <line x1="106" y1="66" x2="94" y2="55" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+      <line x1="106" y1="66" x2="118" y2="55" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+      <line x1="106" y1="84" x2="98" y2="104" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+      <line x1="106" y1="84" x2="114" y2="104" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+    </g>
+    <line x1="8" y1="108" x2="152" y2="108" stroke={SOFT} strokeWidth="3" strokeLinecap="round" />
   </svg>
 );
 
-const IronSvg = () => (
-  <svg viewBox="0 0 120 100" className="h-36 w-auto" aria-hidden="true">
-    <rect x="12" y="78" width="96" height="6" rx="3" fill="#D8B4FE" />
-    <rect x="34" y="70" width="52" height="8" rx="4" fill="#E9D5FF" />
-    <path d="M20 84 l-5 10 M100 84 l5 10" stroke="#D8B4FE" strokeWidth="4" strokeLinecap="round" />
-    <circle cx="52" cy="30" r="3" fill="#C084FC" className="animate-steam svg-origin" />
-    <circle cx="64" cy="26" r="3.6" fill="#D8B4FE" className="animate-steam svg-origin" style={{ animationDelay: "0.7s" }} />
-    <circle cx="76" cy="30" r="3" fill="#C084FC" className="animate-steam svg-origin" style={{ animationDelay: "1.3s" }} />
+const SceneSetrika = () => (
+  <svg viewBox="0 0 160 120" className="h-32 w-auto" aria-hidden="true">
+    <g className="animate-sparkle svg-origin">
+      <circle cx="40" cy="20" r="3" fill={ACCENT} />
+      <line x1="43" y1="20" x2="43" y2="10" stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round" />
+    </g>
+    <g className="animate-sparkle svg-origin" style={{ animationDelay: "0.9s" }}>
+      <circle cx="56" cy="14" r="2.5" fill={SOFT} />
+      <line x1="58.5" y1="14" x2="58.5" y2="6" stroke={SOFT} strokeWidth="2" strokeLinecap="round" />
+    </g>
+    <circle cx="26" cy="46" r="8" fill="none" stroke={STROKE} strokeWidth="3" />
+    <path d="M22 48 q4 3.5 8 0" stroke={STROKE} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+    <line x1="26" y1="54" x2="26" y2="80" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+    <line x1="26" y1="80" x2="18" y2="102" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+    <line x1="26" y1="80" x2="34" y2="102" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+    <line x1="42" y1="80" x2="140" y2="80" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+    <line x1="54" y1="80" x2="46" y2="104" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+    <line x1="128" y1="80" x2="136" y2="104" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+    <rect x="96" y="72" width="34" height="8" rx="4" fill="none" stroke={SOFT} strokeWidth="2.5" />
     <g className="animate-iron svg-origin">
-      <path d="M44 70 L48 52 Q50 44 60 44 L80 44 Q88 44 88 52 L88 60 Q88 70 78 70 Z" fill="#7E22CE" />
-      <rect x="54" y="35" width="26" height="9" rx="4.5" fill="#581C87" />
-      <circle cx="82" cy="52" r="2.5" fill="#E9D5FF" />
+      <line x1="26" y1="62" x2="70" y2="70" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+      <path d="M64 78 L66 60 Q67 54 74 54 L86 54 Q92 54 92 60 L92 68 Q92 78 82 78 Z" fill="none" stroke={ACCENT} strokeWidth="3" strokeLinejoin="round" />
+      <line x1="71" y1="49" x2="85" y2="49" stroke={ACCENT} strokeWidth="3" strokeLinecap="round" />
     </g>
-    <path d="M98 40 l1.8 4.5 4.5 1.8 -4.5 1.8 -1.8 4.5 -1.8 -4.5 -4.5 -1.8 4.5 -1.8 z" fill="#F59E0B" className="animate-sparkle svg-origin" />
+    <circle cx="118" cy="62" r="2.5" fill="none" stroke={SOFT} strokeWidth="2" className="animate-steam svg-origin" />
+    <circle cx="126" cy="58" r="2" fill="none" stroke={SOFT} strokeWidth="2" className="animate-steam svg-origin" style={{ animationDelay: "1s" }} />
   </svg>
 );
 
-const FoldSvg = () => (
-  <svg viewBox="0 0 120 100" className="h-36 w-auto" aria-hidden="true">
-    <rect x="34" y="74" width="52" height="11" rx="5.5" fill="#581C87" />
-    <rect x="37" y="63" width="46" height="11" rx="5.5" fill="#7E22CE" />
-    <rect x="40" y="52" width="40" height="11" rx="5.5" fill="#A855F7" />
-    <g className="animate-fold svg-origin">
-      <rect x="40" y="36" width="40" height="14" rx="6" fill="#C084FC" />
-      <rect x="47" y="41" width="26" height="4" rx="2" fill="#E9D5FF" />
+const SceneLipat = () => (
+  <svg viewBox="0 0 160 120" className="h-32 w-auto" aria-hidden="true">
+    <g className="animate-stack svg-origin"><rect x="42" y="86" width="58" height="12" rx="6" fill="none" stroke={STROKE} strokeWidth="3" /></g>
+    <g className="animate-stack svg-origin" style={{ animationDelay: "0.45s" }}><rect x="46" y="74" width="50" height="12" rx="6" fill="none" stroke={ACCENT} strokeWidth="3" /></g>
+    <g className="animate-stack svg-origin" style={{ animationDelay: "0.9s" }}><rect x="50" y="62" width="42" height="12" rx="6" fill="none" stroke={STROKE} strokeWidth="3" /></g>
+    <g className="animate-stack svg-origin" style={{ animationDelay: "1.35s" }}><rect x="54" y="50" width="34" height="12" rx="6" fill="none" stroke={ACCENT} strokeWidth="3" /></g>
+    <g className="animate-bounce svg-origin" style={{ animationDuration: "2s" }}>
+      <circle cx="126" cy="46" r="8" fill="none" stroke={STROKE} strokeWidth="3" />
+      <path d="M122 48 q4 3.5 8 0" stroke={STROKE} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      <line x1="126" y1="54" x2="126" y2="78" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+      <line x1="126" y1="60" x2="137" y2="47" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+      <line x1="126" y1="60" x2="117" y2="66" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+      <line x1="126" y1="78" x2="119" y2="100" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
+      <line x1="126" y1="78" x2="133" y2="100" stroke={STROKE} strokeWidth="3" strokeLinecap="round" />
     </g>
-    <path d="M24 34 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z" fill="#F59E0B" className="animate-sparkle svg-origin" />
-    <path d="M96 22 l1.6 4 4 1.6 -4 1.6 -1.6 4 -1.6 -4 -4 -1.6 4 -1.6 z" fill="#D8B4FE" className="animate-sparkle svg-origin" style={{ animationDelay: "1.1s" }} />
+    <path d="M28 34 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z" fill={GOLD} className="animate-sparkle svg-origin" />
+    <path d="M104 22 l1.6 4 4 1.6 -4 1.6 -1.6 4 -1.6 -4 -4 -1.6 4 -1.6 z" fill={SOFT} className="animate-sparkle svg-origin" style={{ animationDelay: "1.2s" }} />
+    <line x1="8" y1="102" x2="152" y2="102" stroke={SOFT} strokeWidth="3" strokeLinecap="round" />
+  </svg>
+);
+
+const STAR = "M0 -12 L3 -4 L12 -4 L5 2 L7.5 11 L0 5.5 L-7.5 11 L-5 2 L-12 -4 L-3 -4 Z";
+
+const SceneBintang = () => (
+  <svg viewBox="0 0 160 120" className="h-32 w-auto" aria-hidden="true">
+    {[26, 53, 80, 107, 134].map((x, i) => (
+      <g key={x} className="animate-star svg-origin" style={{ animationDelay: `${i * 0.35}s` }}>
+        <path d={STAR} transform={`translate(${x}, 56)`} fill={GOLD} stroke="#D97706" strokeWidth="1.5" strokeLinejoin="round" />
+      </g>
+    ))}
+    <line x1="30" y1="92" x2="130" y2="92" stroke={SOFT} strokeWidth="3" strokeLinecap="round" strokeDasharray="1 8" />
+    <path d="M18 26 l1.8 4.5 4.5 1.8 -4.5 1.8 -1.8 4.5 -1.8 -4.5 -4.5 -1.8 4.5 -1.8 z" fill={SOFT} className="animate-sparkle svg-origin" />
+    <path d="M142 24 l1.8 4.5 4.5 1.8 -4.5 1.8 -1.8 4.5 -1.8 -4.5 -4.5 -1.8 4.5 -1.8 z" fill={GOLD} className="animate-sparkle svg-origin" style={{ animationDelay: "0.8s" }} />
   </svg>
 );
 
 const STEPS = [
-  { id: "cuci", title: "Cuci", desc: "Mesin modern & deterjen lembut serat — plus opsi antiseptik Dettol.", Svg: WasherSvg },
-  { id: "kering", title: "Keringkan", desc: "Pengering cepat, anti bau apek walau lagi musim hujan.", Svg: DryerSvg },
-  { id: "setrika", title: "Setrika", desc: "Setrika uap presisi — licin, tegak, bebas kusut.", Svg: IronSvg },
-  { id: "lipat", title: "Lipat Rapi", desc: "Dilipat rapi & dikemas wangi, siap langsung masuk lemari.", Svg: FoldSvg },
+  { id: "cuci", title: "Jalan ke Mesin Cuci", desc: "Cucian kotor dibawa masuk — waktunya mandi busa.", Svg: SceneCuci },
+  { id: "kering", title: "Kering Sempurna", desc: "Masuk dryer sampai kering — dia bahagia, anti apek.", Svg: SceneKering },
+  { id: "setrika", title: "Setrika dengan Happy", desc: "Licin dan tegak, disetrika sambil senyum-senyum.", Svg: SceneSetrika },
+  { id: "lipat", title: "Lipat Super Rapi", desc: "Hasilnya tumpukan rapi, siap langsung masuk lemari.", Svg: SceneLipat },
+  { id: "bintang", title: "Bintang 5 Darimu", desc: "Kering sempurna, rapi, wangi — pantas dapat bintang 5.", Svg: SceneBintang },
 ];
 
 export default function Proses() {
@@ -111,7 +143,7 @@ export default function Proses() {
             Cara Kerja Kami
           </p>
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl tracking-tight text-[#1E1329] leading-[1.12]">
-            Serahkan ke kami, <em className="text-[#7E22CE]">tanpa ribet sama sekali.</em>
+            Ikuti perjalanan cucianmu — <em className="text-[#7E22CE]">dari keranjang sampai bintang 5.</em>
           </h2>
           <p className="mt-5 text-base sm:text-lg text-[#645B72] leading-relaxed">
             Cukup satu chat WhatsApp — cucianmu kami jemput, cuci, keringkan, setrika, dan lipat
@@ -119,7 +151,7 @@ export default function Proses() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-5">
           {STEPS.map((s, i) => (
             <motion.article
               key={s.id}

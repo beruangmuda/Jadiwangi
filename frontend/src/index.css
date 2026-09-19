@@ -175,3 +175,52 @@
 .animate-sparkle {
     animation: sparkle-twinkle 2s ease-in-out infinite;
 }
+
+/* Animasi line art stickman Cara Kerja */
+.origin-hip {
+    transform-origin: 50% 0;
+}
+@keyframes leg-swing {
+    0%, 100% { transform: rotate(20deg); }
+    50% { transform: rotate(-20deg); }
+}
+.animate-leg {
+    animation: leg-swing 0.7s ease-in-out infinite;
+}
+.animate-leg-rev {
+    animation: leg-swing 0.7s ease-in-out infinite reverse;
+}
+@keyframes walk-drift {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(12px, -2px); }
+}
+.animate-walk {
+    animation: walk-drift 3.4s ease-in-out infinite;
+}
+@keyframes happy-bounce {
+    0%, 100% { transform: translateY(0); }
+    40%, 60% { transform: translateY(-7px); }
+}
+.animate-bounce {
+    animation: happy-bounce 1.4s ease-in-out infinite;
+}
+@keyframes stack-pop {
+    0% { transform: translateY(-10px) scale(0.4); opacity: 0; }
+    12% { transform: translateY(0) scale(1.06); opacity: 1; }
+    18% { transform: translateY(0) scale(1); }
+    88% { opacity: 1; }
+    100% { opacity: 0; }
+}
+.animate-stack {
+    animation: stack-pop 4.2s ease-in-out infinite;
+}
+@keyframes star-pop {
+    0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+    14% { transform: scale(1.25) rotate(6deg); opacity: 1; }
+    22% { transform: scale(1) rotate(0); }
+    88% { opacity: 1; }
+    100% { opacity: 0.85; }
+}
+.animate-star {
+    animation: star-pop 4.6s ease-in-out infinite;
+}
