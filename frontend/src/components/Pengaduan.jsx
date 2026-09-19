@@ -1,16 +1,8 @@
 import { motion } from "framer-motion";
 import { HeartHandshake, ShieldCheck, UserCheck } from "lucide-react";
-import { trackEvent, waLink } from "@/data/laundry";
+import { PENGADUAN_MESSAGE, trackEvent, waLink } from "@/data/laundry";
 
-const PESAN_PENGADUAN = [
-  "Halo Jadiwangi Laundry! Saya mau menyampaikan *PENGADUAN* terkait layanan.",
-  "",
-  "• Outlet: ",
-  "• Tanggal / No. Nota: ",
-  "• Keluhan: ",
-  "",
-  "Mohon ditindaklanjuti ya kak. Terima kasih.",
-].join("\n");
+const PESAN_PENGADUAN = PENGADUAN_MESSAGE;
 
 const JANJI = [
   { icon: UserCheck, text: "Langsung diterima pemilik — bukan bot, bukan template" },

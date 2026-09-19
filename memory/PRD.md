@@ -67,6 +67,7 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
 
 ## Update 19 Sep 2026 (iterasi 8)
 - Section "Layanan Pengaduan" (#pengaduan, setelah FAQ): kartu ungu besar — keluhan disalurkan ke WA topik PENGADUAN (pesan terisi otomatis: outlet, tanggal/nota, keluhan) supaya pelanggan tidak langsung kasih bintang 1 di Google. CTA trackEvent("pengaduan_click"). FAQ ditambah item keluhan.
+- Floating bar: link "Pengaduan" polos (teks underline abu, tanpa highlight) di sebelah tombol "Order Sekarang" — fokus tetap di order. Pesan PENGADUAN dipusatkan di PENGADUAN_MESSAGE (data/laundry.js), dipakai section & floating bar.
 - ALAMAT LENGKAP 3 outlet terpasang di kartu outlet & footer: Pulomas = Jl. Angkur No. 26D (Ruko Biru), Kayu Putih, Pulogadung, Jakarta Timur; Ujungberung = Jl. Rumah Sakit No. 50 (Ruko Orange sebelah Alfamart), Ujungberung, Bandung; Kalimulya = Jl. Raya Kalimulya No. 86B (Depan Sekolah Tunas Bangsa Islamic School), Cilodong, Depok.
 
 ## Backlog

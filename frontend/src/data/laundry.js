@@ -11,6 +11,16 @@ export const rp = (n) => "Rp " + Math.round(n).toLocaleString("id-ID");
 export const waLink = (message) =>
   `https://wa.me/${WA_CENTRAL}?text=${encodeURIComponent(message)}`;
 
+export const PENGADUAN_MESSAGE = [
+  "Halo Jadiwangi Laundry! Saya mau menyampaikan *PENGADUAN* terkait layanan.",
+  "",
+  "• Outlet: ",
+  "• Tanggal / No. Nota: ",
+  "• Keluhan: ",
+  "",
+  "Mohon ditindaklanjuti ya kak. Terima kasih.",
+].join("\n");
+
 // Tracking interaksi untuk dashboard pengelola (fire-and-forget)
 export const trackEvent = (type, outlet = null) => {
   try {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { GripVertical, MessageCircle } from "lucide-react";
-import { getOutlet, trackEvent, waLink } from "@/data/laundry";
+import { PENGADUAN_MESSAGE, getOutlet, trackEvent, waLink } from "@/data/laundry";
 
 export default function FloatingBar({ outletId }) {
   const [show, setShow] = useState(false);
@@ -35,6 +35,16 @@ export default function FloatingBar({ outletId }) {
           <span className="text-xs sm:text-sm font-medium text-[#581C87]">
             Outlet: <strong>{outlet.label}</strong>
           </span>
+          <a
+            data-testid="floating-pengaduan-link"
+            href={waLink(PENGADUAN_MESSAGE)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackEvent("pengaduan_click")}
+            className="text-xs text-[#645B72] hover:text-[#7E22CE] underline underline-offset-2 decoration-purple-200 transition-colors whitespace-nowrap"
+          >
+            Pengaduan
+          </a>
           <a
             data-testid="floating-order-wa-btn"
             onClick={() => trackEvent("wa_click", outletId)}
