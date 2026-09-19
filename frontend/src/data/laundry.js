@@ -379,5 +379,7 @@ export const IMG_TOWELS =
   "https://customer-assets-jt897jd0.emergentagent.net/job_jadiwangi-laundry/artifacts/q6wdcycx_WhatsApp%20Image%202026-06-05%20at%2021.55.31.jpeg";
 export const IMG_DETTOL_POUR =
   "https://customer-assets-jt897jd0.emergentagent.net/job_jadiwangi-laundry/artifacts/byo9thxu_WhatsApp%20Image%202026-06-05%20at%2021.55.32%20%281%29.jpeg";
+export const IMG_OJEK =
+  "https://images.unsplash.com/photo-1742060390828-f42b15e37ca9?fm=jpg&q=80&w=940&auto=format&fit=crop";
 export const IMG_SHIRTS =
   "https://images.unsplash.com/photo-1603252109303-2751441dd157?crop=entropy&cs=srgb&fm=jpg&q=85&w=940";

@@ -1,6 +1,7 @@
-import { motion } from "framer-motion";
-import { Bike, ShieldPlus, TrainFront, Wind } from "lucide-react";
-import { DETTOL_LOGO, IMG_DETTOL_POUR, rp } from "@/data/laundry";
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Bike, ChevronLeft, ChevronRight, ShieldPlus, TrainFront, Wind } from "lucide-react";
+import { DETTOL_LOGO, IMG_DETTOL_POUR, IMG_OJEK, rp } from "@/data/laundry";
 
 const IMG_COMMUTE =
   "https://images.pexels.com/photos/36978293/pexels-photo-36978293.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940";
@@ -12,6 +13,19 @@ const RISKS = [
 ];
 
 export default function Antiseptik({ onNavigate }) {
+  const [slide, setSlide] = useState(0);
+  const SLIDES = [
+    {
+      src: IMG_COMMUTE,
+      alt: "Padatnya gerbong transportasi umum — virus dan bakteri mudah menempel di pakaian",
+      caption: "Sesaknya gerbong KRL & transportasi umum",
+    },
+    {
+      src: IMG_OJEK,
+      alt: "Ojek online melintas di jalan raya Jakarta — debu dan polusi menempel di pakaian",
+      caption: "Dibonceng ojek: debu & polusi jalanan",
+    },
+  ];
   return (
     <section id="antiseptik" data-testid="antiseptik-section" className="relative py-24 lg:py-36 overflow-hidden">
       <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-[#E9D5FF]/60 blur-3xl" />
@@ -23,14 +37,43 @@ export default function Antiseptik({ onNavigate }) {
           transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
           className="relative"
         >
-          <div className="rounded-[2rem] overflow-hidden border-4 border-white shadow-[0_25px_60px_rgba(88,28,135,0.22)]">
-            <img
-              data-testid="antiseptik-img"
-              src={IMG_COMMUTE}
-              alt="Padatnya transportasi umum harian — virus dan bakteri mudah menempel di pakaian"
-              loading="lazy"
-              className="w-full h-[22rem] lg:h-[26rem] object-cover"
-            />
+          <div className="relative rounded-[2rem] overflow-hidden border-4 border-white shadow-[0_25px_60px_rgba(88,28,135,0.22)]">
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={slide}
+                data-testid="antiseptik-img"
+                src={SLIDES[slide].src}
+                alt={SLIDES[slide].alt}
+                loading="lazy"
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -40 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="w-full h-[22rem] lg:h-[26rem] object-cover"
+              />
+            </AnimatePresence>
+            <span className="absolute top-4 left-4 bg-white/90 backdrop-blur text-[#581C87] text-xs font-semibold px-3.5 py-1.5 rounded-full border border-purple-200">
+              {SLIDES[slide].caption}
+            </span>
+            <span className="absolute top-4 right-4 bg-[#1E1329]/70 text-white text-xs font-mono-accent px-2.5 py-1 rounded-full">
+              {slide + 1}/{SLIDES.length}
+            </span>
+            <button
+              data-testid="antiseptik-slide-prev"
+              onClick={() => setSlide((s) => (s - 1 + SLIDES.length) % SLIDES.length)}
+              aria-label="Foto sebelumnya"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 backdrop-blur border border-purple-200 text-[#7E22CE] flex items-center justify-center hover:bg-white transition-colors shadow-md"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              data-testid="antiseptik-slide-next"
+              onClick={() => setSlide((s) => (s + 1) % SLIDES.length)}
+              aria-label="Foto berikutnya"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 backdrop-blur border border-purple-200 text-[#7E22CE] flex items-center justify-center hover:bg-white transition-colors shadow-md"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
           </div>
           <div className="absolute -bottom-8 -right-2 sm:-right-5 w-32 sm:w-40 rotate-3 rounded-2xl overflow-hidden border-4 border-white shadow-[0_15px_40px_rgba(88,28,135,0.3)] bg-white">
             <img
