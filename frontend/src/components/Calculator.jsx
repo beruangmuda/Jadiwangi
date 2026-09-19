@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Minus, Plus, Send } from "lucide-react";
-import { OUTLETS, deliveryFee, getOutlet, rp, waLink } from "@/data/laundry";
+import { DETTOL_LOGO, OUTLETS, deliveryFee, getOutlet, rp, waLink } from "@/data/laundry";
 
 export default function Calculator({ outletId }) {
   const [calcOutlet, setCalcOutlet] = useState(outletId);
@@ -171,8 +171,9 @@ export default function Calculator({ outletId }) {
                   onChange={(e) => setDettol(e.target.checked)}
                   className="w-4.5 h-4.5 w-5 h-5 accent-[#7E22CE]"
                 />
+                <img src={DETTOL_LOGO} alt="Dettol" className="h-5 w-auto" />
                 <span className="text-sm text-[#1E1329]">
-                  Tambah Dettol antiseptik <span className="text-[#645B72]">(+{rp(outlet.dettolKiloan)}/kg)</span>
+                  Tambah antiseptik <span className="text-[#645B72]">(+{rp(outlet.dettolKiloan)}/kg)</span>
                 </span>
               </label>
             )}

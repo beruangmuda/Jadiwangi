@@ -43,6 +43,7 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
 - Section baru "Perlindungan Ekstra" (#antiseptik): USP add-on antiseptik Dettol — edukasi risiko virus/bakteri dari Gojek, KRL, motor + foto gerbong commuter padat (Pexels 36978293) + harga add-on per outlet + CTA scroll ke kalkulator (toggle Dettol).
 - USP 01 & FAQ express diperbarui: order express masuk sebelum jam 10 pagi bisa diambil sore hari sepulang kantor.
 - Marquee menambah pesan "ANTISEPTIK DETTOL LINDUNGI KELUARGA".
+- Logo asli Dettol (perisai hijau, dari Wikimedia Commons) dipasang di kartu add-on antiseptik & toggle Dettol di kalkulator untuk membangun kepercayaan.
 
 ## Backlog
 - P0: Kirim ulasan asli Google Maps ★5 untuk outlet Ujungberung & Kalimulya (format: link share ulasan seperti yang Pulomas) — tambahkan ke TESTIMONIALS di data/laundry.js.

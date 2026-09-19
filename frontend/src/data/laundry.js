@@ -1,6 +1,8 @@
 export const WA_CENTRAL = "6285770706467";
 export const WA_DISPLAY = "0857 7070 6467";
 export const IG_URL = "https://instagram.com/jadiwangilaundry";
+export const DETTOL_LOGO =
+  "https://upload.wikimedia.org/wikipedia/commons/6/63/Dettol_logo.svg";
 export const LOGO_URL =
   "https://customer-assets-rejwkqb3.emergentagent.net/job_307e2abc-0d5f-4f42-a8d4-2c090b6b8405/artifacts/9rizptxp_Logo%20Jadiwangi%20transparan.png";
 

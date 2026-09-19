@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Bike, ShieldPlus, TrainFront, Wind } from "lucide-react";
-import { rp } from "@/data/laundry";
+import { DETTOL_LOGO, rp } from "@/data/laundry";
 
 const IMG_COMMUTE =
   "https://images.pexels.com/photos/36978293/pexels-photo-36978293.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940";
@@ -69,8 +69,8 @@ export default function Antiseptik({ onNavigate }) {
 
           <div className="mt-8 bg-white rounded-3xl border border-purple-100 shadow-[0_4px_25px_rgba(126,34,206,0.06)] p-6 lg:p-7">
             <div className="flex items-start gap-4">
-              <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#7E22CE] to-[#4C1D95] flex items-center justify-center shrink-0">
-                <ShieldPlus className="w-6 h-6 text-white" />
+              <span className="h-12 rounded-xl bg-white border border-purple-100 shadow-sm flex items-center justify-center shrink-0 px-2">
+                <img data-testid="dettol-logo" src={DETTOL_LOGO} alt="Logo Dettol Antiseptik" className="h-9 w-auto" />
               </span>
               <div>
                 <h3 className="font-display text-xl lg:text-2xl text-[#1E1329]">
