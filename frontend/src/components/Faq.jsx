@@ -29,7 +29,7 @@ const FAQS = [
   },
   {
     q: "Ada layanan express?",
-    a: "Ada. Hampir semua layanan tersedia versi Express 6 Jam — dari kiloan, kemeja, dress, sampai bed cover. Cocok untuk kebutuhan mendadak.",
+    a: "Ada. Hampir semua layanan tersedia versi Express 6 Jam — dari kiloan, kemeja, dress, sampai bed cover. Tipsnya: order express yang masuk sebelum jam 10 pagi bisa diambil sore hari, pas banget dijemput sepulang kantor.",
   },
 ];
 

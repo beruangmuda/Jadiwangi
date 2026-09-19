@@ -283,7 +283,7 @@ export const USP_CHAPTERS = [
   {
     number: "01",
     title: "Express 6 Jam Selesai",
-    desc: "Butuh kemeja buat acara mendadak? Layanan express kami selesai dalam 6 jam — cuci, kering, setrika, rapi dan wangi.",
+    desc: "Order express yang masuk sebelum jam 10 pagi bisa diambil sore hari — pas banget dijemput pulang kantor. Cuci, kering, setrika, rapi dan wangi.",
   },
   {
     number: "02",

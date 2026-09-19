@@ -39,6 +39,11 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
 - Strip promo bulanan di atas navbar: "Promo Jumat Berkah — Diskon 10% setiap hari Jumat" → klik langsung chat WA. Ganti promo cukup edit object PROMO di data/laundry.js.
 - Jam operasional 07.00–21.00 WIB setiap hari + badge "Buka Sekarang" otomatis (zona Asia/Jakarta, refresh tiap menit) di semua kartu outlet.
 
+## Update 19 Sep 2026 (iterasi 3)
+- Section baru "Perlindungan Ekstra" (#antiseptik): USP add-on antiseptik Dettol — edukasi risiko virus/bakteri dari Gojek, KRL, motor + foto gerbong commuter padat (Pexels 36978293) + harga add-on per outlet + CTA scroll ke kalkulator (toggle Dettol).
+- USP 01 & FAQ express diperbarui: order express masuk sebelum jam 10 pagi bisa diambil sore hari sepulang kantor.
+- Marquee menambah pesan "ANTISEPTIK DETTOL LINDUNGI KELUARGA".
+
 ## Backlog
 - P0: Kirim ulasan asli Google Maps ★5 untuk outlet Ujungberung & Kalimulya (format: link share ulasan seperti yang Pulomas) — tambahkan ke TESTIMONIALS di data/laundry.js.
 - P1: Embed Google Maps interaktif di kartu outlet.
