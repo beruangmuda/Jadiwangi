@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { MessageCircle } from "lucide-react";
+import { GripVertical, MessageCircle } from "lucide-react";
 import { getOutlet, trackEvent, waLink } from "@/data/laundry";
 
 export default function FloatingBar({ outletId }) {
   const [show, setShow] = useState(false);
+  const constraintsRef = useRef(null);
   const outlet = getOutlet(outletId);
 
   useEffect(() => {
@@ -16,14 +17,21 @@ export default function FloatingBar({ outletId }) {
   return (
     <AnimatePresence>
       {show && (
-        <motion.div
-          data-testid="floating-order-bar"
-          initial={{ y: 90, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 90, opacity: 0 }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed bottom-5 inset-x-4 sm:inset-x-auto sm:right-6 z-50 flex items-center gap-3 backdrop-blur-2xl bg-white/90 border border-purple-200/80 shadow-[0_10px_35px_rgba(88,28,135,0.18)] rounded-full pl-5 pr-2 py-2"
-        >
+        <div ref={constraintsRef} className="fixed inset-0 z-50 pointer-events-none">
+          <motion.div
+            data-testid="floating-order-bar"
+            drag
+            dragConstraints={constraintsRef}
+            dragMomentum={false}
+            dragElastic={0.08}
+            whileDrag={{ scale: 1.05 }}
+            initial={{ y: 90, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 90, opacity: 0 }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="pointer-events-auto absolute bottom-5 inset-x-4 sm:inset-x-auto sm:right-6 flex items-center gap-2.5 backdrop-blur-2xl bg-white/90 border border-purple-200/80 shadow-[0_10px_35px_rgba(88,28,135,0.18)] rounded-full pl-3 pr-2 py-2 cursor-grab active:cursor-grabbing touch-none"
+          >
+            <GripVertical className="w-4 h-4 text-purple-300 shrink-0" />
           <span className="text-xs sm:text-sm font-medium text-[#581C87]">
             Outlet: <strong>{outlet.label}</strong>
           </span>
@@ -38,7 +46,8 @@ export default function FloatingBar({ outletId }) {
             <MessageCircle className="w-4 h-4" />
             Order Sekarang
           </a>
-        </motion.div>
+          </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );
