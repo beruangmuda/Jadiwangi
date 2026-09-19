@@ -72,7 +72,7 @@ export default function Hero({ onNavigate }) {
             </span>
           </motion.div>
 
-          <img src={LOGO_URL} alt="Jadiwangi Laundry" className="h-24 w-auto mb-7 opacity-95 -ml-2" />
+          <img src={LOGO_URL} alt="Jadiwangi Laundry" className="h-32 sm:h-36 lg:h-44 w-auto mb-7 opacity-95 -ml-3" />
 
           <h1 className="font-display font-medium text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.08] text-[#1E1329]">
             {LINES.map((line, i) => (
