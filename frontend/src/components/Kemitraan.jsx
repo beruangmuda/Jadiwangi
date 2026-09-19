@@ -42,6 +42,9 @@ export default function Kemitraan() {
             Kami membuka peluang kemitraan bagi kamu yang ingin membangun bisnis laundry dengan
             brand, sistem, dan resep wangi yang sudah terbukti.
           </p>
+          <p className="mt-4 text-base sm:text-lg font-semibold text-[#581C87] leading-relaxed">
+            Mulai dari Rp 50 juta, Anda sudah bisa mendapatkan passive income dan bisnis autopilot.
+          </p>
         </motion.div>
 
         <div className="grid sm:grid-cols-3 gap-5 lg:gap-6 mb-12">

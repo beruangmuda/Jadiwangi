@@ -9,6 +9,7 @@ const LINKS = [
   { href: "#kalkulator", label: "Kalkulator" },
   { href: "#pricelist", label: "Pricelist" },
   { href: "#ulasan", label: "Ulasan" },
+  { href: "#kemitraan", label: "Kemitraan", highlight: true },
 ];
 
 export default function Navbar({ outletId, onNavigate }) {
@@ -40,16 +41,28 @@ export default function Navbar({ outletId, onNavigate }) {
           <img src={LOGO_URL} alt="Jadiwangi Laundry" className="h-11 w-auto" />
         </a>
         <nav className="hidden lg:flex items-center gap-7">
-          {LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              onClick={(e) => onNavigate(e, l.href)}
-              className="text-sm font-medium text-[#645B72] hover:text-[#7E22CE] transition-colors duration-200"
-            >
-              {l.label}
-            </a>
-          ))}
+          {LINKS.map((l) =>
+            l.highlight ? (
+              <a
+                key={l.href}
+                href={l.href}
+                data-testid="navbar-kemitraan-highlight"
+                onClick={(e) => onNavigate(e, l.href)}
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-[#1E1329] bg-gradient-to-r from-amber-300 to-amber-400 hover:from-amber-400 hover:to-amber-500 px-4 py-2 rounded-full shadow-[0_6px_20px_rgba(245,158,11,0.35)] transition-all duration-300 hover:-translate-y-0.5"
+              >
+                {l.label}
+              </a>
+            ) : (
+              <a
+                key={l.href}
+                href={l.href}
+                onClick={(e) => onNavigate(e, l.href)}
+                className="text-sm font-medium text-[#645B72] hover:text-[#7E22CE] transition-colors duration-200"
+              >
+                {l.label}
+              </a>
+            )
+          )}
         </nav>
         <div className="flex items-center gap-3">
           <span
