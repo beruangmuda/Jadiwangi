@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Bike, ShieldPlus, TrainFront, Wind } from "lucide-react";
-import { DETTOL_LOGO, rp } from "@/data/laundry";
+import { DETTOL_LOGO, IMG_DETTOL_POUR, rp } from "@/data/laundry";
 
 const IMG_COMMUTE =
   "https://images.pexels.com/photos/36978293/pexels-photo-36978293.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940";
@@ -31,6 +31,18 @@ export default function Antiseptik({ onNavigate }) {
               loading="lazy"
               className="w-full h-[22rem] lg:h-[26rem] object-cover"
             />
+          </div>
+          <div className="absolute -bottom-8 -right-2 sm:-right-5 w-32 sm:w-40 rotate-3 rounded-2xl overflow-hidden border-4 border-white shadow-[0_15px_40px_rgba(88,28,135,0.3)] bg-white">
+            <img
+              data-testid="antiseptik-pour-img"
+              src={IMG_DETTOL_POUR}
+              alt="Staff menuang antiseptik Dettol asli ke mesin cuci di outlet Jadiwangi"
+              loading="lazy"
+              className="w-full h-28 sm:h-32 object-cover"
+            />
+            <p className="bg-white text-[10px] font-mono-accent tracking-wide text-[#581C87] px-2 py-1.5 text-center">
+              Dettol asli, dituang di outlet
+            </p>
           </div>
           <div className="absolute -bottom-5 left-6 bg-[#581C87] text-white rounded-2xl shadow-[0_15px_40px_rgba(88,28,135,0.35)] px-5 py-4 animate-float-soft">
             <p className="text-xs font-mono-accent tracking-widest uppercase text-purple-200">Risiko tak terlihat</p>

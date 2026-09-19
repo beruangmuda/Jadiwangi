@@ -51,6 +51,12 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
 
 ## Update 19 Sep 2026 (iterasi 5)
 - Section Cara Kerja diganti jadi LINE ART STORY stickman (permintaan user): 5 panel berurutan — (1) stickman jalan bawa keranjang ke mesin cuci (kaki bergantian + drum berputar), (2) dryer sampai kering sempurna + stickman bahagia melompat di bawah matahari, (3) setrika dengan happy (lengan menyetrika + nada musik), (4) tumpukan pakaian terlipat rapi muncul berlapis + stickman bangga, (5) animasi 5 bintang emas muncul berurutan. Keyframes baru: leg-swing, walk-drift, happy-bounce, stack-pop, star-pop.
+- Panel 2 Cara Kerja: awan mendung + hujan beranimasi di atas dryer (tetes ungu tua di samping mesin), pesan "Di luar mendung & hujan pun, cucian tetap kering sempurna — anti apek".
+- Banner keluarga diakhiri hashtag #BESOKSUDAHWANGI; hero juga punya chip #BESOKSUDAHWANGI (kampanye konsisten atas-bawah).
+- Hero fokus "Masuk sebelum jam 10 pagi, sorenya sudah rapi dan siap diambil" + kartu apung "Masuk Pagi, Ambil Sore".
+
+## Update 19 Sep 2026 (iterasi 6)
+- FOTO ASLI OUTLET terpasang (4 foto dari user, customer-assets-jt897jd0): hero = jajaran mesin + dinding ungu neon; Layanan = interior mesin (Kiloan) & keranjang produk Rinso/Dettol/Downy (Premium Care); Antiseptik = foto overlay "Dettol asli, dituang di outlet" (staff menuang Dettol ke mesin LG).
 
 ## Backlog
 - P0: Kirim ulasan asli Google Maps ★5 untuk outlet Ujungberung & Kalimulya (format: link share ulasan seperti yang Pulomas) — tambahkan ke TESTIMONIALS di data/laundry.js.

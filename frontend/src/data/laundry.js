@@ -353,11 +353,14 @@ export const TESTIMONIALS = [
   },
 ];
 
+// Foto asli outlet Jadiwangi (dinding ungu khas outlet)
 export const HERO_IMG =
-  "https://images.pexels.com/photos/8581380/pexels-photo-8581380.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940";
-export const IMG_TOWELS =
-  "https://images.pexels.com/photos/45980/pexels-photo-45980.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940";
+  "https://customer-assets-jt897jd0.emergentagent.net/job_jadiwangi-laundry/artifacts/2ao1u3d5_WhatsApp%20Image%202026-06-05%20at%2022.10.55.jpeg";
 export const IMG_IRON =
-  "https://images.pexels.com/photos/5901627/pexels-photo-5901627.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940";
+  "https://customer-assets-jt897jd0.emergentagent.net/job_jadiwangi-laundry/artifacts/vnk82pl2_WhatsApp%20Image%202026-06-05%20at%2021.55.37.jpeg";
+export const IMG_TOWELS =
+  "https://customer-assets-jt897jd0.emergentagent.net/job_jadiwangi-laundry/artifacts/q6wdcycx_WhatsApp%20Image%202026-06-05%20at%2021.55.31.jpeg";
+export const IMG_DETTOL_POUR =
+  "https://customer-assets-jt897jd0.emergentagent.net/job_jadiwangi-laundry/artifacts/byo9thxu_WhatsApp%20Image%202026-06-05%20at%2021.55.32%20%281%29.jpeg";
 export const IMG_SHIRTS =
   "https://images.unsplash.com/photo-1603252109303-2751441dd157?crop=entropy&cs=srgb&fm=jpg&q=85&w=940";

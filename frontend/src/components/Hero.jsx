@@ -12,6 +12,7 @@ const CHIPS = [
   { icon: WashingMachine, label: "Cuci Satuan & Kiloan" },
   { icon: Truck, label: "Antar Jemput Radius 5 KM" },
   { icon: Star, label: "Ulasan Bintang 5" },
+  { icon: Sparkles, label: "#BESOKSUDAHWANGI" },
 ];
 
 const reveal = {
@@ -132,9 +133,10 @@ export default function Hero({ onNavigate }) {
             transition={{ delay: 1.25, duration: 1 }}
             className="mt-10 flex flex-wrap gap-3"
           >
-            {CHIPS.map((c) => (
+            {CHIPS.map((c, i) => (
               <span
                 key={c.label}
+                data-testid={`hero-chip-${i}`}
                 className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium bg-white/80 border border-purple-100 text-[#581C87]"
               >
                 <c.icon className="w-3.5 h-3.5 text-[#7E22CE]" />
