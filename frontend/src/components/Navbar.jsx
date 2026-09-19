@@ -1,5 +1,5 @@
 import { MessageCircle, Tag } from "lucide-react";
-import { LOGO_URL, PROMO, getOutlet, waLink } from "@/data/laundry";
+import { LOGO_URL, PROMO, getOutlet, trackEvent, waLink } from "@/data/laundry";
 
 const LINKS = [
   { href: "#keunggulan", label: "Keunggulan" },
@@ -61,6 +61,7 @@ export default function Navbar({ outletId, onNavigate }) {
           </span>
           <a
             data-testid="navbar-whatsapp-cta"
+            onClick={() => trackEvent("wa_click", outletId)}
             href={waLink(`Halo Jadiwangi Laundry! Saya mau tanya-tanya dulu untuk outlet ${outlet.label}.`)}
             target="_blank"
             rel="noopener noreferrer"

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Minus, Plus, Send } from "lucide-react";
-import { DETTOL_LOGO, OUTLETS, deliveryFee, getOutlet, rp, waLink } from "@/data/laundry";
+import { DETTOL_LOGO, OUTLETS, deliveryFee, getOutlet, rp, trackEvent, waLink } from "@/data/laundry";
 
 export default function Calculator({ outletId }) {
   const [calcOutlet, setCalcOutlet] = useState(outletId);
@@ -213,6 +213,7 @@ export default function Calculator({ outletId }) {
 
           <a
             data-testid="calc-submit-wa-btn"
+            onClick={() => trackEvent("calc_order", outlet.id)}
             href={waLink(message)}
             target="_blank"
             rel="noopener noreferrer"

@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
 import { MapPin, MessageCircle, Sparkles, Star, Truck, WashingMachine } from "lucide-react";
-import { HERO_IMG, LOGO_URL, waLink } from "@/data/laundry";
+import { HERO_IMG, LOGO_URL, trackEvent, waLink } from "@/data/laundry";
 
 const LINES = [
   { text: "Laundry Sebersih Sutra,", italic: false },
@@ -51,6 +51,12 @@ export default function Hero({ onNavigate }) {
       <div className="absolute -top-32 -right-40 w-[36rem] h-[36rem] rounded-full bg-[#E9D5FF] blur-3xl opacity-70" />
       <div className="absolute top-1/2 -left-48 w-[30rem] h-[30rem] rounded-full bg-[#F3E8FF] blur-3xl opacity-80" />
       <motion.div style={{ y: mistY }} className="absolute bottom-10 right-1/4 w-72 h-72 rounded-full bg-[#D8B4FE]/40 blur-3xl" />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none select-none absolute -bottom-6 left-0 font-display font-semibold text-[19vw] leading-none text-stroke-lavender opacity-60 whitespace-nowrap z-0"
+      >
+        JADIWANGI
+      </div>
 
       <div className="relative max-w-7xl mx-auto px-5 lg:px-8 py-20 lg:py-28 grid lg:grid-cols-12 gap-14 lg:gap-8 items-center w-full">
         <div className="lg:col-span-7">
@@ -66,7 +72,7 @@ export default function Hero({ onNavigate }) {
             </span>
           </motion.div>
 
-          <img src={LOGO_URL} alt="" className="h-20 w-auto mb-7 opacity-95 -ml-2" />
+          <img src={LOGO_URL} alt="Jadiwangi Laundry" className="h-24 w-auto mb-7 opacity-95 -ml-2" />
 
           <h1 className="font-display font-medium text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.08] text-[#1E1329]">
             {LINES.map((line, i) => (
@@ -117,6 +123,7 @@ export default function Hero({ onNavigate }) {
             </button>
             <a
               data-testid="hero-btn-order-wa"
+              onClick={() => trackEvent("wa_click")}
               href={waLink("Halo Jadiwangi Laundry! Saya mau pesan layanan antar jemput laundry.")}
               target="_blank"
               rel="noopener noreferrer"

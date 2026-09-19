@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Lenis from "lenis";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "@/App.css";
+import AdminLogin from "@/components/AdminLogin";
+import AdminDashboard from "@/components/AdminDashboard";
+import AppDownload from "@/components/AppDownload";
+import Kemitraan from "@/components/Kemitraan";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Marquee from "@/components/Marquee";
@@ -41,7 +46,7 @@ export default function App() {
     else document.querySelector(hash)?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  return (
+  const landing = (
     <div className="bg-[#FAF7FD] text-[#1E1329] font-body antialiased overflow-x-clip">
       <Navbar outletId={outletId} onNavigate={onNavigate} />
       <main>
@@ -55,10 +60,22 @@ export default function App() {
         <Calculator outletId={outletId} />
         <Pricelist />
         <Testimonials />
+        <AppDownload />
+        <Kemitraan />
         <Faq />
       </main>
       <Footer />
       <FloatingBar outletId={outletId} />
     </div>
+  );
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={landing} />
+        <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

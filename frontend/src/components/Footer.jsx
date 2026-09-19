@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { Clock, Instagram, MapPin, MessageCircle } from "lucide-react";
-import { IG_URL, LOGO_URL, OUTLETS, WA_DISPLAY, waLink } from "@/data/laundry";
+import { Clock, Instagram, Lock, MapPin, MessageCircle } from "lucide-react";
+import { IG_URL, LOGO_URL, OUTLETS, WA_DISPLAY, trackEvent, waLink } from "@/data/laundry";
 
 export default function Footer() {
   return (
@@ -20,6 +20,7 @@ export default function Footer() {
           </h2>
           <a
             data-testid="footer-cta-wa"
+            onClick={() => trackEvent("wa_click")}
             href={waLink("Halo Jadiwangi Laundry! Saya mau order laundry. Mohon dibantu ya kak.")}
             target="_blank"
             rel="noopener noreferrer"
@@ -76,7 +77,17 @@ export default function Footer() {
 
         <div className="mt-14 pt-7 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs text-purple-200/60">
           <p>© {new Date().getFullYear()} Jadiwangi Laundry. Garansi Cuci Ulang Gratis.</p>
-          <p className="font-mono-accent tracking-widest uppercase">Jakarta · Bandung · Depok</p>
+          <div className="flex items-center gap-5">
+            <p className="font-mono-accent tracking-widest uppercase">Jakarta · Bandung · Depok</p>
+            <a
+              data-testid="footer-admin-login"
+              href="/admin"
+              className="inline-flex items-center gap-1.5 hover:text-white transition-colors"
+            >
+              <Lock className="w-3 h-3" />
+              Login Pengelola
+            </a>
+          </div>
         </div>
       </div>
     </footer>

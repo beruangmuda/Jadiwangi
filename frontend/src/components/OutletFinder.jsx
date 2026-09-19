@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ExternalLink, Loader2, MapPin, Navigation, Truck } from "lucide-react";
-import { OUTLETS, deliveryFee, haversineKm, rp, waLink } from "@/data/laundry";
+import { OUTLETS, deliveryFee, haversineKm, rp, trackEvent, waLink } from "@/data/laundry";
 import OpenBadge from "@/components/OpenBadge";
 
 export default function OutletFinder({ outletId, onSelect }) {
@@ -23,6 +23,7 @@ export default function OutletFinder({ outletId, onSelect }) {
         setDists(d);
         const nearest = OUTLETS.reduce((a, b) => (d[a.id] <= d[b.id] ? a : b));
         onSelect(nearest.id);
+        trackEvent("detect_location", nearest.id);
         setStatus("done");
       },
       () => setStatus("denied"),
@@ -177,6 +178,7 @@ export default function OutletFinder({ outletId, onSelect }) {
         >
           <a
             data-testid="outlet-wa-order-btn"
+            onClick={() => trackEvent("wa_click", outletId)}
             href={waLink(`Halo Jadiwangi Laundry! Saya mau order antar jemput untuk outlet ${OUTLETS.find((o) => o.id === outletId).label}. Mohon info penjemputannya ya kak.`)}
             target="_blank"
             rel="noopener noreferrer"

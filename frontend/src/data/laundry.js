@@ -11,6 +11,20 @@ export const rp = (n) => "Rp " + Math.round(n).toLocaleString("id-ID");
 export const waLink = (message) =>
   `https://wa.me/${WA_CENTRAL}?text=${encodeURIComponent(message)}`;
 
+// Tracking interaksi untuk dashboard pengelola (fire-and-forget)
+export const trackEvent = (type, outlet = null) => {
+  try {
+    const base = process.env.REACT_APP_BACKEND_URL;
+    if (!base) return;
+    fetch(`${base}/api/track`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, outlet }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch (e) { /* abaikan */ }
+};
+
 export const haversineKm = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;

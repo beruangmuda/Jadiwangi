@@ -57,6 +57,12 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
 
 ## Update 19 Sep 2026 (iterasi 6)
 - FOTO ASLI OUTLET terpasang (4 foto dari user, customer-assets-jt897jd0): hero = jajaran mesin + dinding ungu neon; Layanan = interior mesin (Kiloan) & keranjang produk Rinso/Dettol/Downy (Premium Care); Antiseptik = foto overlay "Dettol asli, dituang di outlet" (staff menuang Dettol ke mesin LG).
+
+## Update 19 Sep 2026 (iterasi 7)
+- Brand awareness hero: watermark raksasa outline "JADIWANGI" (text-stroke lavender, 19vw) di belakang konten + logo diperbesar.
+- LOGIN PENGELOLA: JWT auth (bcrypt + PyJWT, httpOnly cookie, brute-force lock 5x/15mnt, seed admin idempoten dari env ADMIN_EMAIL/ADMIN_PASSWORD). Halaman /admin (login) & /admin/dashboard (analisis: total interaksi, klik WA per jenis, per outlet, aktivitas terbaru). Tracking via POST /api/track dari tombol WA (navbar, hero, floating, footer, outlet, kalkulator), deteksi lokasi, minat app & kemitraan. Kredensial di /app/memory/test_credentials.md.
+- Section "Jadiwangi App" (#aplikasi): segera hadir, mockup HP CSS, benefit diskon/tracking, CTA "Kabari Saya Saat Rilis" → WA.
+- Section "Kemitraan & Franchise" (#kemitraan): 3 benefit + CTA diskusi kemitraan via WA.
 - ALAMAT LENGKAP 3 outlet terpasang di kartu outlet & footer: Pulomas = Jl. Angkur No. 26D (Ruko Biru), Kayu Putih, Pulogadung, Jakarta Timur; Ujungberung = Jl. Rumah Sakit No. 50 (Ruko Orange sebelah Alfamart), Ujungberung, Bandung; Kalimulya = Jl. Raya Kalimulya No. 86B (Depan Sekolah Tunas Bangsa Islamic School), Cilodong, Depok.
 
 ## Backlog

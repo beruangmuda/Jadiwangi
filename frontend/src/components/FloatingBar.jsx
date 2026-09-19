@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { MessageCircle } from "lucide-react";
-import { getOutlet, waLink } from "@/data/laundry";
+import { getOutlet, trackEvent, waLink } from "@/data/laundry";
 
 export default function FloatingBar({ outletId }) {
   const [show, setShow] = useState(false);
@@ -29,6 +29,7 @@ export default function FloatingBar({ outletId }) {
           </span>
           <a
             data-testid="floating-order-wa-btn"
+            onClick={() => trackEvent("wa_click", outletId)}
             href={waLink(`Halo Jadiwangi Laundry! Saya mau order untuk outlet ${outlet.label}.`)}
             target="_blank"
             rel="noopener noreferrer"
