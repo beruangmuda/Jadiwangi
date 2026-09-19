@@ -6,6 +6,7 @@ import AdminLogin from "@/components/AdminLogin";
 import AdminDashboard from "@/components/AdminDashboard";
 import AppDownload from "@/components/AppDownload";
 import Kemitraan from "@/components/Kemitraan";
+import Pengaduan from "@/components/Pengaduan";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Marquee from "@/components/Marquee";
@@ -63,6 +64,7 @@ export default function App() {
         <AppDownload />
         <Kemitraan />
         <Faq />
+        <Pengaduan />
       </main>
       <Footer />
       <FloatingBar outletId={outletId} />

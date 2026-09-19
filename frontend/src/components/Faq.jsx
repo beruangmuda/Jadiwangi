@@ -31,6 +31,10 @@ const FAQS = [
     q: "Ada layanan express?",
     a: "Ada. Hampir semua layanan tersedia versi Express 6 Jam — dari kiloan, kemeja, dress, sampai bed cover. Tipsnya: order express yang masuk sebelum jam 10 pagi bisa diambil sore hari, pas banget dijemput sepulang kantor.",
   },
+  {
+    q: "Kalau ada keluhan atau kecewa, lapor ke mana?",
+    a: "Langsung ke pemilik lewat WhatsApp dengan topik Pengaduan — klik bagian Layanan Pengaduan di bawah dan pesannya sudah terisi otomatis. Setiap keluhan kami tindak lanjuti serius sampai beres, jadi kamu tidak perlu kecewa berlama-lama.",
+  },
 ];
 
 export default function Faq() {

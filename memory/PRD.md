@@ -64,6 +64,9 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
 - Section "Jadiwangi App" (#aplikasi): segera hadir, mockup HP CSS, benefit diskon/tracking, CTA "Kabari Saya Saat Rilis" → WA.
 - Section "Kemitraan & Franchise" (#kemitraan): 3 benefit + CTA diskusi kemitraan via WA + highlight pill emas "Kemitraan" di navbar + kalimat "Mulai dari Rp 50 juta ... passive income dan bisnis autopilot".
 - Section Antiseptik: foto utama jadi SLIDER 2 slide (KRL padat + foto referensi dari user: penumpang dibonceng driver Gojek jaket hijau berangkat kerja — artifact kf87wnbq) dengan tombol next/prev, caption per slide, counter 1/2.
+
+## Update 19 Sep 2026 (iterasi 8)
+- Section "Layanan Pengaduan" (#pengaduan, setelah FAQ): kartu ungu besar — keluhan disalurkan ke WA topik PENGADUAN (pesan terisi otomatis: outlet, tanggal/nota, keluhan) supaya pelanggan tidak langsung kasih bintang 1 di Google. CTA trackEvent("pengaduan_click"). FAQ ditambah item keluhan.
 - ALAMAT LENGKAP 3 outlet terpasang di kartu outlet & footer: Pulomas = Jl. Angkur No. 26D (Ruko Biru), Kayu Putih, Pulogadung, Jakarta Timur; Ujungberung = Jl. Rumah Sakit No. 50 (Ruko Orange sebelah Alfamart), Ujungberung, Bandung; Kalimulya = Jl. Raya Kalimulya No. 86B (Depan Sekolah Tunas Bangsa Islamic School), Cilodong, Depok.
 
 ## Backlog
