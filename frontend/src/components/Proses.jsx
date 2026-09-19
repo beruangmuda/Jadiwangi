@@ -201,8 +201,9 @@ export default function Proses() {
               Sementara kami yang mencuci, <em className="text-[#D8B4FE]">kamu bebas bermain bersama keluarga.</em>
             </h3>
             <p className="mt-3 text-sm sm:text-base text-purple-100 leading-relaxed">
-              Weekend bukan untuk antre cucian. Serahkan pada kami — waktu luangmu terlalu berharga
-              untuk dihabiskan di depan mesin cuci.
+              Weekend bukan saatnya sibuk mencuci pakaian sendiri. Serahkan pada kami — waktu
+              luangmu terlalu berharga untuk dihabiskan di depan mesin cuci.{" "}
+              <span className="font-semibold text-[#D8B4FE] tracking-wide">#BESOKSUDAHWANGI</span>
             </p>
           </div>
           <a
