@@ -32,7 +32,9 @@ export default function Footer() {
 
         <div className="grid md:grid-cols-4 gap-10 border-t border-white/10 pt-12">
           <div>
-            <img src={LOGO_URL} alt="Jadiwangi Laundry" className="h-12 w-auto mb-4 brightness-0 invert" />
+            <span className="inline-flex items-center bg-white rounded-2xl px-4 py-2.5 mb-4">
+              <img src={LOGO_URL} alt="Jadiwangi Laundry" className="h-12 w-auto" />
+            </span>
             <p className="text-sm text-purple-200/80 leading-relaxed">
               Laundry kiloan & premium fabric care dengan garansi cuci ulang gratis.
             </p>
