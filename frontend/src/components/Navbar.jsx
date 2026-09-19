@@ -38,7 +38,7 @@ export default function Navbar({ outletId, onNavigate }) {
           onClick={(e) => onNavigate(e, "#beranda")}
           className="flex items-center gap-2.5 shrink-0"
         >
-          <img src={LOGO_URL} alt="Jadiwangi Laundry" className="h-11 w-auto" />
+          <img src={LOGO_URL} alt="Jadiwangi Laundry" className="h-14 w-auto -my-2" />
         </a>
         <nav className="hidden lg:flex items-center gap-7">
           {LINKS.map((l) =>
