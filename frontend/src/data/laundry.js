@@ -380,6 +380,6 @@ export const IMG_TOWELS =
 export const IMG_DETTOL_POUR =
   "https://customer-assets-jt897jd0.emergentagent.net/job_jadiwangi-laundry/artifacts/byo9thxu_WhatsApp%20Image%202026-06-05%20at%2021.55.32%20%281%29.jpeg";
 export const IMG_OJEK =
-  "https://images.pexels.com/photos/36974894/pexels-photo-36974894.jpeg?auto=compress&cs=tinysrgb&w=940";
+  "https://customer-assets-jt897jd0.emergentagent.net/job_jadiwangi-laundry/artifacts/kf87wnbq_image.png";
 export const IMG_SHIRTS =
   "https://images.unsplash.com/photo-1603252109303-2751441dd157?crop=entropy&cs=srgb&fm=jpg&q=85&w=940";
