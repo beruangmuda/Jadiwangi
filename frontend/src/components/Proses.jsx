@@ -31,15 +31,15 @@ const SceneCuci = () => (
 const SceneKering = () => (
   <svg viewBox="0 0 160 120" className="h-32 w-auto" aria-hidden="true">
     <path
-      d="M18 26 q0 -9 9 -9 q2 -8 11 -8 q9 0 10 8 q9 -1 9 8 q0 7 -9 7 h-21 q-9 0 -9 -6 z"
+      d="M36 24 q0 -9 9 -9 q2 -8 11 -8 q9 0 10 8 q9 -1 9 8 q0 7 -9 7 h-21 q-9 0 -9 -6 z"
       fill="#F3E8FF"
       stroke={STROKE}
       strokeWidth="2.5"
       strokeLinejoin="round"
     />
-    <line x1="27" y1="30" x2="24" y2="37" stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round" className="animate-rain svg-origin" />
-    <line x1="37" y1="30" x2="34" y2="37" stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round" className="animate-rain svg-origin" style={{ animationDelay: "0.4s" }} />
-    <line x1="47" y1="30" x2="44" y2="37" stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round" className="animate-rain svg-origin" style={{ animationDelay: "0.8s" }} />
+    <line x1="64" y1="28" x2="60" y2="42" stroke={STROKE} strokeWidth="3" strokeLinecap="round" className="animate-rain svg-origin" />
+    <line x1="74" y1="28" x2="70" y2="42" stroke={STROKE} strokeWidth="3" strokeLinecap="round" className="animate-rain svg-origin" style={{ animationDelay: "0.4s" }} />
+    <line x1="84" y1="28" x2="80" y2="42" stroke={STROKE} strokeWidth="3" strokeLinecap="round" className="animate-rain svg-origin" style={{ animationDelay: "0.8s" }} />
     <rect x="14" y="40" width="46" height="64" rx="8" fill="none" stroke={STROKE} strokeWidth="3" />
     <line x1="14" y1="52" x2="60" y2="52" stroke={STROKE} strokeWidth="3" />
     <circle cx="21" cy="46" r="2" fill={STROKE} />
