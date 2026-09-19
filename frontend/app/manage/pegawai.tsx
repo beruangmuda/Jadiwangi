@@ -38,7 +38,7 @@ export default function ManagePegawai() {
 
   const save = useMutation({
     mutationFn: () => {
-      const body = { name: form.name, role_type: form.role_type, pin: form.pin, outlet_id: form.outlet_id, active: form.active, permissions: form.permissions };
+      const body = { name: form.name, role_type: form.role_type, pin: form.pin || "0000", username: form.username, password: form.password, outlet_id: form.outlet_id, active: form.active, permissions: form.permissions };
       return form.id ? api.put(`/employees/${form.id}`, body) : api.post("/employees", body);
     },
     onSuccess: () => {
@@ -48,8 +48,8 @@ export default function ManagePegawai() {
     },
   });
 
-  const openAdd = () => { setForm({ id: "", name: "", role_type: "admin", pin: "", outlet_id: outlets[0]?.id || "", active: true, permissions: { orders: true, reports: false, delivery: false } }); setModal(true); };
-  const openEdit = (e: any) => { setForm({ ...e, permissions: e.permissions || {} }); setModal(true); };
+  const openAdd = () => { setForm({ id: "", name: "", role_type: "admin", pin: "0000", username: "", password: "", outlet_id: outlets[0]?.id || "", active: true, permissions: { orders: true, reports: false, delivery: false } }); setModal(true); };
+  const openEdit = (e: any) => { setForm({ ...e, password: "", permissions: e.permissions || {} }); setModal(true); };
 
   const grouped = (role: string) => (employees || []).filter((e: any) => e.role_type === role);
 
@@ -70,7 +70,7 @@ export default function ManagePegawai() {
                 <View style={styles.avatar}><Icon name={ROLE_META[role].icon} size={18} color={colors.onBrandPrimary} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{e.name}</Text>
-                  <Text style={styles.sub}>PIN: {e.pin} • {outlets.find((o) => o.id === e.outlet_id)?.city || "-"}</Text>
+                  <Text style={styles.sub}>@{e.username || "-"} • {outlets.find((o) => o.id === e.outlet_id)?.city || "-"}</Text>
                 </View>
                 {e.active ? <Pill label="Aktif" tone="success" /> : <Pill label="Nonaktif" tone="neutral" />}
                 <Icon name="chevron-right" size={20} color={colors.muted} />
@@ -92,7 +92,8 @@ export default function ManagePegawai() {
                   <Text style={styles.label}>Bagian</Text>
                   <Segmented items={[{ key: "admin", label: "Admin" }, { key: "produksi", label: "Produksi" }, { key: "kurir", label: "Kurir" }]} value={form.role_type} onChange={(k) => setForm({ ...form, role_type: k })} />
                 </View>
-                <Field label="PIN (4 digit)" value={form.pin} onChangeText={(t) => setForm({ ...form, pin: t.slice(0, 4) })} placeholder="1234" keyboardType="number-pad" testID="emp-pin" />
+                <Field label="Username" value={form.username} onChangeText={(t) => setForm({ ...form, username: t.replace(/\s/g, "").toLowerCase() })} placeholder="mis. andi" testID="emp-username" />
+                <Field label={form.id ? "Kata Sandi (kosongkan jika tetap)" : "Kata Sandi (min. 6)"} value={form.password} onChangeText={(t) => setForm({ ...form, password: t })} placeholder="••••••" testID="emp-password" />
                 <View style={{ gap: spacing.xs }}>
                   <Text style={styles.label}>Outlet</Text>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
@@ -121,7 +122,7 @@ export default function ManagePegawai() {
                 </View>
                 <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm }}>
                   <Pressable style={styles.cancel} onPress={() => setModal(false)}><Text style={styles.cancelText}>Batal</Text></Pressable>
-                  <PrimaryButton label="Simpan" onPress={() => save.mutate()} loading={save.isPending} disabled={!form.name || form.pin.length < 4} testID="save-employee" style={{ flex: 1 }} />
+                  <PrimaryButton label="Simpan" onPress={() => save.mutate()} loading={save.isPending} disabled={!form.name || !form.username || (!form.id && form.password.length < 6)} testID="save-employee" style={{ flex: 1 }} />
                 </View>
               </View>
             ) : <View />}

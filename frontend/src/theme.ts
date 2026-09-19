@@ -46,9 +46,9 @@ export const defaultScheme = "light" satisfies ColorScheme;
 export const themes: { light: ThemeColors; dark?: ThemeColors } = { light };
 
 export const fonts = {
-  display: "Fredoka-SemiBold",
-  displayMedium: "Fredoka-Medium",
-  displayBold: "Fredoka-Bold",
+  display: "Poppins-SemiBold",
+  displayMedium: "Poppins-Medium",
+  displayBold: "Poppins-Bold",
   body: "Nunito-Regular",
   bodySemi: "Nunito-SemiBold",
   bodyBold: "Nunito-Bold",

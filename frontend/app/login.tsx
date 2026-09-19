@@ -1,80 +1,65 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, Platform } from "react-native";
+import { View, Text, Pressable, TextInput, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
-import { useAuth, Role } from "@/src/auth";
+import { useAuth } from "@/src/auth";
 import { fonts, makeStyles, radius, shadow, spacing, useTheme } from "@/src/theme";
 import { Icon } from "@/src/components/Icon";
-
-const ROLES: { key: Role; label: string; desc: string; icon: string }[] = [
-  { key: "owner", label: "Owner", desc: "Akses penuh & laporan", icon: "crown" },
-  { key: "pegawai", label: "Pegawai", desc: "Kelola order & produksi", icon: "account-hard-hat" },
-  { key: "pelanggan", label: "Pelanggan", desc: "Order & lihat ranking", icon: "account-heart" },
-];
-
-const HINTS: Record<Role, string> = {
-  owner: "PIN demo: 1234",
-  pegawai: "PIN demo: 3333 (produksi) / 5555 (kurir)",
-  pelanggan: "Masukkan 4 digit terakhir no. HP mana saja",
-};
+import { PrimaryButton } from "@/src/components/ui";
 
 export default function Login() {
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { login } = useAuth();
+  const { login, register } = useAuth();
   const router = useRouter();
 
-  const [role, setRole] = useState<Role | null>(null);
-  const [pin, setPin] = useState("");
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const shake = useSharedValue(0);
 
-  const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));
-
-  const triggerError = (msg: string) => {
+  const fail = (msg: string) => {
     setError(msg);
-    setPin("");
-    shake.value = withSequence(withTiming(-10, { duration: 50 }), withTiming(10, { duration: 50 }), withTiming(-6, { duration: 50 }), withTiming(0, { duration: 50 }));
     if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
   };
 
-  const submit = async (value: string, r: Role) => {
-    setBusy(true);
-    setError("");
+  const doLogin = async () => {
+    if (!username.trim() || !password) return fail("Isi username dan kata sandi");
+    setBusy(true); setError("");
     try {
-      if (r === "pelanggan") await login(r, { phone: value });
-      else await login(r, { pin: value });
+      await login(username.trim(), password);
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (r === "owner") router.replace("/(owner)");
-      else if (r === "pegawai") router.replace("/(employee)");
-      else router.replace("/customer");
+      router.replace("/");
     } catch (e: any) {
-      triggerError(e?.message || "Gagal masuk");
-    } finally {
-      setBusy(false);
-    }
+      fail(e?.message || "Gagal masuk");
+    } finally { setBusy(false); }
   };
 
-  const press = (digit: string) => {
-    if (busy || !role) return;
-    if (Platform.OS !== "web") Haptics.selectionAsync();
-    const maxLen = role === "pelanggan" ? 13 : 4;
-    const next = (pin + digit).slice(0, maxLen);
-    setPin(next);
-    setError("");
-    if (role !== "pelanggan" && next.length === 4) submit(next, role);
+  const doRegister = async () => {
+    if (!name.trim() || phone.trim().length < 7 || password.length < 6)
+      return fail("Lengkapi nama, no. HP, dan kata sandi (min. 6 karakter)");
+    setBusy(true); setError("");
+    try {
+      await register(name.trim(), phone.trim(), password);
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/");
+    } catch (e: any) {
+      fail(e?.message || "Gagal mendaftar");
+    } finally { setBusy(false); }
   };
-  const backspace = () => setPin((p) => p.slice(0, -1));
 
-  const isPhone = role === "pelanggan";
-  const dots = 4;
+  const isLogin = mode === "login";
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
@@ -85,93 +70,89 @@ export default function Login() {
         <Text style={styles.tagline}>POS Laundry • ESTD 2021</Text>
       </LinearGradient>
 
-      <View style={[styles.body, { paddingBottom: insets.bottom + spacing.lg }]}>
-        {!role ? (
-          <Animated.View entering={FadeInDown} style={{ gap: spacing.md }}>
-            <Text style={styles.heading}>Masuk sebagai</Text>
-            {ROLES.map((r, i) => (
-              <Animated.View key={r.key} entering={FadeInDown.delay(i * 80)}>
-                <Pressable testID={`role-${r.key}`} onPress={() => { setRole(r.key); setPin(""); setError(""); }} style={styles.roleCard}>
-                  <View style={styles.roleIcon}>
-                    <Icon name={r.icon} size={24} color={colors.onBrandPrimary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.roleLabel}>{r.label}</Text>
-                    <Text style={styles.roleDesc}>{r.desc}</Text>
-                  </View>
-                  <Icon name="chevron-right" size={24} color={colors.muted} />
-                </Pressable>
-              </Animated.View>
-            ))}
-          </Animated.View>
-        ) : (
-          <View style={{ flex: 1 }}>
-            <Pressable testID="back-to-roles" onPress={() => { setRole(null); setPin(""); setError(""); }} style={styles.back}>
-              <Icon name="arrow-left" size={20} color={colors.onSurface} />
-              <Text style={styles.backText}>{ROLES.find((x) => x.key === role)?.label}</Text>
-            </Pressable>
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + spacing.xl }]}
+        bottomOffset={20}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Animated.View entering={FadeInDown} style={{ gap: spacing.md }}>
+          <Text style={styles.heading}>{isLogin ? "Masuk" : "Daftar Akun"}</Text>
+          <Text style={styles.hint}>
+            {isLogin ? "Masuk dengan username / no. HP dan kata sandi Anda." : "Buat akun pelanggan untuk mulai order laundry."}
+          </Text>
 
-            <Text style={styles.heading}>{isPhone ? "Nomor HP" : "Masukkan PIN"}</Text>
-            <Text style={styles.hint}>{HINTS[role]}</Text>
+          {!isLogin && (
+            <View style={styles.field}>
+              <Text style={styles.label}>Nama Lengkap</Text>
+              <View style={styles.inputRow}>
+                <Icon name="account" size={20} color={colors.muted} />
+                <TextInput testID="reg-name" value={name} onChangeText={setName} placeholder="Nama Anda" placeholderTextColor={colors.muted} style={styles.input} />
+              </View>
+            </View>
+          )}
 
-            <Animated.View style={[styles.pinRow, shakeStyle]}>
-              {isPhone ? (
-                <Text style={styles.phoneText}>{pin || "0812xxxx"}</Text>
-              ) : (
-                Array.from({ length: dots }).map((_, i) => (
-                  <View key={i} style={[styles.pinDot, i < pin.length && { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary }]} />
-                ))
-              )}
-            </Animated.View>
-            {error ? <Text testID="login-error" style={styles.error}>{error}</Text> : <View style={{ height: 18 }} />}
-
-            <View style={styles.keypad}>
-              {["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"].map((k) => {
-                if (k === "clear") {
-                  return isPhone ? (
-                    <Key key={k} testID="key-submit" onPress={() => role && submit(pin, role)} disabled={pin.length < 4 || busy}>
-                      <Icon name="check-bold" size={26} color={colors.onBrandPrimary} />
-                    </Key>
-                  ) : <View key={k} style={{ width: "30%" }} />;
-                }
-                if (k === "back") {
-                  return (
-                    <Key key={k} testID="key-back" onPress={backspace} variant="ghost">
-                      <Icon name="backspace-outline" size={24} color={colors.onSurface} />
-                    </Key>
-                  );
-                }
-                return (
-                  <Key key={k} testID={`key-${k}`} onPress={() => press(k)}>
-                    <Text style={styles.keyText}>{k}</Text>
-                  </Key>
-                );
-              })}
+          <View style={styles.field}>
+            <Text style={styles.label}>{isLogin ? "Username / No. HP" : "No. HP"}</Text>
+            <View style={styles.inputRow}>
+              <Icon name={isLogin ? "account-circle" : "phone"} size={20} color={colors.muted} />
+              <TextInput
+                testID={isLogin ? "login-username" : "reg-phone"}
+                value={isLogin ? username : phone}
+                onChangeText={isLogin ? setUsername : setPhone}
+                placeholder={isLogin ? "username atau 08xxxx" : "08xxxxxxxxxx"}
+                placeholderTextColor={colors.muted}
+                autoCapitalize="none"
+                keyboardType={isLogin ? "default" : "phone-pad"}
+                style={styles.input}
+              />
             </View>
           </View>
-        )}
-      </View>
-    </View>
-  );
-}
 
-function Key({ children, onPress, testID, variant = "default", disabled }: { children: React.ReactNode; onPress: () => void; testID?: string; variant?: "default" | "ghost"; disabled?: boolean }) {
-  const styles = useStyles();
-  return (
-    <Pressable
-      testID={testID}
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [
-        styles.key,
-        variant === "ghost" && styles.keyGhost,
-        testID === "key-submit" && styles.keySubmit,
-        pressed && { transform: [{ scale: 0.94 }], opacity: 0.85 },
-        disabled && { opacity: 0.4 },
-      ]}
-    >
-      {children}
-    </Pressable>
+          <View style={styles.field}>
+            <Text style={styles.label}>Kata Sandi</Text>
+            <View style={styles.inputRow}>
+              <Icon name="lock" size={20} color={colors.muted} />
+              <TextInput
+                testID="login-password"
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••"
+                placeholderTextColor={colors.muted}
+                secureTextEntry={!showPass}
+                autoCapitalize="none"
+                style={styles.input}
+                onSubmitEditing={isLogin ? doLogin : doRegister}
+              />
+              <Pressable testID="toggle-pass" onPress={() => setShowPass((s) => !s)} hitSlop={8}>
+                <Icon name={showPass ? "eye-off" : "eye"} size={20} color={colors.muted} />
+              </Pressable>
+            </View>
+          </View>
+
+          {error ? <Text testID="login-error" style={styles.error}>{error}</Text> : null}
+
+          <PrimaryButton
+            label={isLogin ? "Masuk" : "Daftar & Masuk"}
+            icon={isLogin ? "login" : "account-plus"}
+            onPress={isLogin ? doLogin : doRegister}
+            loading={busy}
+            testID={isLogin ? "login-submit" : "register-submit"}
+          />
+
+          <Pressable
+            testID="toggle-mode"
+            onPress={() => { setMode(isLogin ? "register" : "login"); setError(""); }}
+            style={styles.switchRow}
+          >
+            <Text style={styles.switchText}>
+              {isLogin ? "Belum punya akun? " : "Sudah punya akun? "}
+              <Text style={styles.switchLink}>{isLogin ? "Daftar sebagai Pelanggan" : "Masuk"}</Text>
+            </Text>
+          </Pressable>
+        </Animated.View>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 
@@ -180,22 +161,15 @@ const useStyles = makeStyles((c) => ({
   logoWrap: { backgroundColor: "#FFFFFF", borderRadius: radius.lg, padding: spacing.sm, ...shadow.soft },
   logoImg: { width: 104, height: 104 },
   tagline: { fontFamily: fonts.bodyBold, fontSize: 13, color: "rgba(255,255,255,0.95)" },
-  body: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
-  heading: { fontFamily: fonts.displayBold, fontSize: 22, color: c.onSurface, marginBottom: spacing.xs },
-  hint: { fontFamily: fonts.body, fontSize: 13, color: c.muted, marginBottom: spacing.lg },
-  roleCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: c.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: c.border, ...shadow.card },
-  roleIcon: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: c.brand, alignItems: "center", justifyContent: "center" },
-  roleLabel: { fontFamily: fonts.displayBold, fontSize: 17, color: c.onSurface },
-  roleDesc: { fontFamily: fonts.body, fontSize: 13, color: c.muted },
-  back: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: spacing.lg },
-  backText: { fontFamily: fonts.bodyBold, fontSize: 15, color: c.onSurface },
-  pinRow: { flexDirection: "row", gap: spacing.md, justifyContent: "center", alignItems: "center", marginVertical: spacing.md, minHeight: 40 },
-  pinDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: c.borderStrong, backgroundColor: "transparent" },
-  phoneText: { fontFamily: fonts.displayBold, fontSize: 26, color: c.onSurface, letterSpacing: 2 },
-  error: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.error, textAlign: "center", height: 18 },
-  keypad: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: spacing.md, marginTop: spacing.md },
-  key: { width: "30%", aspectRatio: 1.6, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: c.surfaceSecondary },
-  keyGhost: { backgroundColor: "transparent" },
-  keySubmit: { backgroundColor: c.brandPrimary, ...shadow.soft },
-  keyText: { fontFamily: fonts.displayBold, fontSize: 28, color: c.onSurface },
+  body: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
+  heading: { fontFamily: fonts.displayBold, fontSize: 24, color: c.onSurface },
+  hint: { fontFamily: fonts.body, fontSize: 13, color: c.muted, marginBottom: spacing.sm },
+  field: { gap: spacing.xs },
+  label: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurfaceSecondary },
+  inputRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: c.surfaceSecondary, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, paddingHorizontal: spacing.md },
+  input: { flex: 1, paddingVertical: 14, fontFamily: fonts.body, fontSize: 15, color: c.onSurface },
+  error: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.error, textAlign: "center" },
+  switchRow: { alignItems: "center", paddingVertical: spacing.sm },
+  switchText: { fontFamily: fonts.body, fontSize: 14, color: c.muted },
+  switchLink: { fontFamily: fonts.bodyBold, color: c.brandPrimary },
 }));

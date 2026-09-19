@@ -8,6 +8,8 @@ from decimal import Decimal
 from typing import Optional, List
 
 import asyncpg
+import bcrypt
+from starlette.concurrency import run_in_threadpool
 from fastapi import FastAPI, APIRouter, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -106,7 +108,7 @@ def jsonable(v):
 
 
 def row_to_dict(row) -> dict:
-    return {k: jsonable(val) for k, val in dict(row).items()}
+    return {k: jsonable(val) for k, val in dict(row).items() if k != "password_hash"}
 
 
 def rows_to_list(rows) -> List[dict]:
@@ -123,8 +125,69 @@ async def startup():
     pool = await asyncpg.create_pool(**DB, statement_cache_size=0, min_size=1, max_size=5)
     async with pool.acquire() as conn:
         await conn.execute(SCHEMA)
+        await conn.execute(MIGRATIONS)
     await seed_data()
+    await ensure_credentials()
     logger.info("Database ready.")
+
+
+MIGRATIONS = """
+alter table employees add column if not exists username text;
+alter table employees add column if not exists password_hash text;
+alter table customers add column if not exists password_hash text;
+create unique index if not exists employees_username_uq on employees (lower(username)) where username is not null;
+"""
+
+MAX_BCRYPT_BYTES = 72
+
+
+def _pw_bytes(password: str) -> bytes:
+    value = (password or "").encode("utf-8")
+    if len(value) > MAX_BCRYPT_BYTES:
+        raise ValueError("Kata sandi maksimal 72 byte")
+    return value
+
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(_pw_bytes(password), bcrypt.gensalt(rounds=12)).decode("ascii")
+
+
+def verify_password(password: str, password_hash: Optional[str]) -> bool:
+    if not password_hash:
+        return False
+    try:
+        return bcrypt.checkpw(_pw_bytes(password), password_hash.encode("ascii"))
+    except (ValueError, UnicodeError):
+        return False
+
+
+async def ensure_credentials():
+    """Idempotently give the owner, seeded employees and customers login credentials."""
+    async with pool.acquire() as conn:
+        # owner account (stored in app_config)
+        has_owner = await conn.fetchval("select value from app_config where key='owner_username'")
+        if not has_owner:
+            oh = await run_in_threadpool(hash_password, "owner123")
+            await conn.execute("insert into app_config(key,value) values('owner_username','owner') on conflict (key) do nothing")
+            await conn.execute("insert into app_config(key,value) values('owner_pass_hash',$1) on conflict (key) do nothing", oh)
+
+        # employees without username/password
+        emps = await conn.fetch("select id, name from employees where username is null or password_hash is null")
+        if emps:
+            eh = await run_in_threadpool(hash_password, "pegawai123")
+            for e in emps:
+                uname = (e["name"] or "staff").split()[0].lower()
+                # ensure uniqueness by appending suffix if needed
+                exists = await conn.fetchval("select count(*) from employees where lower(username)=$1 and id<>$2", uname, e["id"])
+                if exists:
+                    uname = f"{uname}{str(e['id'])[:4]}"
+                await conn.execute("update employees set username=$1, password_hash=$2 where id=$3", uname, eh, e["id"])
+
+        # customers without password
+        need = await conn.fetchval("select count(*) from customers where password_hash is null")
+        if need:
+            ch = await run_in_threadpool(hash_password, "pelanggan123")
+            await conn.execute("update customers set password_hash=$1 where password_hash is null", ch)
 
 
 @app.on_event("shutdown")
@@ -290,9 +353,15 @@ async def seed_data():
 
 # Models
 class LoginBody(BaseModel):
-    role: str
-    pin: str = ""
-    phone: str = ""
+    username: str
+    password: str
+
+
+class RegisterBody(BaseModel):
+    name: str
+    phone: str
+    password: str
+    email: str = ""
 
 
 class OutletBody(BaseModel):
@@ -319,12 +388,15 @@ class CustomerBody(BaseModel):
     email: str = ""
     deposit: float = 0
     outlet_id: Optional[str] = None
+    password: str = ""
 
 
 class EmployeeBody(BaseModel):
     name: str
     role_type: str = "admin"
     pin: str = "0000"
+    username: str = ""
+    password: str = ""
     outlet_id: Optional[str] = None
     active: bool = True
     permissions: dict = Field(default_factory=dict)
@@ -373,28 +445,51 @@ class AdjustmentBody(BaseModel):
 
 @api.post("/auth/login")
 async def login(body: LoginBody):
+    uname = (body.username or "").strip().lower()
     async with pool.acquire() as conn:
-        if body.role == "owner":
-            pin = await conn.fetchval("select value from app_config where key='owner_pin'")
-            if body.pin != (pin or "1234"):
-                raise HTTPException(401, "PIN Owner salah")
-            outlets = rows_to_list(await conn.fetch("select * from outlets order by created_at"))
-            return {"role": "owner", "name": "Owner", "outlets": outlets}
-        if body.role == "pegawai":
-            emp = await conn.fetchrow("select * from employees where pin=$1 and active=true", body.pin)
-            if not emp:
-                raise HTTPException(401, "PIN Pegawai salah")
+        # owner
+        owner_user = await conn.fetchval("select value from app_config where key='owner_username'")
+        owner_hash = await conn.fetchval("select value from app_config where key='owner_pass_hash'")
+        if owner_user and uname == owner_user.lower():
+            if await run_in_threadpool(verify_password, body.password, owner_hash):
+                outlets = rows_to_list(await conn.fetch("select * from outlets order by created_at"))
+                return {"role": "owner", "name": "Owner", "outlets": outlets}
+            raise HTTPException(401, "Username atau kata sandi salah")
+
+        # pegawai
+        emp = await conn.fetchrow("select * from employees where lower(username)=$1 and active=true", uname)
+        if emp and await run_in_threadpool(verify_password, body.password, emp["password_hash"]):
             outlets = rows_to_list(await conn.fetch("select * from outlets order by created_at"))
             return {"role": "pegawai", "employee": row_to_dict(emp), "outlets": outlets}
-        if body.role == "pelanggan":
-            key = body.phone or body.pin
-            cust = await conn.fetchrow("select * from customers where phone=$1", key)
-            if not cust:
-                cust = await conn.fetchrow("select * from customers where phone like $1 order by created_at limit 1", f"%{key}")
-            if not cust:
-                raise HTTPException(401, "Nomor pelanggan tidak ditemukan")
+
+        # pelanggan (username = phone)
+        cust = await conn.fetchrow("select * from customers where phone=$1", body.username.strip())
+        if cust and await run_in_threadpool(verify_password, body.password, cust["password_hash"]):
             return {"role": "pelanggan", "customer": row_to_dict(cust)}
-    raise HTTPException(400, "Peran tidak valid")
+
+    raise HTTPException(401, "Username atau kata sandi salah")
+
+
+@api.post("/auth/register")
+async def register(body: RegisterBody):
+    phone = (body.phone or "").strip()
+    if len(phone) < 7:
+        raise HTTPException(422, "Nomor HP tidak valid")
+    if len(body.password) < 6:
+        raise HTTPException(422, "Kata sandi minimal 6 karakter")
+    try:
+        pw = await run_in_threadpool(hash_password, body.password)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    async with pool.acquire() as conn:
+        exists = await conn.fetchval("select count(*) from customers where phone=$1", phone)
+        if exists:
+            raise HTTPException(409, "Nomor HP sudah terdaftar")
+        outlet = await conn.fetchval("select id from outlets order by created_at limit 1")
+        row = await conn.fetchrow(
+            "insert into customers(name,phone,email,outlet_id,password_hash) values($1,$2,$3,$4,$5) returning *",
+            body.name.strip(), phone, body.email, outlet, pw)
+        return {"role": "pelanggan", "customer": row_to_dict(row)}
 
 
 @api.get("/outlets")
@@ -465,10 +560,11 @@ async def list_customers(outlet_id: Optional[str] = None, q: Optional[str] = Non
 
 @api.post("/customers")
 async def create_customer(b: CustomerBody):
+    pw = await run_in_threadpool(hash_password, b.password or "pelanggan123")
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "insert into customers(name,phone,email,deposit,outlet_id) values($1,$2,$3,$4,$5) returning *",
-            b.name, b.phone, b.email, b.deposit, b.outlet_id)
+            "insert into customers(name,phone,email,deposit,outlet_id,password_hash) values($1,$2,$3,$4,$5,$6) returning *",
+            b.name, b.phone, b.email, b.deposit, b.outlet_id, pw)
         return row_to_dict(row)
 
 
@@ -496,10 +592,15 @@ async def list_employees(outlet_id: Optional[str] = None):
 @api.post("/employees")
 async def create_employee(b: EmployeeBody):
     import json
+    username = (b.username or (b.name or "staff").split()[0]).strip().lower()
+    pw = await run_in_threadpool(hash_password, b.password or "pegawai123")
     async with pool.acquire() as conn:
+        dup = await conn.fetchval("select count(*) from employees where lower(username)=$1", username)
+        if dup:
+            username = f"{username}{str(uuid.uuid4())[:4]}"
         row = await conn.fetchrow(
-            "insert into employees(name,role_type,pin,outlet_id,active,permissions) values($1,$2,$3,$4,$5,$6::jsonb) returning *",
-            b.name, b.role_type, b.pin, b.outlet_id, b.active, json.dumps(b.permissions))
+            "insert into employees(name,role_type,pin,username,password_hash,outlet_id,active,permissions) values($1,$2,$3,$4,$5,$6,$7,$8::jsonb) returning *",
+            b.name, b.role_type, b.pin, username, pw, b.outlet_id, b.active, json.dumps(b.permissions))
         return row_to_dict(row)
 
 
@@ -507,9 +608,16 @@ async def create_employee(b: EmployeeBody):
 async def update_employee(eid: str, b: EmployeeBody):
     import json
     async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "update employees set name=$1,role_type=$2,pin=$3,outlet_id=$4,active=$5,permissions=$6::jsonb where id=$7 returning *",
-            b.name, b.role_type, b.pin, b.outlet_id, b.active, json.dumps(b.permissions), eid)
+        username = (b.username or (b.name or "staff").split()[0]).strip().lower()
+        if b.password:
+            pw = await run_in_threadpool(hash_password, b.password)
+            row = await conn.fetchrow(
+                "update employees set name=$1,role_type=$2,pin=$3,username=$4,password_hash=$5,outlet_id=$6,active=$7,permissions=$8::jsonb where id=$9 returning *",
+                b.name, b.role_type, b.pin, username, pw, b.outlet_id, b.active, json.dumps(b.permissions), eid)
+        else:
+            row = await conn.fetchrow(
+                "update employees set name=$1,role_type=$2,pin=$3,username=$4,outlet_id=$5,active=$6,permissions=$7::jsonb where id=$8 returning *",
+                b.name, b.role_type, b.pin, username, b.outlet_id, b.active, json.dumps(b.permissions), eid)
         if not row:
             raise HTTPException(404, "Pegawai tidak ditemukan")
         return row_to_dict(row)

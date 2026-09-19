@@ -17,9 +17,9 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [loaded] = useFonts({
-    "Fredoka-Medium": require("../assets/fonts/Fredoka-Medium.ttf"),
-    "Fredoka-SemiBold": require("../assets/fonts/Fredoka-SemiBold.ttf"),
-    "Fredoka-Bold": require("../assets/fonts/Fredoka-Bold.ttf"),
+    "Poppins-Medium": require("../assets/fonts/Poppins-Medium.ttf"),
+    "Poppins-SemiBold": require("../assets/fonts/Poppins-SemiBold.ttf"),
+    "Poppins-Bold": require("../assets/fonts/Poppins-Bold.ttf"),
     "Nunito-Regular": require("../assets/fonts/Nunito-Regular.ttf"),
     "Nunito-SemiBold": require("../assets/fonts/Nunito-SemiBold.ttf"),
     "Nunito-Bold": require("../assets/fonts/Nunito-Bold.ttf"),

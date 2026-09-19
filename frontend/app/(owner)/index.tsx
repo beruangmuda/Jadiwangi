@@ -82,10 +82,10 @@ export default function Dashboard() {
                   <Icon name="cash-multiple" size={20} color={colors.brandPrimary} />
                 </View>
                 <Text style={styles.kpiLabel}>Pendapatan</Text>
-                <Text style={[styles.kpiValue, { fontSize: 20, color: colors.brandPrimary }]}>{rupiah(t?.pendapatan)}</Text>
+                <Text style={[styles.kpiValue, { fontSize: 20, color: colors.brandPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{rupiah(t?.pendapatan)}</Text>
                 <View style={styles.divider} />
                 <Text style={styles.kpiLabel}>Omzet</Text>
-                <Text style={styles.omzet}>{rupiah(t?.omzet)}</Text>
+                <Text style={styles.omzet} numberOfLines={1} adjustsFontSizeToFit>{rupiah(t?.omzet)}</Text>
               </Card>
             </View>
 

@@ -79,7 +79,7 @@ function StatTile({ icon, label, value, tone = "brand" }: { icon: string; label:
         <Icon name={icon} size={18} color={map[tone]} />
       </View>
       <Text style={styles.tileLabel}>{label}</Text>
-      <Text style={[styles.tileValue, { color: map[tone] }]} numberOfLines={1}>{value}</Text>
+      <Text style={[styles.tileValue, { color: map[tone] }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
     </View>
   );
 }
@@ -101,7 +101,7 @@ function Keuangan({ q }: { q: string }) {
       </View>
       <Card>
         <SectionHeader title="Laba Bersih" />
-        <Text style={[styles.bigMoney, { color: data.laba >= 0 ? colors.success : colors.error }]}>{rupiah(data.laba)}</Text>
+        <Text style={[styles.bigMoney, { color: data.laba >= 0 ? colors.success : colors.error }]} numberOfLines={1} adjustsFontSizeToFit>{rupiah(data.laba)}</Text>
         <Text style={styles.hintMuted}>Pendapatan − Pengeluaran − Kasbon</Text>
       </Card>
       <Card>
@@ -139,7 +139,7 @@ function Transaksi({ q }: { q: string }) {
       </View>
       <Card>
         <SectionHeader title="Nilai Transaksi" />
-        <Text style={[styles.bigMoney, { color: colors.brandPrimary }]}>{rupiah(data.total_value)}</Text>
+        <Text style={[styles.bigMoney, { color: colors.brandPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{rupiah(data.total_value)}</Text>
       </Card>
       <Card>
         <SectionHeader title="Transaksi Terbaru" />

@@ -26,7 +26,8 @@ export type Session = {
 type AuthCtx = {
   session: Session | null;
   loading: boolean;
-  login: (role: Role, opts: { pin?: string; phone?: string }) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  register: (name: string, phone: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   setOutlet: (id: string | null) => void;
   currentOutlet: () => Outlet | null;
@@ -53,17 +54,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     else await storage.removeItem(SESSION_KEY);
   };
 
-  const login: AuthCtx["login"] = async (role, opts) => {
-    const res = await api.post("/auth/login", { role, pin: opts.pin || "", phone: opts.phone || "" });
-    let s: Session;
-    if (role === "owner") {
-      s = { role, name: res.name, outlets: res.outlets, currentOutletId: null };
-    } else if (role === "pegawai") {
-      s = { role, name: res.employee?.name, employee: res.employee, outlets: res.outlets, currentOutletId: res.employee?.outlet_id ?? null };
-    } else {
-      s = { role, name: res.customer?.name, customer: res.customer, currentOutletId: res.customer?.outlet_id ?? null };
+  const sessionFromRes = (res: any): Session => {
+    if (res.role === "owner") {
+      return { role: "owner", name: res.name, outlets: res.outlets, currentOutletId: null };
+    } else if (res.role === "pegawai") {
+      return { role: "pegawai", name: res.employee?.name, employee: res.employee, outlets: res.outlets, currentOutletId: res.employee?.outlet_id ?? null };
     }
-    await persist(s);
+    return { role: "pelanggan", name: res.customer?.name, customer: res.customer, currentOutletId: res.customer?.outlet_id ?? null };
+  };
+
+  const login: AuthCtx["login"] = async (username, password) => {
+    const res = await api.post("/auth/login", { username, password });
+    await persist(sessionFromRes(res));
+  };
+
+  const register: AuthCtx["register"] = async (name, phone, password) => {
+    const res = await api.post("/auth/register", { name, phone, password });
+    await persist(sessionFromRes(res));
   };
 
   const logout = async () => {
@@ -82,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ session, loading, login, logout, setOutlet, currentOutlet }}>
+    <Ctx.Provider value={{ session, loading, login, register, logout, setOutlet, currentOutlet }}>
       {children}
     </Ctx.Provider>
   );

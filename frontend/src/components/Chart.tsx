@@ -28,27 +28,34 @@ export function TrendChart({ data, width, height = 180 }: { data: Point[]; width
 
   const gridY = [0.25, 0.5, 0.75, 1].map((f) => padTop + (h - padTop - padBottom) * (1 - f));
 
+  const omzetColor = colors.error;        // merah
+  const pendapatanColor = colors.brandPrimary; // biru
+
   return (
     <View>
       <Svg width={w} height={h}>
         <Defs>
           <LinearGradient id="omzetFill" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={colors.brandPrimary} stopOpacity={0.28} />
-            <Stop offset="1" stopColor={colors.brandPrimary} stopOpacity={0.02} />
+            <Stop offset="0" stopColor={omzetColor} stopOpacity={0.22} />
+            <Stop offset="1" stopColor={omzetColor} stopOpacity={0.02} />
           </LinearGradient>
         </Defs>
         {gridY.map((gy, i) => (
           <Line key={i} x1={padX} y1={gy} x2={w - padX} y2={gy} stroke={colors.divider} strokeWidth={1} />
         ))}
         <Path d={areaPath} fill="url(#omzetFill)" />
-        <Path d={buildLine("omzet")} stroke={colors.brandPrimary} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
-        <Path d={buildLine("pendapatan")} stroke={colors.brand} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" strokeDasharray="5 4" />
-        {pts.length <= 16 &&
-          pts.map((p, i) => <Circle key={i} cx={xFor(i)} cy={yFor(p.omzet)} r={2.5} fill={colors.brandPrimary} />)}
+        <Path d={buildLine("pendapatan")} stroke={pendapatanColor} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+        <Path d={buildLine("omzet")} stroke={omzetColor} strokeWidth={3} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+        {pts.length <= 16 && pts.map((p, i) => (
+          <React.Fragment key={i}>
+            <Circle cx={xFor(i)} cy={yFor(p.pendapatan)} r={2.5} fill={pendapatanColor} />
+            <Circle cx={xFor(i)} cy={yFor(p.omzet)} r={3} fill={omzetColor} />
+          </React.Fragment>
+        ))}
       </Svg>
-      <View style={{ flexDirection: "row", gap: 18, marginTop: 6, paddingHorizontal: padX }}>
-        <Legend color={colors.brandPrimary} label="Omzet" />
-        <Legend color={colors.brand} label="Pendapatan" dashed />
+      <View style={{ flexDirection: "row", gap: 20, marginTop: 8, paddingHorizontal: padX }}>
+        <Legend color={omzetColor} label="Omzet" />
+        <Legend color={pendapatanColor} label="Pendapatan" />
       </View>
     </View>
   );

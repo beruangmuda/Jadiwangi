@@ -38,6 +38,14 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] Robustness: validasi format tanggal (400), transaksi DB atomik untuk pembayaran.
 - [x] Testing iterasi 2: 35/36 backend + semua alur frontend PASS.
 
+## Update (2026-06, iterasi 3)
+- [x] Login diganti: **satu form Username + Kata Sandi** (tanpa pilihan peran). Owner & pegawai pre-registered; ada **Daftar sebagai Pelanggan** (registrasi mandiri).
+- [x] Auth aman: bcrypt (rounds=12) di Supabase; endpoint /api/auth/login & /api/auth/register; hash tidak pernah dikirim ke klien; kredensial di-backfill otomatis (owner/owner123, pegawai username+pegawai123, pelanggan seed +pelanggan123).
+- [x] Manage Pegawai: input Username + Kata Sandi (bukan PIN lagi).
+- [x] Font diganti ke **Poppins** (heading/angka) + Nunito (body) → angka tidak lagi terpotong; ditambah adjustsFontSizeToFit pada nominal besar.
+- [x] Grafik Trend: legend jelas, garis **Omzet = merah**, **Pendapatan = biru**, garis lebih rapi + titik data.
+- [x] Verifikasi e2e: login owner, registrasi+login pelanggan, dashboard, chart — semua OK.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Kasbon pegawai (tabel sudah ada, UI belum) & saldo deposit pelanggan (pakai untuk bayar).
