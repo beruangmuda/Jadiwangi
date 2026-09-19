@@ -53,6 +53,7 @@ export default function Footer() {
             <div key={o.id}>
               <h3 className="font-display text-xl text-white">{o.name}</h3>
               <p className="text-sm text-purple-200/80 mt-1">{o.region}</p>
+              <p className="text-xs text-purple-200/60 mt-1.5 leading-relaxed">{o.address}</p>
               <div className="mt-4 space-y-2.5 text-sm text-purple-200/80">
                 <p className="flex items-center gap-2">
                   <Clock className="w-4 h-4 shrink-0" />

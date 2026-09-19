@@ -57,11 +57,11 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
 
 ## Update 19 Sep 2026 (iterasi 6)
 - FOTO ASLI OUTLET terpasang (4 foto dari user, customer-assets-jt897jd0): hero = jajaran mesin + dinding ungu neon; Layanan = interior mesin (Kiloan) & keranjang produk Rinso/Dettol/Downy (Premium Care); Antiseptik = foto overlay "Dettol asli, dituang di outlet" (staff menuang Dettol ke mesin LG).
+- ALAMAT LENGKAP 3 outlet terpasang di kartu outlet & footer: Pulomas = Jl. Angkur No. 26D (Ruko Biru), Kayu Putih, Pulogadung, Jakarta Timur; Ujungberung = Jl. Rumah Sakit No. 50 (Ruko Orange sebelah Alfamart), Ujungberung, Bandung; Kalimulya = Jl. Raya Kalimulya No. 86B (Depan Sekolah Tunas Bangsa Islamic School), Cilodong, Depok.
 
 ## Backlog
 - P0: Kirim ulasan asli Google Maps ★5 untuk outlet Ujungberung & Kalimulya (format: link share ulasan seperti yang Pulomas) — tambahkan ke TESTIMONIALS di data/laundry.js.
 - P1: Embed Google Maps interaktif di kartu outlet.
-- P1: Alamat lengkap tiap outlet (saat ini hanya nama wilayah + link Maps).
 - P2: SEO (OG image, schema LocalBusiness), mode gelap, animasi halaman ulasan asli terhubung Google Places API.
 
 ## Next Tasks

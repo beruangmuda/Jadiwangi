@@ -111,6 +111,7 @@ export default function OutletFinder({ outletId, onSelect }) {
                   <div>
                     <h3 className="font-display text-2xl tracking-tight text-[#1E1329]">{o.name}</h3>
                     <p className="text-sm text-[#645B72] mt-0.5">{o.region}</p>
+                    <p className="text-xs text-[#645B72] mt-1.5 leading-relaxed">{o.address}</p>
                   </div>
                   <MapPin className={`w-6 h-6 shrink-0 ${selected ? "text-[#7E22CE]" : "text-purple-300"}`} />
                 </div>
