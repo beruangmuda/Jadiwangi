@@ -21,12 +21,25 @@ export const haversineKm = (lat1, lon1, lat2, lon2) => {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-// Estimasi ongkir antar-jemput: < 2 km GRATIS, 2-5 km Rp 3.000/km (dari km ke-3)
+// Tarif resmi antar-jemput: < 2 km GRATIS, 2 km Rp 10.000, 3–5 km Rp 15.000
 export const deliveryFee = (km) => {
   if (km == null) return null;
-  if (km <= 2) return 0;
-  if (km <= 5) return Math.ceil(km - 2) * 3000;
+  if (km < 2) return 0;
+  if (km < 3) return 10000;
+  if (km <= 5) return 15000;
   return -1; // di luar radius
+};
+
+// Jam operasional semua outlet: 07.00–21.00 WIB setiap hari
+export const isOpenNow = () => {
+  const hour = Number(
+    new Intl.DateTimeFormat("id-ID", {
+      hour: "numeric",
+      hour12: false,
+      timeZone: "Asia/Jakarta",
+    }).format(new Date())
+  );
+  return hour >= 7 && hour < 21;
 };
 
 export const OUTLETS = [
@@ -38,7 +51,7 @@ export const OUTLETS = [
     lat: -6.1866679,
     lng: 106.8867307,
     mapsUrl: "https://maps.app.goo.gl/22KBfJEZxmseseVh9",
-    hours: "Buka Setiap Hari",
+    hours: "07.00 – 21.00 WIB · Setiap Hari",
     waOutlet: "0856 9125 9381",
     pricelistImage:
       "https://customer-assets-rejwkqb3.emergentagent.net/job_307e2abc-0d5f-4f42-a8d4-2c090b6b8405/artifacts/94k7o4sx_Price%20List%20Jadiwangi%20Pulomas.webp",
@@ -116,7 +129,7 @@ export const OUTLETS = [
     lat: -6.9174122,
     lng: 107.6986498,
     mapsUrl: "https://maps.app.goo.gl/nQz9hnHtAauVT8Q66",
-    hours: "Buka Setiap Hari",
+    hours: "07.00 – 21.00 WIB · Setiap Hari",
     waOutlet: "0856 0198 4480",
     pricelistImage:
       "https://customer-assets-rejwkqb3.emergentagent.net/job_307e2abc-0d5f-4f42-a8d4-2c090b6b8405/artifacts/pmnjilvz_Price%20List%20Jadiwangi%20Ujungberung.webp",
@@ -194,7 +207,7 @@ export const OUTLETS = [
     lat: -6.4373379,
     lng: 106.8214778,
     mapsUrl: "https://maps.app.goo.gl/GMsodebyyefpKHEt5",
-    hours: "Buka Setiap Hari",
+    hours: "07.00 – 21.00 WIB · Setiap Hari",
     waOutlet: "0857 3535 0048",
     pricelistImage:
       "https://customer-assets-rejwkqb3.emergentagent.net/job_307e2abc-0d5f-4f42-a8d4-2c090b6b8405/artifacts/66m9uj6u_Price%20List%20Jadiwangi%20Depok.webp",
@@ -290,14 +303,53 @@ export const USP_CHAPTERS = [
   },
 ];
 
-// CONTOH — akan diganti dengan ulasan asli Google Maps ★5 dari pemilik bisnis
+// PROMO BULANAN — cukup edit object ini untuk ganti promo tiap bulan
+export const PROMO = {
+  active: true,
+  badge: "Promo Jumat Berkah",
+  text: "Diskon 10% setiap hari Jumat — semua layanan, semua outlet",
+  cta: "Klaim via WA",
+  waMessage:
+    "Halo Jadiwangi Laundry! Saya mau klaim Promo Jumat Berkah diskon 10%. Mohon infonya ya kak.",
+};
+
+// Ulasan asli Google Maps ★5 — Outlet Pulomas (tertaut ke ulasan aslinya)
 export const TESTIMONIALS = [
-  { name: "Dewi Lestari", outlet: "pulomas", text: "Baru kali ini nemu laundry yang wanginya awet berhari-hari. Setrikaan rapi banget, kemeja kantor langsung siap pakai. Langganan tetap!" },
-  { name: "Rizky Pratama", outlet: "pulomas", text: "Adminnya fast respon di WhatsApp, antar jemputnya juga on time. Harga sesuai pricelist, nggak ada biaya aneh-aneh." },
-  { name: "Intan Permata", outlet: "ujungberung", text: "Sepatu putihku balik kinclong kayak baru beli. Buat harga segini sih worth it banget, bakal balik lagi sih pasti." },
-  { name: "Budi Santoso", outlet: "ujungberung", text: "Udah coba banyak laundry di daerah Ujungberung, ini yang paling rapi dan paling wangi. Mukena juga dicuci terpisah. Recommended!" },
-  { name: "Maya Anggraini", outlet: "kalimulya", text: "Cuci bed cover queen di sini hasilnya bersih dan wangi banget. Bisa pantau status cucian dari link di nota, transparan banget." },
-  { name: "Fajar Nugroho", outlet: "kalimulya", text: "Express 6 jam beneran kelar! Ngebantu banget pas butuh batik buat acara mendadak. Pelayanannya ramah pula." },
+  {
+    name: "Ganies Anggradini",
+    outlet: "pulomas",
+    time: "5 bulan lalu",
+    text: "Selalu jadi andalan untuk laundry kiloan di daerah Rawamangun dan Pulomas. Bersih, dan pakai Dettol 👍",
+    link: "https://maps.app.goo.gl/F6XX4nPm9Aa9foSQ9",
+  },
+  {
+    name: "Denny Mactavish",
+    outlet: "pulomas",
+    time: "1 tahun lalu",
+    text: "Pelayanan cepat dan tepat waktu. Ramah, hasilnya bersih dan wangi.",
+    link: "https://maps.app.goo.gl/i13ocga8mSheo2Js8",
+  },
+  {
+    name: "Hani Yulandani",
+    outlet: "pulomas",
+    time: "1 tahun lalu",
+    text: "Pelayanan ramah. Hasil cuci dan setrikanya bagus.",
+    link: "https://maps.app.goo.gl/14kKGyHVjwLa7MCS6",
+  },
+  {
+    name: "Dorgis Bernando",
+    outlet: "pulomas",
+    time: "1 tahun lalu",
+    text: "Pelayanan bagus, parfumnya wangi. Pelayanannya ramah.",
+    link: "https://maps.app.goo.gl/PHQvCm47QfTNfdh89",
+  },
+  {
+    name: "widya siagian",
+    outlet: "pulomas",
+    time: "1 tahun lalu",
+    text: "Laundry recommended di Kayu Putih..",
+    link: "https://maps.app.goo.gl/kdfkTxXSafeJbCgj8",
+  },
 ];
 
 export const HERO_IMG =

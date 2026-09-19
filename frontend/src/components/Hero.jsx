@@ -45,7 +45,7 @@ export default function Hero({ onNavigate }) {
       id="beranda"
       ref={ref}
       onMouseMove={onMouseMove}
-      className="hero-grain relative min-h-screen flex items-center overflow-hidden pt-16"
+      className="hero-grain relative min-h-screen flex items-center overflow-hidden pt-[100px]"
     >
       <div className="absolute -top-32 -right-40 w-[36rem] h-[36rem] rounded-full bg-[#E9D5FF] blur-3xl opacity-70" />
       <div className="absolute top-1/2 -left-48 w-[30rem] h-[30rem] rounded-full bg-[#F3E8FF] blur-3xl opacity-80" />

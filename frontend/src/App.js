@@ -35,7 +35,7 @@ export default function App() {
 
   const onNavigate = useCallback((e, hash) => {
     e.preventDefault();
-    if (window.__lenis) window.__lenis.scrollTo(hash, { offset: -70 });
+    if (window.__lenis) window.__lenis.scrollTo(hash, { offset: -104 });
     else document.querySelector(hash)?.scrollIntoView({ behavior: "smooth" });
   }, []);
 

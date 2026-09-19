@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { ExternalLink, Loader2, MapPin, Navigation, Truck } from "lucide-react";
 import { OUTLETS, deliveryFee, haversineKm, rp, waLink } from "@/data/laundry";
+import OpenBadge from "@/components/OpenBadge";
 
 export default function OutletFinder({ outletId, onSelect }) {
   const [status, setStatus] = useState("idle"); // idle | locating | done | denied
@@ -115,10 +116,7 @@ export default function OutletFinder({ outletId, onSelect }) {
                 </div>
 
                 <div className="mt-5 space-y-2.5 text-sm">
-                  <p className="flex items-center gap-2 text-[#645B72]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    {o.hours}
-                  </p>
+                  <OpenBadge hours={o.hours} testId={`outlet-hours-${o.id}`} />
                   {dist != null && (
                     <p data-testid={`outlet-distance-${o.id}`} className="font-semibold text-[#1E1329]">
                       Jarak dari lokasimu: ± {dist.toFixed(1)} km

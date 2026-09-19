@@ -16,7 +16,7 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
   - Ujungberung (JadiwangiLAH): -6.9174122, 107.6986498 (https://maps.app.goo.gl/nQz9hnHtAauVT8Q66)
   - Kalimulya Depok: -6.4373379, 106.8214778 (https://maps.app.goo.gl/GMsodebyyefpKHEt5)
 - Harga per outlet: disalin persis dari 3 gambar pricelist yang dilampirkan user (kiloan + premium care).
-- Ongkir antar jemput: < 2 km GRATIS (resmi dari pricelist), 2–5 km ESTIMASI Rp 3.000/km (tarif belum dikonfirmasi user), > 5 km di luar radius.
+- Ongkir antar jemput: < 2 km GRATIS (resmi dari pricelist), 2 km Rp 10.000, 3–5 km Rp 15.000 (dikonfirmasi user 19 Sep 2026), > 5 km di luar radius.
 - Logo & gambar pricelist asli: customer-assets URL (lihat data/laundry.js).
 - IG: @jadiwangilaundry.
 
@@ -33,14 +33,19 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
 - Ulasan (filter per outlet), FAQ, footer CTA, floating order bar, favicon + meta title.
 - Diverifikasi e2e: geolocation, kalkulator (Rp 34.500 Bandung CKS 5kg; ongkir 4km Rp 6.000), tab pricelist, filter ulasan, link WA.
 
+## Update 19 Sep 2026 (iterasi 2)
+- Testimoni ASLI Google Maps ★5 outlet Pulomas terpasang (5 ulasan: Ganies Anggradini, Denny Mactavish, Hani Yulandani, Dorgis Bernando, widya siagian), tiap kartu tertaut ke link ulasan aslinya. Ujungberung & Kalimulya: empty state + link ke Google Maps (menunggu user kirim ulasan asli).
+- Tarif ongkir RESMI: < 2 km GRATIS, 2 km Rp 10.000, 3–5 km Rp 15.000 (dikonfirmasi user) — berlaku di deteksi lokasi & kalkulator.
+- Strip promo bulanan di atas navbar: "Promo Jumat Berkah — Diskon 10% setiap hari Jumat" → klik langsung chat WA. Ganti promo cukup edit object PROMO di data/laundry.js.
+- Jam operasional 07.00–21.00 WIB setiap hari + badge "Buka Sekarang" otomatis (zona Asia/Jakarta, refresh tiap menit) di semua kartu outlet.
+
 ## Backlog
-- P0: Ganti TESTIMONIALS dengan ulasan asli Google Maps ★5 (user sedang mengumpulkan) — edit array di data/laundry.js.
-- P0: Konfirmasi tarif ongkir 2–5 km (saat ini estimasi Rp 3.000/km) & alamat lengkap + jam operasional tiap outlet.
+- P0: Kirim ulasan asli Google Maps ★5 untuk outlet Ujungberung & Kalimulya (format: link share ulasan seperti yang Pulomas) — tambahkan ke TESTIMONIALS di data/laundry.js.
 - P1: Embed Google Maps interaktif di kartu outlet.
-- P1: Promo bulanan (banner/section) — pricelist menyebut promo tiap bulan via WA/IG.
+- P1: Alamat lengkap tiap outlet (saat ini hanya nama wilayah + link Maps).
 - P2: SEO (OG image, schema LocalBusiness), mode gelap, animasi halaman ulasan asli terhubung Google Places API.
 
 ## Next Tasks
-1. User kirim testimoni asli → ganti data TESTIMONIALS.
-2. User konfirmasi tarif ongkir & jam operasional tiap outlet.
+1. User kirim ulasan asli Ujungberung & Kalimulya → tambah ke TESTIMONIALS.
+2. Ganti promo bulanan: edit object PROMO di /app/frontend/src/data/laundry.js.
 3. Tambah alamat lengkap outlet bila diberikan.

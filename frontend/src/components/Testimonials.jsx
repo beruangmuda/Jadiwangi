@@ -32,7 +32,7 @@ export default function Testimonials() {
                 <Star key={i} className="w-4 h-4 fill-[#F59E0B] text-[#F59E0B]" />
               ))}
             </span>
-            <span className="text-sm font-semibold text-[#1E1329]">Ulasan bintang 5 dari pelanggan</span>
+            <span className="text-sm font-semibold text-[#1E1329]">Ulasan asli bintang 5 · tertaut ke Google Maps</span>
           </div>
         </motion.div>
 
@@ -72,9 +72,15 @@ export default function Testimonials() {
                       <Star key={i} className="w-4 h-4 fill-[#F59E0B] text-[#F59E0B]" />
                     ))}
                   </span>
-                  <span className="text-[10px] font-mono-accent uppercase tracking-wider text-[#645B72]">
-                    Google Maps
-                  </span>
+                  <a
+                    href={t.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid={`review-link-${t.name.toLowerCase().replace(/\s+/g, "-")}`}
+                    className="text-[10px] font-mono-accent uppercase tracking-wider text-[#645B72] hover:text-[#7E22CE] transition-colors"
+                  >
+                    Google Maps · {t.time} ↗
+                  </a>
                 </div>
                 <blockquote className="text-sm sm:text-base text-[#1E1329] leading-relaxed">
                   “{t.text}”
@@ -91,6 +97,22 @@ export default function Testimonials() {
               </motion.figure>
             ))}
           </AnimatePresence>
+          {list.length === 0 && (
+            <div data-testid="reviews-empty-state" className="col-span-full bg-white rounded-3xl border border-dashed border-purple-300 p-10 text-center">
+              <p className="text-sm sm:text-base text-[#645B72]">
+                Ulasan outlet ini belum ditampilkan di sini.
+              </p>
+              <a
+                data-testid="reviews-empty-maps-link"
+                href={getOutlet(filter).mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#7E22CE] hover:text-[#581C87] transition-colors"
+              >
+                Lihat ulasan {getOutlet(filter).label} di Google Maps ↗
+              </a>
+            </div>
+          )}
         </motion.div>
       </div>
     </section>

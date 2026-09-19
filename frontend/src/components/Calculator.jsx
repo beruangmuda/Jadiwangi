@@ -158,7 +158,7 @@ export default function Calculator({ outletId }) {
                   onChange={(e) => setKm(Number(e.target.value))}
                   className="w-full accent-[#7E22CE] mt-3"
                 />
-                <p className="text-xs text-[#645B72] mt-1.5">&lt; 2 km gratis · maks. radius 5 km</p>
+                <p className="text-xs text-[#645B72] mt-1.5">&lt; 2 km gratis · 2 km Rp 10.000 · 3–5 km Rp 15.000</p>
               </div>
             </div>
 

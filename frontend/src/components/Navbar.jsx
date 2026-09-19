@@ -1,5 +1,5 @@
-import { MessageCircle } from "lucide-react";
-import { LOGO_URL, getOutlet, waLink } from "@/data/laundry";
+import { MessageCircle, Tag } from "lucide-react";
+import { LOGO_URL, PROMO, getOutlet, waLink } from "@/data/laundry";
 
 const LINKS = [
   { href: "#keunggulan", label: "Keunggulan" },
@@ -13,8 +13,23 @@ const LINKS = [
 export default function Navbar({ outletId, onNavigate }) {
   const outlet = getOutlet(outletId);
   return (
-    <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-xl bg-white/85 border-b border-purple-100 shadow-sm">
-      <div className="max-w-7xl mx-auto px-5 lg:px-8 h-16 flex items-center justify-between gap-4">
+    <header className="fixed top-0 inset-x-0 z-50">
+      {PROMO.active && (
+        <a
+          data-testid="promo-strip"
+          href={waLink(PROMO.waMessage)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-[#7E22CE] to-[#581C87] text-white px-4 py-2 text-xs sm:text-sm hover:from-[#6B21A8] hover:to-[#4C1D95] transition-colors duration-300"
+        >
+          <Tag className="w-3.5 h-3.5 shrink-0" />
+          <span className="font-mono-accent uppercase tracking-widest text-[10px] sm:text-xs text-purple-200">{PROMO.badge}</span>
+          <span className="hidden md:inline font-medium">{PROMO.text}</span>
+          <span className="font-semibold underline underline-offset-2 whitespace-nowrap">{PROMO.cta}</span>
+        </a>
+      )}
+      <div className="backdrop-blur-xl bg-white/85 border-b border-purple-100 shadow-sm">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8 h-16 flex items-center justify-between gap-4">
         <a
           href="#beranda"
           data-testid="navbar-brand-logo"
@@ -54,6 +69,7 @@ export default function Navbar({ outletId, onNavigate }) {
             <span className="hidden sm:inline">Order via WA</span>
             <span className="sm:hidden">WA</span>
           </a>
+        </div>
         </div>
       </div>
     </header>
