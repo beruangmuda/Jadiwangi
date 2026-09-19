@@ -45,6 +45,10 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
 - Marquee menambah pesan "ANTISEPTIK DETTOL LINDUNGI KELUARGA".
 - Logo asli Dettol (perisai hijau, dari Wikimedia Commons) dipasang di kartu add-on antiseptik & toggle Dettol di kalkulator untuk membangun kepercayaan.
 
+## Update 19 Sep 2026 (iterasi 4)
+- Section baru "Cara Kerja Kami" (#proses): 4 kartu ilustrasi SVG beranimasi CSS murni — mesin cuci tersenyum (drum berputar, air bergoyang, gelembung naik), dryer (pakaian berputar), setrika geser dengan uap & percikan, dan pakaian yang melipat rapi. Ditutup banner "Sementara kami mencuci, kamu bebas bermain bersama keluarga" + CTA WA.
+- Navbar menambah link "Cara Kerja". Keyframes animasi di index.css (drum-spin, water-slosh, bubble-rise, iron-slide, steam-puff, fold-flip, sparkle-twinkle).
+
 ## Backlog
 - P0: Kirim ulasan asli Google Maps ★5 untuk outlet Ujungberung & Kalimulya (format: link share ulasan seperti yang Pulomas) — tambahkan ke TESTIMONIALS di data/laundry.js.
 - P1: Embed Google Maps interaktif di kartu outlet.

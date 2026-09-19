@@ -6,6 +6,7 @@ import Hero from "@/components/Hero";
 import Marquee from "@/components/Marquee";
 import Manifesto from "@/components/Manifesto";
 import Antiseptik from "@/components/Antiseptik";
+import Proses from "@/components/Proses";
 import Services from "@/components/Services";
 import OutletFinder from "@/components/OutletFinder";
 import Calculator from "@/components/Calculator";
@@ -48,6 +49,7 @@ export default function App() {
         <Marquee />
         <Manifesto />
         <Antiseptik onNavigate={onNavigate} />
+        <Proses />
         <Services onNavigate={onNavigate} />
         <OutletFinder outletId={outletId} onSelect={setOutletId} />
         <Calculator outletId={outletId} />

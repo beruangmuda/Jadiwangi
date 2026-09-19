@@ -118,3 +118,60 @@
 .lenis.lenis-smooth {
     scroll-behavior: auto !important;
 }
+
+/* Animasi ilustrasi Cara Kerja */
+.svg-origin {
+    transform-box: fill-box;
+    transform-origin: center;
+}
+@keyframes drum-spin {
+    to { transform: rotate(360deg); }
+}
+.animate-drum {
+    animation: drum-spin 2.6s linear infinite;
+}
+@keyframes water-slosh {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-8px); }
+}
+.animate-water {
+    animation: water-slosh 3s ease-in-out infinite;
+}
+@keyframes bubble-rise {
+    0% { transform: translateY(6px) scale(0.6); opacity: 0; }
+    25% { opacity: 0.95; }
+    100% { transform: translateY(-20px) scale(1.15); opacity: 0; }
+}
+.animate-bubble {
+    animation: bubble-rise 2.6s ease-in infinite;
+}
+@keyframes iron-slide {
+    0%, 100% { transform: translateX(-13px); }
+    50% { transform: translateX(13px); }
+}
+.animate-iron {
+    animation: iron-slide 3.4s ease-in-out infinite;
+}
+@keyframes steam-puff {
+    0% { transform: translateY(4px) scale(0.6); opacity: 0; }
+    30% { opacity: 0.85; }
+    100% { transform: translateY(-18px) scale(1.2); opacity: 0; }
+}
+.animate-steam {
+    animation: steam-puff 2.3s ease-out infinite;
+}
+@keyframes fold-flip {
+    0%, 18% { transform: rotateX(0deg) translateY(-14px); }
+    60%, 100% { transform: rotateX(-180deg) translateY(0); }
+}
+.animate-fold {
+    transform-origin: center bottom;
+    animation: fold-flip 3.2s ease-in-out infinite;
+}
+@keyframes sparkle-twinkle {
+    0%, 100% { transform: scale(0.7); opacity: 0.5; }
+    50% { transform: scale(1.15); opacity: 1; }
+}
+.animate-sparkle {
+    animation: sparkle-twinkle 2s ease-in-out infinite;
+}

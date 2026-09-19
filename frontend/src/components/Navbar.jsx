@@ -3,6 +3,7 @@ import { LOGO_URL, PROMO, getOutlet, waLink } from "@/data/laundry";
 
 const LINKS = [
   { href: "#keunggulan", label: "Keunggulan" },
+  { href: "#proses", label: "Cara Kerja" },
   { href: "#layanan", label: "Layanan" },
   { href: "#outlet", label: "Outlet & Jarak" },
   { href: "#kalkulator", label: "Kalkulator" },
