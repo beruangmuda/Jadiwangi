@@ -10,7 +10,7 @@ const LINES = [
 
 const CHIPS = [
   { icon: WashingMachine, label: "Cuci Satuan & Kiloan" },
-  { icon: Truck, label: "Gratis Jemput < 2 KM" },
+  { icon: Truck, label: "Antar Jemput Radius 5 KM" },
   { icon: Star, label: "Ulasan Bintang 5" },
 ];
 

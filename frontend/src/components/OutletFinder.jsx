@@ -52,7 +52,7 @@ export default function OutletFinder({ outletId, onSelect }) {
             Deteksi lokasimu, kami hitung <em className="text-[#7E22CE]">jarak & ongkirnya.</em>
           </h2>
           <p className="mt-5 text-base sm:text-lg text-[#645B72] leading-relaxed">
-            Antar jemput radius 5 KM dari outlet. Di bawah 2 KM, ongkirnya gratis.
+            Antar jemput radius 5 KM dari outlet. Ongkir Rp 10.000 (0–2 km) · Rp 15.000 (3–5 km).
           </p>
         </motion.div>
 
@@ -128,17 +128,13 @@ export default function OutletFinder({ outletId, onSelect }) {
                       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
                         fee === -1
                           ? "bg-amber-50 text-amber-700 border border-amber-200"
-                          : fee === 0
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                           : "bg-purple-50 text-[#581C87] border border-purple-200"
                       }`}
                     >
                       <Truck className="w-3.5 h-3.5" />
                       {fee === -1
                         ? "Di luar radius antar jemput (5 km)"
-                        : fee === 0
-                        ? "Ongkir antar jemput GRATIS"
-                        : `Estimasi ongkir ${rp(fee)}`}
+                        : `Ongkir antar jemput ${rp(fee)}`}
                     </p>
                   )}
                 </div>

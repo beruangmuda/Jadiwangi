@@ -16,7 +16,7 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
   - Ujungberung (JadiwangiLAH): -6.9174122, 107.6986498 (https://maps.app.goo.gl/nQz9hnHtAauVT8Q66)
   - Kalimulya Depok: -6.4373379, 106.8214778 (https://maps.app.goo.gl/GMsodebyyefpKHEt5)
 - Harga per outlet: disalin persis dari 3 gambar pricelist yang dilampirkan user (kiloan + premium care).
-- Ongkir antar jemput: < 2 km GRATIS (resmi dari pricelist), 2 km Rp 10.000, 3–5 km Rp 15.000 (dikonfirmasi user 19 Sep 2026), > 5 km di luar radius.
+- Ongkir antar jemput RESMI (aturan terbaru user, 19 Sep 2026): 0–2 km Rp 10.000, 3–5 km Rp 15.000, > 5 km di luar radius. TIDAK ada lagi gratis < 2 km — semua copy (hero chip, marquee, USP 04, FAQ, kalkulator, deteksi lokasi) sudah disesuaikan.
 - Logo & gambar pricelist asli: customer-assets URL (lihat data/laundry.js).
 - IG: @jadiwangilaundry.
 

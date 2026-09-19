@@ -158,7 +158,7 @@ export default function Calculator({ outletId }) {
                   onChange={(e) => setKm(Number(e.target.value))}
                   className="w-full accent-[#7E22CE] mt-3"
                 />
-                <p className="text-xs text-[#645B72] mt-1.5">&lt; 2 km gratis · 2 km Rp 10.000 · 3–5 km Rp 15.000</p>
+                <p className="text-xs text-[#645B72] mt-1.5">0–2 km Rp 10.000 · 3–5 km Rp 15.000 · maks. radius 5 km</p>
               </div>
             </div>
 
@@ -201,7 +201,7 @@ export default function Calculator({ outletId }) {
             <div className="flex justify-between gap-4">
               <dt className="text-purple-200">Ongkir antar jemput ({km} km)</dt>
               <dd className="font-medium" data-testid="calc-ongkir-display">
-                {fee === -1 ? "Hubungi admin" : fee === 0 ? "GRATIS" : rp(fee)}
+                {fee === -1 ? "Hubungi admin" : rp(fee)}
               </dd>
             </div>
             <div className="border-t border-white/20 pt-4 flex justify-between items-baseline gap-4">

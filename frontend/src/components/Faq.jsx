@@ -13,7 +13,7 @@ const FAQS = [
   },
   {
     q: "Bagaimana layanan antar jemputnya?",
-    a: "Kurir kami menjemput dan mengantar cucianmu sampai depan rumah dalam radius maksimal 5 km dari outlet. Jarak di bawah 2 km gratis ongkir, 2 km Rp 10.000, dan 3–5 km Rp 15.000. Order langsung lewat WhatsApp dan kurir kami meluncur.",
+    a: "Kurir kami menjemput dan mengantar cucianmu sampai depan rumah dalam radius maksimal 5 km dari outlet. Ongkirnya flat dan jujur: Rp 10.000 untuk jarak 0–2 km dan Rp 15.000 untuk 3–5 km. Order langsung lewat WhatsApp dan kurir kami meluncur.",
   },
   {
     q: "Kalau pakaian masih bau apek, bagaimana?",

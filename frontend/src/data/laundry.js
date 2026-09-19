@@ -21,10 +21,9 @@ export const haversineKm = (lat1, lon1, lat2, lon2) => {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-// Tarif resmi antar-jemput: < 2 km GRATIS, 2 km Rp 10.000, 3–5 km Rp 15.000
+// Tarif resmi antar-jemput: 0–2 km Rp 10.000, 3–5 km Rp 15.000
 export const deliveryFee = (km) => {
   if (km == null) return null;
-  if (km < 2) return 0;
   if (km < 3) return 10000;
   if (km <= 5) return 15000;
   return -1; // di luar radius
@@ -298,8 +297,8 @@ export const USP_CHAPTERS = [
   },
   {
     number: "04",
-    title: "Antar Jemput, < 2 KM Gratis Ongkir",
-    desc: "Kurir kami jemput dan antar sampai depan rumah dalam radius 5 KM dari outlet. Jarak di bawah 2 KM? Ongkirnya gratis.",
+    title: "Antar Jemput Sampai Depan Rumah",
+    desc: "Kurir kami jemput dan antar cucianmu dalam radius 5 KM dari outlet. Ongkir flat & jujur: Rp 10.000 (0–2 km) dan Rp 15.000 (3–5 km).",
   },
 ];
 
