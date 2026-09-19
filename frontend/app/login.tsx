@@ -67,7 +67,7 @@ export default function Login() {
         <View style={styles.logoWrap}>
           <Image source={require("../assets/images/jadiwangi-logo.png")} style={styles.logoImg} contentFit="contain" />
         </View>
-        <Text style={styles.tagline}>POS Laundry • ESTD 2021</Text>
+        <Text style={styles.tagline}>Jadi Lebih Mudah dengan Jadi Wangi App</Text>
       </LinearGradient>
 
       <KeyboardAwareScrollView
