@@ -101,3 +101,45 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+## user_problem_statement: "Masukkan pricelist 3 outlet (Depok/Kalimulya, Jakarta/Pulomas, Bandung/Ujungberung) ke database. Model 1 item = 2 harga (Reguler & Express) dengan toggle saat order. Reset data contoh."
+
+## backend:
+##   - task: "Pricelist per outlet + services schema (outlet_id, price_express, duration, duration_express, min_kg)"
+##     implemented: true
+##     working: true
+##     file: "backend/server.py"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Reseed pricelist_v=3. /services?outlet_id= returns Depok 41, Jakarta 43, Bandung 43. Order create with express price verified via curl (18000x5=90000)."
+
+## frontend:
+##   - task: "Buat Order: services per outlet, grouped by category, Reguler/Express toggle"
+##     implemented: true
+##     working: "NA"
+##     file: "frontend/app/order-baru.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##   - task: "Produk & Layanan: outlet tabs, dual price display, full edit form"
+##     implemented: true
+##     working: "NA"
+##     file: "frontend/app/manage/produk.tsx"
+##     stuck_count: 0
+##     priority: "medium"
+##     needs_retesting: true
+
+## test_plan:
+##   current_focus:
+##     - "Buat Order flow with express toggle and outlet switching"
+##     - "Manage Produk per outlet"
+##   test_all: false
+##   test_priority: "high_first"
+
+## agent_communication:
+##     -agent: "main"
+##     -message: "Pricelist per outlet loaded. Test order flow (pick customer, toggle express, add items, total reflects express price, submit order) and manage produk per outlet. Owner login owner/owner123."

@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 3 (Reguler/Express dual-pricing + per-outlet pricelists) fully verified end-to-end. Backend pytest 17/17 PASS against public URL (username/password auth updated in tests). GET /api/services?outlet_id={depok|jakarta|bandung} returns exactly 41/43/43 active services with fields price, price_express, duration, duration_express, min_kg, category, outlet_id. POST/PUT /api/services persists all new columns (price_express=18000, duration='1 Hari', duration_express='4 Jam', min_kg=5 all round-trip). Order create with express price: POST /api/orders with 5x18000 -> total 90000 (verified in test_order_with_express_price_total). Frontend (390x844 mobile web): Owner login owner/owner123 works, FAB fab-buat-order opens /order-baru. Outlet chips (outlet-pick-Depok/Jakarta/Bandung) render as 'Kalimulya/Pulomas/Ujungberung' labels. Services grouped by category (KILOAN, ADD-ON, BED COVER, SELIMUT, BANTAL & GULING, BONEKA, ATASAN, ...). Each service with express shows testIDs speed-<uuid>-regular / speed-<uuid>-express; toggling Express updates displayed price (Rp10.000 -> Rp18.000 for Cuci Kering Setrika) and running total updates in bottom bar (5 x Rp18.000 = Rp90.000 confirmed). Switching outlet chip from Kalimulya -> Ujungberung reloads Bandung-specific pricelist (Cuci Kering Setrika Rp6.900) and resets cart to '0 item / Rp0'. Customer picker works, Konfirmasi Sudah Bayar submits order and returns to /home dashboard (13 transaksi visible). Setelan > Produk & Layanan: three outlet tabs work; row shows regular price/duration and 'Express Rp.../ ... Jam' subline; add-service modal exposes fields Harga Reguler, Harga Express, Durasi Reguler, Durasi Express, Minimal Kg. Per-outlet service counts as shown in UI (include_inactive=true): Depok 42, Jakarta 43, Bandung 43 (Depok +1 because our test suite created one TEST_Svc). No regressions.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "/manage/produk", "issue": "On first landing (deep-linked navigation) no outlet tab is auto-selected, showing 'Belum ada layanan' until the user taps a tab. session.currentOutletId may not be set at hydration time. Workaround: fallback to outlets[0].id already in code but session may still be undefined on first render.", "testID": "outlet-tab-Depok", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Persistent RN-Web console deprecation: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Non-blocking."}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Optional: in /app/frontend/app/manage/produk.tsx, useEffect to set outletId to outlets[0].id when session hydrates so the first tab is auto-selected on deep-link.",
+    "Optional: migrate shadow* style props to boxShadow to silence RN-Web deprecation warning.",
+    "Cleanup: one TEST_Svc_* row is now visible under Kalimulya (Depok) via include_inactive; recommend a periodic Supabase cleanup of TEST_ prefixed rows."
+  ],
+  "critical_code_review_comments": [
+    "server.py grew to 1341 lines - still monolithic. Consider splitting into modules (services/orders/reports/masterdata).",
+    "order-baru.tsx priceOf() correctly falls back to regular price when speed=='express' but svc.price_express is null - defensive and correct.",
+    "produk.tsx correctly sends price_express=null when field left empty (String '' -> null) so backend column stays NULL."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py", "/app/test_reports/iteration_3.json"],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "100% of listed critical flows"},
+  "seed_data_creation": "TestServiceCRUD created one TEST_Svc_<hex> row for Depok. TestExpressOrder + TestServiceCRUD also created several test orders (paid/unpaid) for the first customer at Depok and at Jakarta. No customer records created this run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 3 feature — per-outlet pricelists (Depok=41, Jakarta=43, Bandung=43) with express price toggle — is fully functional across backend and frontend. Key testIDs on order-baru: fab-buat-order, outlet-pick-<City>, pick-customer, cust-opt-<id>, speed-<svc_id>-regular/-express, add-<svc_id>, plus-<svc_id>, minus-<svc_id>, proceed-payment, confirm-paid, pay-deposit, pay-later. Manage produk: outlet-tab-<City>, add-service, edit-service-<svc_id>, svc-name, svc-price, svc-price-exp, svc-dur, svc-dur-exp, svc-minkg, save-service. Auth: POST /api/auth/login {username,password}; owner/owner123 works. Backend base URL: https://wangi-dashboard.preview.emergentagent.com/api. Outlet UUIDs: Depok e5fc0b12-25f5-4be2-a117-6fea0df032da, Jakarta a1564153-3b1a-4528-9132-1a4406acb094, Bandung 654ab50b-111c-4e9b-8df3-ff7a9a1e0916.",
+  "rca_of_issue": "N/A — feature working end-to-end. Only a minor UX polish (auto-select first outlet on /manage/produk deep-link) noted."
+}

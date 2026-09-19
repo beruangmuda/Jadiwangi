@@ -127,6 +127,7 @@ async def startup():
         await conn.execute(SCHEMA)
         await conn.execute(MIGRATIONS)
     await seed_data()
+    await reseed_pricelist()
     await ensure_credentials()
     logger.info("Database ready.")
 
@@ -136,6 +137,11 @@ alter table employees add column if not exists username text;
 alter table employees add column if not exists password_hash text;
 alter table customers add column if not exists password_hash text;
 create unique index if not exists employees_username_uq on employees (lower(username)) where username is not null;
+alter table services add column if not exists outlet_id uuid references outlets(id);
+alter table services add column if not exists price_express numeric(12,2);
+alter table services add column if not exists duration text default '';
+alter table services add column if not exists duration_express text default '';
+alter table services add column if not exists min_kg numeric(10,2);
 """
 
 MAX_BCRYPT_BYTES = 72
@@ -351,6 +357,255 @@ async def seed_data():
         logger.info("Seeding complete.")
 
 
+# ---------------------------------------------------------------------------
+# Pricelist per outlet (Depok / Jakarta / Bandung) + reseed of sample data
+# ---------------------------------------------------------------------------
+PRICELIST_VERSION = "3"
+
+# Common satuan durations
+_D2 = ("2 Hari", "6 Jam")
+
+
+def _pricelist_for(city: str):
+    """Return list of service tuples for a given outlet city.
+    Each tuple: (name, category, unit, price, price_express|None, duration, duration_express, min_kg|None, icon)
+    """
+    if city == "Depok":
+        atasan = [
+            ("Kemeja", 18000, 32000), ("Kebaya", 29000, 51000), ("Vest", 18000, 32000),
+            ("Jas", 33000, 53000), ("Dress", 38000, 70000), ("Jaket", 30000, 53000),
+            ("Selendang", 10000, 20000), ("Coat", 38000, 70000), ("Songket", 29000, 51000),
+            ("Jubah / Toga", 45000, 89000), ("Seprei", 19000, 35000),
+        ]
+        bawahan = [("Celana", 18000, 32000), ("Rok", 18000, 32000)]
+        ibadah = [("Mukena", 28000, 40000), ("Sarung", 16000, 30000), ("Sajadah", 18000, 35000)]
+        data = {
+            "kiloan": [
+                ("Cuci Kering Setrika", 10000, 18000, 4, "tshirt-crew"),
+                ("Cuci Lipat", 7500, 11000, 5, "washing-machine"),
+                ("Setrika", 9000, 10500, 5, "iron"),
+            ],
+            "dettol": 1000,
+            "bedcover": [("Single (100-120)", 40000, 55000), ("Queen (160-180)", 53000, 75000), ("Super XL (200)", 88000, None)],
+            "selimut": [("Tipis", 20000, 34000), ("Tebal", 26000, 35000)],
+            "bantal": [("Bantal", 40000, "2 Hari"), ("Guling", 40000, "2 Hari"), ("Bantal Leher", 20000, "2 Hari")],
+            "boneka": [("Boneka Kecil", 25000, "3 Hari"), ("Boneka Besar", 36000, "3 Hari")],
+            "atasan": atasan, "bawahan": bawahan, "ibadah": ibadah,
+            "sepatu": [("Sepatu", 40000, "3 Hari"), ("Sandal", 22000, "2 Hari"), ("Tas", 27000, "2 Hari")],
+            "karpet": [("Karpet Tipis", 25000), ("Karpet Tebal", 30000), ("Gorden", 16000), ("Vitrase Gorden", 10000)],
+            "kasur": [("Kasur Palembang", 95000), ("Baby Car Seat", 100000), ("Stroller Anak", 100000)],
+            "keset": 11000,
+        }
+    elif city == "Jakarta":
+        atasan = [
+            ("Kemeja", 19000, 34000), ("Kebaya", 29000, 53000), ("Vest", 19000, 34000),
+            ("Jas", 33000, 53000), ("Dress", 57000, 89000), ("Jaket", 30000, 55000),
+            ("Selendang", 15000, 23000), ("Coat", 38000, 70000), ("Jubah / Toga", 57000, 89000),
+            ("Handuk", 19000, 35000), ("Sprei Set", 19000, 35000),
+        ]
+        bawahan = [("Celana", 23000, 34000), ("Rok", 19000, 32000), ("Songket", 29000, 53000)]
+        ibadah = [("Mukena", 28000, 40000), ("Sarung", 16000, 30000), ("Sajadah", 18000, 34000)]
+        data = {
+            "kiloan": [
+                ("Cuci Kering Setrika", 10500, 18000, 5, "tshirt-crew"),
+                ("Cuci Lipat", 8000, 13000, 5, "washing-machine"),
+                ("Setrika", 9000, 11000, 5, "iron"),
+            ],
+            "dettol": 1000,
+            "bedcover": [("Single (100-120)", 40000, 65000), ("Queen (160-180)", 56000, 77000), ("Super XL (200)", 92000, None)],
+            "selimut": [("Tipis", 26000, 35000), ("Tebal / Bulu", 33000, 55000)],
+            "bantal": [("Bantal", 40000, "3 Hari"), ("Guling", 40000, "3 Hari"), ("Bantal Leher", 30000, "3 Hari")],
+            "boneka": [("Boneka Kecil", 25000, "3 Hari"), ("Boneka Besar", 40000, "3 Hari")],
+            "atasan": atasan, "bawahan": bawahan, "ibadah": ibadah,
+            "sepatu": [("Sepatu", 40000, "3 Hari"), ("Sandal", 22000, "2 Hari"), ("Tas", 32000, "2 Hari")],
+            "karpet": [("Karpet Tipis", 22000), ("Karpet Tebal", 26000), ("Gorden", 17000), ("Vitrase Gorden", 11000)],
+            "kasur": [("Kasur Palembang", 80000), ("Baby Car Seat", 100000), ("Stroller Anak", 100000), ("Kasur Bayi", 55000)],
+            "keset": 15000,
+        }
+    else:  # Bandung
+        atasan = [
+            ("Kemeja", 14500, 23000), ("Kebaya", 29000, 53000), ("Vest", 14500, 23000),
+            ("Jas", 28000, 45000), ("Dress", 35000, 53000), ("Jaket", 30000, 45000),
+            ("Selendang", 10000, 20000), ("Coat", 38000, 70000), ("Jubah / Toga", 30000, 45000),
+            ("Handuk", 10000, 17000), ("Sprei Set", 15000, 25000),
+        ]
+        bawahan = [("Celana", 19000, 29000), ("Rok", 19000, 29000), ("Songket", 29000, 53000)]
+        ibadah = [("Mukena", 10000, 18000), ("Sarung", 10000, 15000), ("Sajadah", 15000, 20000)]
+        data = {
+            "kiloan": [
+                ("Cuci Kering Setrika", 6900, 12000, 3, "tshirt-crew"),
+                ("Cuci Lipat", 5900, 7000, 3, "washing-machine"),
+                ("Setrika", 6000, 8000, 5, "iron"),
+            ],
+            "dettol": 2000,
+            "bedcover": [("Single (100-120)", 28000, 40000), ("Queen (160-180)", 40000, 65000), ("Super XL (200)", 80000, None)],
+            "selimut": [("Tipis", 20000, 35000), ("Tebal / Bulu", 25000, 52000)],
+            "bantal": [("Bantal", 30000, "3 Hari"), ("Guling", 30000, "3 Hari"), ("Bantal Leher", 20000, "3 Hari")],
+            "boneka": [("Boneka Kecil", 20000, "3 Hari"), ("Boneka Besar", 32000, "3 Hari")],
+            "atasan": atasan, "bawahan": bawahan, "ibadah": ibadah,
+            "sepatu": [("Sepatu", 50000, "3 Hari"), ("Sandal", 30000, "2 Hari"), ("Tas", 38000, "2 Hari")],
+            "karpet": [("Karpet Tipis", 21000), ("Karpet Tebal", 23000), ("Gorden", 14000), ("Vitrase Gorden", 10000)],
+            "kasur": [("Kasur Palembang", 85000), ("Baby Car Seat", 80000), ("Stroller Anak", 80000), ("Kasur Bayi", 55000)],
+            "keset": 15000,
+        }
+
+    out = []  # (name, category, unit, price, price_exp, dur, dur_exp, min_kg, icon)
+    for nm, reg, exp, mkg, icon in data["kiloan"]:
+        out.append((nm, "Kiloan", "kg", reg, exp, _D2[0], _D2[1], mkg, icon))
+    out.append(("Add-on Dettol", "Add-on", "kg", data["dettol"], None, "", "", None, "shield-plus"))
+    for nm, reg, exp in data["bedcover"]:
+        out.append((f"Bed Cover {nm}", "Bed Cover", "pcs", reg, exp, _D2[0], (_D2[1] if exp else ""), None, "bed"))
+    for nm, reg, exp in data["selimut"]:
+        out.append((f"Selimut {nm}", "Selimut", "pcs", reg, exp, _D2[0], _D2[1], None, "bed-king"))
+    for nm, price, dur in data["bantal"]:
+        out.append((nm, "Bantal & Guling", "pcs", price, None, dur, "", None, "bed-empty"))
+    for nm, price, dur in data["boneka"]:
+        out.append((nm, "Boneka", "pcs", price, None, dur, "", None, "teddy-bear"))
+    for nm, reg, exp in data["atasan"]:
+        out.append((nm, "Atasan", "pcs", reg, exp, _D2[0], _D2[1], None, "tshirt-crew"))
+    for nm, reg, exp in data["bawahan"]:
+        out.append((nm, "Bawahan", "pcs", reg, exp, _D2[0], _D2[1], None, "hanger"))
+    for nm, reg, exp in data["ibadah"]:
+        out.append((nm, "Ibadah", "pcs", reg, exp, _D2[0], _D2[1], None, "hands-pray"))
+    for nm, price, dur in data["sepatu"]:
+        out.append((nm, "Sepatu & Tas", "pcs", price, None, dur, "", None, "shoe-sneaker"))
+    for nm, price in data["karpet"]:
+        out.append((nm, "Karpet & Gorden", "m", price, None, "7 Hari", "", None, "rug"))
+    for nm, price in data["kasur"]:
+        out.append((nm, "Kasur", "pcs", price, None, "7 Hari", "", None, "bed-double"))
+    out.append(("Keset", "Lantai", "pcs", data["keset"], None, "2 Hari", "", None, "broom"))
+    return out
+
+
+async def reseed_pricelist():
+    """Wipe transactional + service data and load per-outlet pricelist with fresh sample orders."""
+    async with pool.acquire() as conn:
+        ver = await conn.fetchval("select value from app_config where key='pricelist_v'")
+        if ver == PRICELIST_VERSION:
+            return
+        logger.info("Reseeding pricelist per outlet (version %s)...", PRICELIST_VERSION)
+        now = now_utc()
+
+        outlets = await conn.fetch("select id, city, sla_hours from outlets")
+        if not outlets:
+            return
+        # wipe transactional + service data (keep outlets, customers, employees)
+        await conn.execute("delete from order_items")
+        await conn.execute("delete from transactions")
+        await conn.execute("delete from orders")
+        await conn.execute("delete from expenses")
+        await conn.execute("delete from adjustments")
+        await conn.execute("delete from services")
+
+        # insert pricelist per outlet
+        svc_records = []
+        svc_by_outlet: dict = {}
+        for o in outlets:
+            oid = o["id"]
+            svc_by_outlet[oid] = []
+            for (nm, cat, unit, price, price_exp, dur, dur_exp, mkg, icon) in _pricelist_for(o["city"]):
+                sid = uuid.uuid4()
+                pe = Decimal(price_exp) if price_exp is not None else None
+                mk = Decimal(mkg) if mkg is not None else None
+                svc_records.append((sid, oid, nm, cat, unit, Decimal(price), pe, dur, dur_exp, mk, icon, True, now))
+                svc_by_outlet[oid].append((sid, nm, unit, Decimal(price)))
+        await conn.copy_records_to_table(
+            "services", records=svc_records,
+            columns=["id", "outlet_id", "name", "category", "unit", "price", "price_express",
+                     "duration", "duration_express", "min_kg", "icon", "active", "created_at"])
+
+        # regenerate sample orders per outlet using its own services
+        cust_rows = await conn.fetch("select id, outlet_id from customers")
+        cust_by_outlet: dict = {}
+        for c in cust_rows:
+            cust_by_outlet.setdefault(c["outlet_id"], []).append(c["id"])
+        sla_by_outlet = {o["id"]: o["sla_hours"] for o in outlets}
+
+        orders = []; items = []; txns = []
+        points_by_cust: dict = {}
+        code_seq = 1000
+        for oid, custs in cust_by_outlet.items():
+            svcs = svc_by_outlet.get(oid, [])
+            if not custs or not svcs:
+                continue
+            sla = sla_by_outlet.get(oid, 48)
+            for day_offset in range(30, -1, -1):
+                day = now - timedelta(days=day_offset)
+                n_orders = random.randint(3, 7) if day_offset == 0 else random.randint(1, 5)
+                for _ in range(n_orders):
+                    cust_id = random.choice(custs)
+                    created = day.replace(hour=random.randint(8, 19), minute=random.randint(0, 59), second=0, microsecond=0)
+                    chosen = random.sample(svcs, random.randint(1, 3))
+                    total = Decimal(0); weight = Decimal(0); unit_qty = 0
+                    ordid = uuid.uuid4()
+                    for (sid, nm, unit, price) in chosen:
+                        if unit == "kg":
+                            qty = Decimal(random.choice([3, 4, 5, 6, 7, 8])); weight += qty
+                        else:
+                            qty = Decimal(random.randint(1, 3)); unit_qty += int(qty)
+                        subtotal = price * qty; total += subtotal
+                        items.append((uuid.uuid4(), ordid, sid, nm, unit, qty, price, subtotal))
+                    if day_offset == 0:
+                        status = random.choice(["received", "washing", "drying", "ironing", "packing", "ready", "completed"])
+                    elif day_offset <= 2:
+                        status = random.choice(["washing", "ironing", "packing", "ready", "ready", "completed", "completed"])
+                    else:
+                        status = random.choices(["completed", "cancelled"], weights=[92, 8])[0]
+                    delivery = random.choices(["self", "delivery", "pickup"], weights=[60, 25, 15])[0]
+                    due_at = created + timedelta(hours=sla)
+                    paid = status == "completed" or random.random() < 0.6
+                    payment_status = "paid" if paid else "unpaid"
+                    completed_at = created + timedelta(hours=random.randint(max(1, sla - 6), sla + 30)) if status == "completed" else None
+                    cancelled_at = created + timedelta(hours=random.randint(1, 5)) if status == "cancelled" else None
+                    code_seq += 1
+                    code = f"JW-{created.strftime('%y%m%d')}-{code_seq}"
+                    orders.append((ordid, code, cust_id, oid, status, total, weight, unit_qty, payment_status,
+                                   "qris", delivery, "", "owner", created, created, due_at, completed_at, cancelled_at,
+                                   "Salah input" if status == "cancelled" else ""))
+                    if payment_status == "paid" and status != "cancelled":
+                        txns.append((uuid.uuid4(), ordid, oid, total, "income", "qris", created))
+                    if status == "completed":
+                        points_by_cust[cust_id] = points_by_cust.get(cust_id, 0) + int(total / Decimal(1000))
+
+        if orders:
+            await conn.copy_records_to_table(
+                "orders", records=orders,
+                columns=["id", "code", "customer_id", "outlet_id", "status", "total", "weight_kg", "unit_qty",
+                         "payment_status", "payment_method", "delivery_type", "notes", "created_by", "created_at",
+                         "updated_at", "due_at", "completed_at", "cancelled_at", "cancel_reason"])
+        if items:
+            await conn.copy_records_to_table(
+                "order_items", records=items,
+                columns=["id", "order_id", "service_id", "service_name", "unit", "qty", "price", "subtotal"])
+        if txns:
+            await conn.copy_records_to_table(
+                "transactions", records=txns,
+                columns=["id", "order_id", "outlet_id", "amount", "type", "method", "created_at"])
+
+        # recompute customer points
+        await conn.execute("update customers set points=0")
+        for cid, pts in points_by_cust.items():
+            await conn.execute("update customers set points=$1 where id=$2", pts, cid)
+
+        # expenses
+        exp_cats = ["Deterjen & Pewangi", "Listrik & Air", "Gaji Harian", "Plastik & Packaging", "Perawatan Mesin", "Transport Kurir"]
+        expenses = []
+        oids = [o["id"] for o in outlets]
+        for day_offset in range(30, -1, -1):
+            if random.random() < 0.5:
+                continue
+            day = now - timedelta(days=day_offset)
+            expenses.append((uuid.uuid4(), random.choice(oids), random.choice(exp_cats),
+                             Decimal(random.choice([50000, 75000, 100000, 150000, 200000])), "", "owner", day))
+        if expenses:
+            await conn.copy_records_to_table(
+                "expenses", records=expenses,
+                columns=["id", "outlet_id", "category", "amount", "note", "created_by", "created_at"])
+
+        await conn.execute("insert into app_config(key,value) values('pricelist_v',$1) on conflict (key) do update set value=$1", PRICELIST_VERSION)
+        logger.info("Pricelist reseed complete.")
+
+
 # Models
 class LoginBody(BaseModel):
     username: str
@@ -378,6 +633,11 @@ class ServiceBody(BaseModel):
     category: str = "Cuci"
     unit: str = "kg"
     price: float = 0
+    price_express: Optional[float] = None
+    duration: str = ""
+    duration_express: str = ""
+    min_kg: Optional[float] = None
+    outlet_id: Optional[str] = None
     icon: str = "washing-machine"
     active: bool = True
 
@@ -518,19 +778,34 @@ async def update_outlet(oid: str, b: OutletBody):
         return row_to_dict(row)
 
 
+CATEGORY_ORDER = ["Kiloan", "Add-on", "Bed Cover", "Selimut", "Bantal & Guling", "Boneka",
+                  "Atasan", "Bawahan", "Ibadah", "Sepatu & Tas", "Karpet & Gorden", "Kasur", "Lantai"]
+
+
 @api.get("/services")
-async def list_services(include_inactive: bool = False):
+async def list_services(include_inactive: bool = False, outlet_id: Optional[str] = None):
     async with pool.acquire() as conn:
-        q = "select * from services" + ("" if include_inactive else " where active=true") + " order by category, name"
-        return rows_to_list(await conn.fetch(q))
+        clauses = []
+        args = []
+        if not include_inactive:
+            clauses.append("active=true")
+        if outlet_id:
+            args.append(outlet_id)
+            clauses.append(f"outlet_id=${len(args)}")
+        where = (" where " + " and ".join(clauses)) if clauses else ""
+        rows = rows_to_list(await conn.fetch(f"select * from services{where}", *args))
+    rows.sort(key=lambda r: (CATEGORY_ORDER.index(r["category"]) if r["category"] in CATEGORY_ORDER else 99, r["name"]))
+    return rows
 
 
 @api.post("/services")
 async def create_service(b: ServiceBody):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "insert into services(name,category,unit,price,icon,active) values($1,$2,$3,$4,$5,$6) returning *",
-            b.name, b.category, b.unit, b.price, b.icon, b.active)
+            """insert into services(name,category,unit,price,price_express,duration,duration_express,min_kg,outlet_id,icon,active)
+               values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning *""",
+            b.name, b.category, b.unit, b.price, b.price_express, b.duration, b.duration_express,
+            b.min_kg, b.outlet_id, b.icon, b.active)
         return row_to_dict(row)
 
 
@@ -538,8 +813,10 @@ async def create_service(b: ServiceBody):
 async def update_service(sid: str, b: ServiceBody):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "update services set name=$1,category=$2,unit=$3,price=$4,icon=$5,active=$6 where id=$7 returning *",
-            b.name, b.category, b.unit, b.price, b.icon, b.active, sid)
+            """update services set name=$1,category=$2,unit=$3,price=$4,price_express=$5,duration=$6,
+               duration_express=$7,min_kg=$8,outlet_id=$9,icon=$10,active=$11 where id=$12 returning *""",
+            b.name, b.category, b.unit, b.price, b.price_express, b.duration, b.duration_express,
+            b.min_kg, b.outlet_id, b.icon, b.active, sid)
         if not row:
             raise HTTPException(404, "Layanan tidak ditemukan")
         return row_to_dict(row)

@@ -49,6 +49,13 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 ## Update (2026-06, iterasi 4)
 - [x] Ukuran angka nominal dikecilkan & diproporsionalkan agar tidak terpotong: Beranda Pendapatan (17px) & Omzet (15px); Laporan tileValue (15px) & Laba Bersih (22px). Tambah minimumFontScale pada adjustsFontSizeToFit. Verifikasi: Rp13.892.000 dst tampil penuh.
 
+## Update (2026-06, iterasi 5)
+- [x] Pricelist per outlet dimasukkan ke DB (Depok/Kalimulya 41, Jakarta/Pulomas 43, Bandung/Ujungberung 43 layanan) sesuai gambar pricelist resmi.
+- [x] Tabel services ditambah kolom: outlet_id, price_express, duration, duration_express, min_kg. Endpoint /services bisa difilter per outlet.
+- [x] Model 1 item = 2 harga (Reguler & Express) + toggle saat Buat Order; kategori dikelompokkan (Kiloan, Add-on, Bed Cover, Selimut, dst).
+- [x] Layar Produk & Layanan: tab outlet, tampil 2 harga + durasi, form lengkap (harga reg/express, durasi, min kg).
+- [x] Data contoh (order/transaksi/pengeluaran) di-reset & di-generate ulang per outlet dengan pricelist baru (guard pricelist_v).
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Kasbon pegawai (tabel sudah ada, UI belum) & saldo deposit pelanggan (pakai untuk bayar).

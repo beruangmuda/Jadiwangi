@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, Modal, TextInput, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -42,22 +42,43 @@ export default function OrderBaru() {
   const [search, setSearch] = useState("");
   const [qrisOpen, setQrisOpen] = useState(false);
   const [payError, setPayError] = useState("");
+  const [speeds, setSpeeds] = useState<Record<string, "regular" | "express">>({});
 
-  const { data: services, isLoading: loadingSvc } = useQuery({ queryKey: ["services"], queryFn: () => api.get("/services") });
+  const { data: services, isLoading: loadingSvc } = useQuery({
+    queryKey: ["services", outletId],
+    queryFn: () => api.get(`/services?outlet_id=${outletId}`),
+    enabled: !!outletId,
+  });
   const { data: customers } = useQuery({
     queryKey: ["customers", search],
     queryFn: () => api.get(`/customers${search ? `?q=${encodeURIComponent(search)}` : ""}`),
     enabled: pickerOpen,
   });
 
+  const priceOf = (svc: any) =>
+    speeds[svc.id] === "express" && svc.price_express != null ? Number(svc.price_express) : Number(svc.price);
+
+  const grouped = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    (services || []).forEach((s: any) => {
+      (map[s.category] = map[s.category] || []).push(s);
+    });
+    return Object.entries(map);
+  }, [services]);
+
   const total = useMemo(
-    () => Object.values(cart).reduce((sum, c) => sum + c.service.price * c.qty, 0),
-    [cart]
+    () => Object.values(cart).reduce((sum, c) => sum + priceOf(c.service) * c.qty, 0),
+    [cart, speeds]
   );
   const totalKg = useMemo(
     () => Object.values(cart).reduce((s, c) => (c.service.unit === "kg" ? s + c.qty : s), 0),
     [cart]
   );
+
+  const setSpeed = (svc: any, speed: "regular" | "express") => {
+    if (Platform.OS !== "web") Haptics.selectionAsync();
+    setSpeeds((p) => ({ ...p, [svc.id]: speed }));
+  };
 
   const setQty = (svc: any, delta: number) => {
     if (Platform.OS !== "web") Haptics.selectionAsync();
@@ -83,10 +104,10 @@ export default function OrderBaru() {
         created_by: session?.role || "owner",
         items: Object.values(cart).map((c) => ({
           service_id: c.service.id,
-          service_name: c.service.name,
+          service_name: speeds[c.service.id] === "express" ? `${c.service.name} (Express)` : c.service.name,
           unit: c.service.unit,
           qty: c.qty,
-          price: c.service.price,
+          price: priceOf(c.service),
         })),
       }),
     onSuccess: () => {
@@ -105,6 +126,11 @@ export default function OrderBaru() {
 
   const deposit = Number(customer?.deposit || 0);
   const canDeposit = deposit >= total && total > 0;
+
+  useEffect(() => {
+    setCart({});
+    setSpeeds({});
+  }, [outletId]);
 
   const canProceed = !!customer && !!outletId && Object.keys(cart).length > 0;
   const outletName = outlets.find((o) => o.id === outletId)?.name || session?.customer?.name || "Outlet";
@@ -159,36 +185,68 @@ export default function OrderBaru() {
           {loadingSvc ? (
             <Loading />
           ) : (
-            <View style={{ gap: spacing.sm }}>
-              {(services || []).map((svc: any) => {
-                const qty = cart[svc.id]?.qty || 0;
-                return (
-                  <View key={svc.id} style={[styles.svcRow, qty > 0 && { borderColor: colors.brandPrimary }]}>
-                    <View style={styles.svcIcon}>
-                      <Icon name={svc.icon} size={20} color={colors.brand} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.svcName}>{svc.name}</Text>
-                      <Text style={styles.svcPrice}>{rupiah(svc.price)}/{svc.unit}</Text>
-                    </View>
-                    {qty > 0 ? (
-                      <View style={styles.stepper}>
-                        <Pressable testID={`minus-${svc.id}`} onPress={() => setQty(svc, -1)} style={styles.stepBtn}>
-                          <Icon name="minus" size={18} color={colors.onBrandPrimary} />
-                        </Pressable>
-                        <Text style={styles.qty}>{qty}</Text>
-                        <Pressable testID={`plus-${svc.id}`} onPress={() => setQty(svc, 1)} style={styles.stepBtn}>
-                          <Icon name="plus" size={18} color={colors.onBrandPrimary} />
-                        </Pressable>
+            <View style={{ gap: spacing.lg }}>
+              {grouped.map(([cat, list]) => (
+                <View key={cat} style={{ gap: spacing.sm }}>
+                  <Text style={styles.catHeader}>{cat}</Text>
+                  {list.map((svc: any) => {
+                    const qty = cart[svc.id]?.qty || 0;
+                    const speed = speeds[svc.id] || "regular";
+                    const hasExpress = svc.price_express != null;
+                    const shownPrice = priceOf(svc);
+                    const dur = speed === "express" && svc.duration_express ? svc.duration_express : svc.duration;
+                    return (
+                      <View key={svc.id} style={[styles.svcRow, qty > 0 && { borderColor: colors.brandPrimary }]}>
+                        <View style={styles.svcIcon}>
+                          <Icon name={svc.icon} size={20} color={colors.brand} />
+                        </View>
+                        <View style={{ flex: 1, gap: 4 }}>
+                          <Text style={styles.svcName}>{svc.name}</Text>
+                          <Text style={styles.svcPrice}>
+                            {rupiah(shownPrice)}/{svc.unit}
+                            {svc.min_kg ? ` • min ${Number(svc.min_kg)} kg` : ""}
+                            {dur ? ` • ${dur}` : ""}
+                          </Text>
+                          {hasExpress ? (
+                            <View style={styles.speedRow}>
+                              {(["regular", "express"] as const).map((sp) => {
+                                const on = speed === sp;
+                                return (
+                                  <Pressable
+                                    key={sp}
+                                    testID={`speed-${svc.id}-${sp}`}
+                                    onPress={() => setSpeed(svc, sp)}
+                                    style={[styles.speedPill, on && { backgroundColor: sp === "express" ? colors.error : colors.brandPrimary, borderColor: sp === "express" ? colors.error : colors.brandPrimary }]}
+                                  >
+                                    <Text style={[styles.speedText, on && { color: colors.onBrandPrimary }]}>
+                                      {sp === "express" ? "Express" : "Reguler"}
+                                    </Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                          ) : null}
+                        </View>
+                        {qty > 0 ? (
+                          <View style={styles.stepper}>
+                            <Pressable testID={`minus-${svc.id}`} onPress={() => setQty(svc, -1)} style={styles.stepBtn}>
+                              <Icon name="minus" size={18} color={colors.onBrandPrimary} />
+                            </Pressable>
+                            <Text style={styles.qty}>{qty}</Text>
+                            <Pressable testID={`plus-${svc.id}`} onPress={() => setQty(svc, 1)} style={styles.stepBtn}>
+                              <Icon name="plus" size={18} color={colors.onBrandPrimary} />
+                            </Pressable>
+                          </View>
+                        ) : (
+                          <Pressable testID={`add-${svc.id}`} onPress={() => setQty(svc, 1)} style={styles.addBtn}>
+                            <Icon name="plus" size={20} color={colors.brandPrimary} />
+                          </Pressable>
+                        )}
                       </View>
-                    ) : (
-                      <Pressable testID={`add-${svc.id}`} onPress={() => setQty(svc, 1)} style={styles.addBtn}>
-                        <Icon name="plus" size={20} color={colors.brandPrimary} />
-                      </Pressable>
-                    )}
-                  </View>
-                );
-              })}
+                    );
+                  })}
+                </View>
+              ))}
             </View>
           )}
         </View>
@@ -300,6 +358,10 @@ const useStyles = makeStyles((c) => ({
   custBox: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, padding: spacing.md },
   custName: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 15, color: c.onSurface },
   svcRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, padding: spacing.md },
+  catHeader: { fontFamily: fonts.displayBold, fontSize: 14, color: c.brand, textTransform: "uppercase", letterSpacing: 0.5, marginTop: spacing.xs },
+  speedRow: { flexDirection: "row", gap: 6, marginTop: 2 },
+  speedPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface },
+  speedText: { fontFamily: fonts.bodyBold, fontSize: 11, color: c.onSurfaceSecondary },
   svcIcon: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   svcName: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurface },
   svcPrice: { fontFamily: fonts.body, fontSize: 12, color: c.muted },
