@@ -95,9 +95,9 @@ export default function Hero({ onNavigate }) {
             transition={{ delay: 0.85, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
             className="mt-6 max-w-xl text-base sm:text-lg leading-relaxed text-[#645B72]"
           >
-            Tak ada lagi baju apek saat musim hujan, setrika kusut, atau cucian tertukar.
-            Pakaian keluargamu dirawat layaknya gaun adibusana — dengan garansi cuci ulang
-            gratis dan antar jemput sampai depan rumah.
+            Masuk sebelum jam 10 pagi, sorenya sudah rapi dan siap diambil — pas banget
+            sepulang kantor. Pakaian keluargamu dirawat layaknya gaun adibusana, lengkap
+            dengan garansi cuci ulang gratis dan antar jemput sampai depan rumah.
           </motion.p>
 
           <motion.div
@@ -165,7 +165,7 @@ export default function Hero({ onNavigate }) {
               style={{ transform: "translateZ(50px)" }}
             >
               <p className="text-xs font-mono-accent tracking-widest uppercase text-[#7E22CE]">Express</p>
-              <p className="font-display text-2xl text-[#1E1329]">Selesai 6 Jam</p>
+              <p className="font-display text-2xl text-[#1E1329]">Masuk Pagi, Ambil Sore</p>
             </div>
             <div
               className="absolute -top-5 -right-4 bg-[#581C87] text-white rounded-2xl shadow-[0_15px_40px_rgba(88,28,135,0.35)] px-5 py-4 animate-float-soft"
