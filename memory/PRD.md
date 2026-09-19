@@ -46,6 +46,9 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] Grafik Trend: legend jelas, garis **Omzet = merah**, **Pendapatan = biru**, garis lebih rapi + titik data.
 - [x] Verifikasi e2e: login owner, registrasi+login pelanggan, dashboard, chart — semua OK.
 
+## Update (2026-06, iterasi 4)
+- [x] Ukuran angka nominal dikecilkan & diproporsionalkan agar tidak terpotong: Beranda Pendapatan (17px) & Omzet (15px); Laporan tileValue (15px) & Laba Bersih (22px). Tambah minimumFontScale pada adjustsFontSizeToFit. Verifikasi: Rp13.892.000 dst tampil penuh.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Kasbon pegawai (tabel sudah ada, UI belum) & saldo deposit pelanggan (pakai untuk bayar).

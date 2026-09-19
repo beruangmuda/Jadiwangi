@@ -79,7 +79,7 @@ function StatTile({ icon, label, value, tone = "brand" }: { icon: string; label:
         <Icon name={icon} size={18} color={map[tone]} />
       </View>
       <Text style={styles.tileLabel}>{label}</Text>
-      <Text style={[styles.tileValue, { color: map[tone] }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+      <Text style={[styles.tileValue, { color: map[tone] }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55}>{value}</Text>
     </View>
   );
 }
@@ -312,8 +312,8 @@ const useStyles = makeStyles((c) => ({
   tile: { flexGrow: 1, flexBasis: "45%", backgroundColor: c.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: c.border, gap: 6, ...shadow.card },
   tileIcon: { width: 36, height: 36, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
   tileLabel: { fontFamily: fonts.bodySemi, fontSize: 12, color: c.muted },
-  tileValue: { fontFamily: fonts.displayBold, fontSize: 18 },
-  bigMoney: { fontFamily: fonts.displayBold, fontSize: 28 },
+  tileValue: { fontFamily: fonts.displayBold, fontSize: 15, lineHeight: 20 },
+  bigMoney: { fontFamily: fonts.displayBold, fontSize: 22, lineHeight: 28 },
   hintMuted: { fontFamily: fonts.body, fontSize: 12, color: c.muted },
   lineRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.md },
   lineLabel: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurface },

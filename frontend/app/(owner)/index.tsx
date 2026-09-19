@@ -82,10 +82,10 @@ export default function Dashboard() {
                   <Icon name="cash-multiple" size={20} color={colors.brandPrimary} />
                 </View>
                 <Text style={styles.kpiLabel}>Pendapatan</Text>
-                <Text style={[styles.kpiValue, { fontSize: 20, color: colors.brandPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{rupiah(t?.pendapatan)}</Text>
+                <Text style={[styles.pendapatan, { color: colors.brandPrimary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{rupiah(t?.pendapatan)}</Text>
                 <View style={styles.divider} />
                 <Text style={styles.kpiLabel}>Omzet</Text>
-                <Text style={styles.omzet} numberOfLines={1} adjustsFontSizeToFit>{rupiah(t?.omzet)}</Text>
+                <Text style={styles.omzet} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{rupiah(t?.omzet)}</Text>
               </Card>
             </View>
 
@@ -171,7 +171,8 @@ const useStyles = makeStyles((c) => ({
   custBadge: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", backgroundColor: c.brandTertiary, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3, marginTop: 2 },
   custText: { fontFamily: fonts.bodyBold, fontSize: 11, color: c.onBrandTertiary },
   divider: { height: 1, backgroundColor: c.divider, marginVertical: 2 },
-  omzet: { fontFamily: fonts.displayBold, fontSize: 18, color: c.onSurface },
+  pendapatan: { fontFamily: fonts.displayBold, fontSize: 17, lineHeight: 22 },
+  omzet: { fontFamily: fonts.displayBold, fontSize: 15, lineHeight: 20, color: c.onSurface },
   queueCard: { backgroundColor: c.surface, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: c.border, alignItems: "flex-start", gap: 6, ...shadow.card },
   queueIcon: { width: 34, height: 34, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
   queueValue: { fontFamily: fonts.displayBold, fontSize: 26 },
