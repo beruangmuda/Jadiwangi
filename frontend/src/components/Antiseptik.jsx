@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
-import { Bike, ShieldPlus, TrainFront, Users } from "lucide-react";
+import { Bike, ShieldPlus, TrainFront, Wind } from "lucide-react";
 import { rp } from "@/data/laundry";
 
 const IMG_COMMUTE =
   "https://images.pexels.com/photos/36978293/pexels-photo-36978293.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940";
 
 const RISKS = [
-  { icon: Users, text: "Jaket ojek online yang dipakai bergantian banyak orang" },
+  { icon: Wind, text: "Asap kendaraan dan polusi jalanan yang menempel saat naik ojek online" },
   { icon: TrainFront, text: "Pegangan & sandaran gerbong KRL yang tak pernah berhenti disentuh" },
   { icon: Bike, text: "Debu, polusi, dan keringat jalanan saat naik motor" },
 ];
