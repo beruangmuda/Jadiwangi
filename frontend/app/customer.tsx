@@ -38,7 +38,7 @@ export default function CustomerHome() {
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Logo size={18} />
-        <Pressable testID="logout-btn" onPress={logout} hitSlop={10} style={styles.logoutBtn}>
+        <Pressable testID="logout-btn" onPress={async () => { await logout(); router.replace("/login"); }} hitSlop={10} style={styles.logoutBtn}>
           <Icon name="logout" size={20} color={colors.error} />
         </Pressable>
       </View>

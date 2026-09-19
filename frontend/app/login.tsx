@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, Pressable, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -9,7 +10,6 @@ import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, w
 import { useAuth, Role } from "@/src/auth";
 import { fonts, makeStyles, radius, shadow, spacing, useTheme } from "@/src/theme";
 import { Icon } from "@/src/components/Icon";
-import { Logo } from "@/src/components/ui";
 
 const ROLES: { key: Role; label: string; desc: string; icon: string }[] = [
   { key: "owner", label: "Owner", desc: "Akses penuh & laporan", icon: "crown" },
@@ -79,7 +79,9 @@ export default function Login() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
       <LinearGradient colors={["#C4B5FD", "#A78BFA", "#0096FF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, { paddingTop: insets.top + spacing.xl }]}>
-        <Logo size={30} />
+        <View style={styles.logoWrap}>
+          <Image source={require("../assets/images/jadiwangi-logo.png")} style={styles.logoImg} contentFit="contain" />
+        </View>
         <Text style={styles.tagline}>POS Laundry • ESTD 2021</Text>
       </LinearGradient>
 
@@ -174,8 +176,10 @@ function Key({ children, onPress, testID, variant = "default", disabled }: { chi
 }
 
 const useStyles = makeStyles((c) => ({
-  hero: { paddingHorizontal: spacing.xl, paddingBottom: spacing["2xl"], borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg, alignItems: "flex-start", gap: spacing.xs },
-  tagline: { fontFamily: fonts.bodyBold, fontSize: 13, color: "rgba(255,255,255,0.9)" },
+  hero: { paddingHorizontal: spacing.xl, paddingBottom: spacing["2xl"], borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg, alignItems: "center", gap: spacing.sm },
+  logoWrap: { backgroundColor: "#FFFFFF", borderRadius: radius.lg, padding: spacing.sm, ...shadow.soft },
+  logoImg: { width: 104, height: 104 },
+  tagline: { fontFamily: fonts.bodyBold, fontSize: 13, color: "rgba(255,255,255,0.95)" },
   body: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
   heading: { fontFamily: fonts.displayBold, fontSize: 22, color: c.onSurface, marginBottom: spacing.xs },
   hint: { fontFamily: fonts.body, fontSize: 13, color: c.muted, marginBottom: spacing.lg },

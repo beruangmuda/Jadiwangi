@@ -36,7 +36,7 @@ export default function EmployeeHome() {
             <Text style={styles.role}>{session?.employee?.role_type === "produksi" ? "Produksi" : session?.employee?.role_type === "kurir" ? "Kurir" : "Admin"}</Text>
           </View>
         </View>
-        <Pressable testID="logout-btn" onPress={logout} hitSlop={10} style={styles.logoutBtn}>
+        <Pressable testID="logout-btn" onPress={async () => { await logout(); router.replace("/login"); }} hitSlop={10} style={styles.logoutBtn}>
           <Icon name="logout" size={20} color={colors.error} />
         </Pressable>
       </View>

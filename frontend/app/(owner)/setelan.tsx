@@ -88,7 +88,7 @@ export default function Setelan() {
           </View>
         ))}
 
-        <Pressable testID="logout-btn" onPress={logout} style={({ pressed }) => [styles.logout, pressed && { opacity: 0.8 }]}>
+        <Pressable testID="logout-btn" onPress={async () => { await logout(); router.replace("/login"); }} style={({ pressed }) => [styles.logout, pressed && { opacity: 0.8 }]}>
           <Icon name="logout" size={20} color={colors.error} />
           <Text style={styles.logoutText}>Keluar</Text>
         </Pressable>
