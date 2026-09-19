@@ -63,7 +63,7 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
 - LOGIN PENGELOLA: JWT auth (bcrypt + PyJWT, httpOnly cookie, brute-force lock 5x/15mnt, seed admin idempoten dari env ADMIN_EMAIL/ADMIN_PASSWORD). Halaman /admin (login) & /admin/dashboard (analisis: total interaksi, klik WA per jenis, per outlet, aktivitas terbaru). Tracking via POST /api/track dari tombol WA (navbar, hero, floating, footer, outlet, kalkulator), deteksi lokasi, minat app & kemitraan. Kredensial di /app/memory/test_credentials.md.
 - Section "Jadiwangi App" (#aplikasi): segera hadir, mockup HP CSS, benefit diskon/tracking, CTA "Kabari Saya Saat Rilis" → WA.
 - Section "Kemitraan & Franchise" (#kemitraan): 3 benefit + CTA diskusi kemitraan via WA + highlight pill emas "Kemitraan" di navbar + kalimat "Mulai dari Rp 50 juta ... passive income dan bisnis autopilot".
-- Section Antiseptik: foto utama jadi SLIDER 2 slide (KRL padat + ojek online Jakarta, Unsplash photo-1742060390828) dengan tombol next/prev, caption per slide, counter 1/2.
+- Section Antiseptik: foto utama jadi SLIDER 2 slide (KRL padat + penumpang dibonceng ojek berangkat kerja, Pexels 36974894) dengan tombol next/prev, caption per slide, counter 1/2.
 - ALAMAT LENGKAP 3 outlet terpasang di kartu outlet & footer: Pulomas = Jl. Angkur No. 26D (Ruko Biru), Kayu Putih, Pulogadung, Jakarta Timur; Ujungberung = Jl. Rumah Sakit No. 50 (Ruko Orange sebelah Alfamart), Ujungberung, Bandung; Kalimulya = Jl. Raya Kalimulya No. 86B (Depan Sekolah Tunas Bangsa Islamic School), Cilodong, Depok.
 
 ## Backlog
