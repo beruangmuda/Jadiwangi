@@ -1,0 +1,364 @@
+{
+  "project_name": "JADIWANGI LAUNDRY - Interactive Luxury Laundry Landing Page",
+  "archetype": "ARCHETYPE 5: LUXURY & SENSORY RITUAL (Deep Lavender & Vivid Royal Purple Haute-Scent Couture)",
+  "context_type": "MARKETING_PAGE_HIGH_CONVERSION",
+  "theme_strategy": {
+    "base_theme": "light_luxury_with_dark_couture_accents",
+    "description": "Premium sensory experience blending ultra-clean crisp linens with luxurious French lavender mist tones, deep vivid purple (#6B21A8, #7E22CE), ethereal lilac (#E9D5FF, #F3E8FF), and royal velvet accents. Crisp, hygienic, fragrant, and inviting."
+  },
+  "typography": {
+    "pairing_archetype": "The 'Old Money Tech' / 'Haute Living Editorial' (Editorial Serif Headings + Sterile Precision Monospace Eyebrows + Crisp Humanist Sans Body)",
+    "font_families": {
+      "heading": "Cormorant Garamond, Bodoni Moda, Playfair Display, serif",
+      "body": "Plus Jakarta Sans, Outfit, system-ui, sans-serif",
+      "accent_mono": "IBM Plex Mono, JetBrains Mono, monospace"
+    },
+    "scale_hierarchy": {
+      "h1_hero": "text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight leading-[1.08]",
+      "h2_section": "text-2xl sm:text-3xl lg:text-4xl font-normal tracking-tight leading-snug",
+      "h3_card": "text-xl sm:text-2xl font-medium tracking-normal",
+      "h4_item": "text-lg sm:text-xl font-medium",
+      "body_lg": "text-base sm:text-lg leading-relaxed text-slate-700",
+      "body_normal": "text-sm sm:text-base leading-relaxed text-slate-600",
+      "eyebrow_label": "text-xs uppercase font-mono tracking-[0.25em] text-purple-600 font-semibold"
+    },
+    "typesetting_rules": [
+      "No Inter or generic sans for Main and Sub-headings",
+      "Main titles must use tight tracking (tracking-tight) with loose leading on body copy",
+      "Hero heading max ceiling text-6xl (avoid poster-scale text-8xl)",
+      "Bilingual-ready Bahasa Indonesia copy written with poetic, premium sensory clarity ('Wanginya Tahan 14 Hari', 'Sentuhan Selembut Sutra')"
+    ]
+  },
+  "colors": {
+    "palette_name": "Haute Lavender & Vivid Royal Amethyst",
+    "background_main": "#FAF7FD",
+    "background_secondary": "#F3EBF9",
+    "surface_cards": "#FFFFFF",
+    "surface_tinted": "#F5EEFB",
+    "primary_vivid_purple": "#7E22CE",
+    "primary_deep_royal": "#581C87",
+    "primary_hover": "#6B21A8",
+    "lavender_soft": "#E9D5FF",
+    "lavender_mist": "#F3E8FF",
+    "lavender_border": "#D8B4FE",
+    "accent_emerald_fresh": "#059669",
+    "accent_gold_star": "#F59E0B",
+    "neutral_ink": "#1E1329",
+    "neutral_muted": "#645B72",
+    "neutral_border_subtle": "#E5D8F0",
+    "whatsapp_green": "#25D366",
+    "contrast_rules": [
+      "White text strictly on Vivid Purple (#7E22CE) and Royal Deep (#581C87) buttons to achieve >7:1 APCA contrast",
+      "Text on soft lavender surfaces must use Deep Royal Ink (#1E1329) or #581C87 to guarantee WCAG AAA legibility",
+      "Headers and navigation bars must never be transparent; use 'backdrop-blur-xl bg-white/85 border-b border-purple-100 shadow-sm'",
+      "Dropdown menus, modals, and tooltips must have solid opaque backgrounds (bg-white or bg-[#FAF7FD])"
+    ]
+  },
+  "surface_treatment": {
+    "cards": "bg-white/95 rounded-2xl border border-purple-100 shadow-[0_4px_25px_rgba(126,34,206,0.06)] hover:border-purple-300 hover:shadow-[0_12px_35px_rgba(126,34,206,0.12)] transition duration-300",
+    "featured_accent_card": "bg-gradient-to-br from-[#7E22CE] to-[#4C1D95] text-white rounded-2xl border border-purple-400/30 shadow-[0_15px_40px_rgba(88,28,135,0.25)]",
+    "pill_badge": "inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-mono font-medium tracking-wide bg-purple-100 text-purple-900 border border-purple-200",
+    "floating_bar": "backdrop-blur-2xl bg-white/90 border border-purple-200/80 shadow-[0_10px_35px_rgba(88,28,135,0.08)] rounded-full"
+  },
+  "branding_elements": {
+    "brand_name": "JADIWANGI LAUNDRY",
+    "tagline": "Sentuhan Lembut, Wangi Mewah Hingga 14 Hari",
+    "sub_tagline": "Spesialis Laundry Kiloan Higienis & Premium Fabric Care di 3 Wilayah Strategis: Pulomas (Jakarta), Ujungberung - Antapani (Bandung), dan Kalimulya (Depok).",
+    "logo_mark": "Purple Butterfly & Lavender Blossom glyph (SVG with lavender-to-purple gradient, delicate fluttering animation on hover)",
+    "usp_chapters": [
+      {
+        "number": "01",
+        "title": "1 Mesin 1 Pelanggan (100% Higienis)",
+        "desc": "Tidak pernah dicampur dengan pakaian orang lain. Menjaga higienitas maksimal, mencegah tertular kuman, dan merawat serat kain secara eksklusif."
+      },
+      {
+        "number": "02",
+        "title": "Fragrance Lock™ 14 Hari",
+        "desc": "Formula konsentrat parfum grade perfumery kelas dunia dengan micro-capsule tech yang aktif melepaskan keharuman setiap kali kain bergesekan."
+      },
+      {
+        "number": "03",
+        "title": "Garansi Cuci Ulang & Anti Luntur",
+        "desc": "Pemeriksaan detail label cuci, pemilahan warna presisi, dan jaminan cuci ulang gratis tanpa syarat jika hasil belum sebersih standar Anda."
+      },
+      {
+        "number": "04",
+        "title": "Antar Jemput Instan & Gratis < 2 KM",
+        "desc": "Kurir ramah siap jemput di depan pagar rumah atau lobi apartemen Anda. Radius hingga 5 KM dengan tarif bersahabat."
+      }
+    ],
+    "outlets": [
+      {
+        "id": "pulomas",
+        "name": "Outlet Pulomas - Jakarta Timur",
+        "city": "Jakarta",
+        "address": "Jl. Pulomas Timur No. 42B, Pulo Gadung, Jakarta Timur 13210",
+        "coordinates": { "lat": -6.1772, "lng": 106.8839 },
+        "phone": "+6281290001821",
+        "wa_number": "6281290001821",
+        "operating_hours": "07.00 - 21.00 WIB (Setiap Hari)",
+        "gmaps_url": "https://maps.google.com/?q=Pulomas+Jakarta",
+        "rating": 5.0,
+        "review_count": 218,
+        "price_kiloan_reguler": "Rp 9.000 / kg",
+        "price_express_24h": "Rp 13.000 / kg",
+        "price_cuci_lipat": "Rp 7.000 / kg",
+        "price_setrika_aja": "Rp 6.000 / kg",
+        "free_delivery_radius_km": 2.0,
+        "max_delivery_radius_km": 5.0,
+        "delivery_rate_per_km": "Rp 3.000 / km (setelah 2km)"
+      },
+      {
+        "id": "ujungberung",
+        "name": "Outlet Ujungberung - Antapani",
+        "city": "Bandung",
+        "address": "Jl. A.H. Nasution No. 178 (Dekat Alun-alun Ujungberung), Bandung 40611",
+        "coordinates": { "lat": -6.9142, "lng": 107.6972 },
+        "phone": "+6281320008432",
+        "wa_number": "6281320008432",
+        "operating_hours": "07.30 - 20.30 WIB (Setiap Hari)",
+        "gmaps_url": "https://maps.google.com/?q=Ujungberung+Bandung",
+        "rating": 5.0,
+        "review_count": 184,
+        "price_kiloan_reguler": "Rp 8.000 / kg",
+        "price_express_24h": "Rp 12.000 / kg",
+        "price_cuci_lipat": "Rp 6.000 / kg",
+        "price_setrika_aja": "Rp 5.500 / kg",
+        "free_delivery_radius_km": 2.0,
+        "max_delivery_radius_km": 5.0,
+        "delivery_rate_per_km": "Rp 2.500 / km (setelah 2km)"
+      },
+      {
+        "id": "kalimulya",
+        "name": "Outlet Kalimulya - Cilodong",
+        "city": "Depok",
+        "address": "Jl. Kalimulya Raya No. 88, Cilodong, Kota Depok 16413",
+        "coordinates": { "lat": -6.4258, "lng": 106.8286 },
+        "phone": "+6281388009214",
+        "wa_number": "6281388009214",
+        "operating_hours": "07.00 - 21.00 WIB (Setiap Hari)",
+        "gmaps_url": "https://maps.google.com/?q=Kalimulya+Depok",
+        "rating": 5.0,
+        "review_count": 162,
+        "price_kiloan_reguler": "Rp 8.000 / kg",
+        "price_express_24h": "Rp 12.000 / kg",
+        "price_cuci_lipat": "Rp 6.000 / kg",
+        "price_setrika_aja": "Rp 5.000 / kg",
+        "free_delivery_radius_km": 2.0,
+        "max_delivery_radius_km": 5.0,
+        "delivery_rate_per_km": "Rp 2.500 / km (setelah 2km)"
+      }
+    ]
+  },
+  "interactive_components": {
+    "1_outlet_distance_finder": {
+      "purpose": "Allow user to click 'Cari Outlet Terdekat Saya' via browser navigator.geolocation (or search district manually: Jakarta, Bandung, Depok). Calculates Haversine distance in KM and highlights the closest Jadiwangi branch with direct WA pickup button and estimated delivery fee.",
+      "states": ["idle", "locating", "located_success", "manual_fallback"],
+      "fallback_locations": ["Pulomas", "Antapani / Ujungberung", "Kalimulya Depok"]
+    },
+    "2_instant_price_estimator": {
+      "purpose": "Interactive interactive simulator. Users select outlet branch, laundry category (Kiloan Cuci-Kering-Setrika, Cuci Lipat, Setrika Saja, Bed Cover Single/King, Sepatu & Tas, Karpet), input estimated weight or quantity with reactive slider/stepper, and select delivery distance slider (0 to 5km). Shows live calculated subtotal + delivery fee breakdown + instant WhatsApp Order format generator with pre-filled message.",
+      "sample_wa_message": "Halo Admin Jadiwangi Laundry Outlet [Outlet]! Saya mau order laundry: [Layanan] sebanyak [Qty/Kg]. Estimasi jarak [Jarak] km. Mohon info penjemputan ke alamat saya ya kak."
+    },
+    "3_google_maps_5star_reviews": {
+      "purpose": "Showcase real verified 5-star Google Maps reviews from customer testimonials across the 3 outlets. Filterable by outlet branch. Displays customer avatar, verified badge, review date, 5 golden stars, and quoted testimonial about smell longevity, punctuality, and crisp packaging."
+    },
+    "4_slow_editorial_marquee": {
+      "purpose": "Living ribbon ticker with luxury lavender scent benefits, organic detergent cert, 14-day scent guarantee, 100% no-mixed-wash policy, and free delivery info."
+    },
+    "5_whatsapp_floating_order_bar": {
+      "purpose": "Persistent subtle bottom floating bar or corner CTA on mobile & desktop showing selected outlet + quick 1-click 'Order via WhatsApp' button with direct wa.me link."
+    }
+  },
+  "curated_media_assets": {
+    "hero_image": {
+      "url": "https://images.pexels.com/photos/8581380/pexels-photo-8581380.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Towel folding and linen care with lavender touch",
+      "category": "hero"
+    },
+    "lavender_botanical": {
+      "url": "https://images.unsplash.com/photo-1528756514091-dee5ecaa3278?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwxfHxmcmVzaCUyMGZvbGRlZCUyMGxpbmVucyUyMHNjZW50ZWQlMjBsYXZlbmRlciUyMGZsb3dlcnMlMjBsYXVuZHJ5fGVufDB8fHx8MTc4OTc4MjQ1MXww&ixlib=rb-4.1.0&q=85",
+      "alt": "Fresh organic lavender flower macro",
+      "category": "texture_accent"
+    },
+    "folded_towel_stack": {
+      "url": "https://images.pexels.com/photos/45980/pexels-photo-45980.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Luxury rolled purple and grey bathroom towels",
+      "category": "services_premium"
+    },
+    "steam_ironing_ritual": {
+      "url": "https://images.pexels.com/photos/5901627/pexels-photo-5901627.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Precision steam ironing on delicate garments",
+      "category": "process_kiloan"
+    },
+    "crisp_hanger_shirts": {
+      "url": "https://images.unsplash.com/photo-1603252109303-2751441dd157?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODh8MHwxfHNlYXJjaHwxfHxjbGVhbiUyMHdoaXRlJTIwaXJvbmVkJTIwY2xvdGhlcyUyMGhhbmdlcnxlbnwwfHx8fDE3ODk3ODI0NjR8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Crisp white button up shirts on luxury hangers",
+      "category": "services_satuan"
+    },
+    "washing_tech": {
+      "url": "https://images.unsplash.com/photo-1604335398980-ededcadcc37d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBsYXVuZHJ5JTIwbW9kZXJuJTIwY2xlYW4lMjBmYWJyaWMlMjBhZXN0aGV0aWN8ZW58MHx8fHwxNzg5NzgyNDUxfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Modern high-end front load washing machine row",
+      "category": "facility"
+    }
+  },
+  "sections_breakdown": [
+    {
+      "id": "navbar",
+      "name": "Floating Scentscape Header",
+      "elements": [
+        "JADIWANGI butterfly logo with lavender glow",
+        "Outlet dropdown selector with live status (Buka Sekarang 07.00 - 21.00)",
+        "Navigation items: Keunggulan, Layanan, Cek Outlet & Jarak, Pricelist, Kalkulator, Ulasan",
+        "Direct WhatsApp Order CTA button with animated ripple"
+      ]
+    },
+    {
+      "id": "hero",
+      "name": "Kinetic Sensory Hero",
+      "elements": [
+        "Lavender mist badge: 'GARANSI WANGI MEWAH 14 HARI • 3 OUTLET JABODETABEK & BANDUNG'",
+        "Headline with editorial elegance: 'Laundry Sebersih Sutra, Sewangi Parfum Prancis.'",
+        "Subhead emphasizing emotional relief: tak ada lagi baju tertukar, bau apek saat hujan, atau setrika kusut. Pakaian keluarga dirawat layaknya gaun adibusana.",
+        "Quick action duo: [Cari Outlet Terdekat] and [Pesan Antar Jemput via WA]",
+        "Floating metric chips: '1 Mesin 1 Pelanggan', 'Gratis Jemput < 2KM', 'Rating 5.0 Google Maps'",
+        "Hero visual stage with layered image mask, floating scent vapor particles, and clean fabric card"
+      ]
+    },
+    {
+      "id": "editorial_ribbon",
+      "name": "Editorial Marquee Ticker",
+      "elements": [
+        "Slow, rhythmic drift of brand virtues in Serif + Mono: '100% AIR TERFILTERISASI • DETERGEN RAMAH SERAT KAIN • DISINFEKTAN ANTIMIKROBA • PACKAGING PRESS MEWAH • WANGI TAHAN 14 HARI • 3 CABANG AKTIF'"
+      ]
+    },
+    {
+      "id": "usp_manifesto",
+      "name": "Overview Bisnis: Added Value & 4 Pilar Keunggulan",
+      "elements": [
+        "Section title: Mengapa Ribuan Keluarga Memilih Jadiwangi?",
+        "Numbered Bento grid (01 to 04) with high contrast purple accents",
+        "Interactive hover reveal on each chapter describing why other laundries fail and how Jadiwangi solves it"
+      ]
+    },
+    {
+      "id": "services_showcase",
+      "name": "Katalog Layanan & Produk",
+      "categories": [
+        {
+          "name": "Laundry Kiloan Harian",
+          "tag": "Paling Populer",
+          "items": [
+            "Cuci Kering Setrika (Lipat Rapi & Harum)",
+            "Cuci Lipat (Tanpa Setrika, Lebih Hemat)",
+            "Setrika Uap Aja (Licin Tegak Bebas Kerut)",
+            "Express 24 Jam & Same Day Service"
+          ]
+        },
+        {
+          "name": "Premium Care & Satuan",
+          "tag": "Perawatan Khusus",
+          "items": [
+            "Bed Cover, Selimut Tebal, Sprei King",
+            "Bantal, Guling & Boneka Anak",
+            "Sepatu Sneakers, Canvas, & Tas Branded",
+            "Karpet Masjid/Rumah, Gorden, & Kasur Lipat"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "outlet_distance_checker",
+      "name": "Pilih Outlet Terdekat & Cek Jarak Antar-Jemput",
+      "elements": [
+        "Geolocation button 'Deteksi Lokasi Saya' with live distance calculation (Haversine formula)",
+        "3 Outlet Interactive Cards: Pulomas (Jakarta Timur), Ujungberung - Antapani (Bandung), Kalimulya (Depok)",
+        "Radius badge: Free Ongkir (<2 km) vs Standard Delivery (<5 km)",
+        "Direct Google Maps directions link & direct WhatsApp order button with the selected outlet assigned"
+      ]
+    },
+    {
+      "id": "price_calculator",
+      "name": "Kalkulator Estimasi Biaya & Format Order WhatsApp",
+      "elements": [
+        "Outlet selection toggle",
+        "Service type selector (Kiloan Komplit, Cuci Lipat, Setrika Saja, Bed Cover, dll)",
+        "Weight/Quantity slider & manual stepper",
+        "Distance slider (0 to 5 km) calculating delivery charge (Free for <= 2km)",
+        "Live Subtotal + Estimated delivery + Total Cost",
+        "Auto-generated ready-to-send WhatsApp Chat button that opens WhatsApp with message structured cleanly"
+      ]
+    },
+    {
+      "id": "pricelist_table",
+      "name": "Daftar Harga Transparan per Outlet & Wilayah",
+      "elements": [
+        "Tabbed navigation: [Pulomas - Jakarta] [Ujungberung - Bandung] [Kalimulya - Depok]",
+        "Clean categorized tables: Kiloan, Satuan/Bedding, Sepatu/Tas/Karpet",
+        "Download/Save pricelist info note, no hidden fees guarantee"
+      ]
+    },
+    {
+      "id": "testimonials_gmaps",
+      "name": "Ulasan Pelanggan Google Maps (Bintang 5 Verified)",
+      "elements": [
+        "Google Maps average badge: 5.0 ★★★★★ (Total 560+ ulasan di 3 cabang)",
+        "Filterable reviews by branch (Semua / Pulomas / Bandung / Depok)",
+        "Customer review cards featuring authentic Indonesian feedback highlighting fragrant aroma, white shirt cleanliness, and super fast delivery"
+      ]
+    },
+    {
+      "id": "faq_section",
+      "name": "Pertanyaan Sering Diajukan (FAQ)",
+      "elements": [
+        "Accordion with questions on pickup hours, fragrance durability, mixed wash safety guarantee, and turnaround time"
+      ]
+    },
+    {
+      "id": "footer_cta",
+      "name": "Grand Final CTA & Footer",
+      "elements": [
+        "Rich deep purple background with large display text: 'Pakaian Bersih, Pikiran Tenang, Harum Mewah Sepanjang Hari.'",
+        "All 3 outlet contacts, addresses, working hours, and social media links",
+        "Copyright & Jadiwangi Laundry Guarantee badge"
+      ]
+    }
+  ],
+  "test_ids": {
+    "navbar_brand": "navbar-brand-logo",
+    "navbar_outlet_select": "navbar-outlet-select",
+    "navbar_btn_wa": "navbar-whatsapp-cta",
+    "hero_btn_find_outlet": "hero-btn-find-outlet",
+    "hero_btn_order_wa": "hero-btn-order-wa",
+    "outlet_card_pulomas": "outlet-card-pulomas",
+    "outlet_card_ujungberung": "outlet-card-ujungberung",
+    "outlet_card_kalimulya": "outlet-card-kalimulya",
+    "btn_detect_location": "btn-detect-user-location",
+    "calc_outlet_select": "calc-outlet-select",
+    "calc_service_select": "calc-service-select",
+    "calc_weight_input": "calc-weight-input",
+    "calc_distance_slider": "calc-distance-slider",
+    "calc_total_display": "calc-total-display",
+    "calc_submit_wa_btn": "calc-submit-wa-btn",
+    "pricelist_tab_pulomas": "pricelist-tab-pulomas",
+    "pricelist_tab_ujungberung": "pricelist-tab-ujungberung",
+    "pricelist_tab_kalimulya": "pricelist-tab-kalimulya",
+    "reviews_filter_all": "reviews-filter-all",
+    "floating_order_bar": "floating-order-bar"
+  },
+  "instructions_to_main_agent": [
+    "Build the complete responsive landing page in React JS (/app/frontend/src/App.js and modular components under /app/frontend/src/components/).",
+    "Install necessary icon packs like lucide-react (already present) or framer-motion (already present in package.json) for smooth animated accordions, modals, and tab switches.",
+    "Implement real geolocation distance calculation using the Haversine formula (calculate distance in KM from user's lat/lng to Pulomas -6.1772, 106.8839; Ujungberung -6.9142, 107.6972; Kalimulya -6.4258, 106.8286). Provide fallback manual buttons if geolocation is denied or unavailable.",
+    "Ensure delivery fee calculation matches the rule: distance <= 2.0 km is FREE (Rp 0), and distance between 2.1 km to 5.0 km adds Rp 2.500 - Rp 3.000 / km.",
+    "Make WhatsApp CTA buttons active and functional: generate direct links like 'https://wa.me/6281290001821?text=...' containing pre-formatted messages with the chosen outlet, customer address, and laundry service.",
+    "Maintain the strict color scheme: Lavender (#E9D5FF, #F3E8FF) and Vivid Purple (#7E22CE, #6B21A8, #581C87). Do not use cyan, neon green or generic SaaS blue.",
+    "Ensure every interactive element has the designated data-testid attribute for automated testing."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "Do not add .App { text-align: center; } in CSS; keep layouts naturally aligned and asymmetric.",
+    "Avoid generic centered layouts, simplistic flat cards, or heavy opaque dark overlays. Keep visual air and sensory crispness.",
+    "Never use pure black #000000; use #1E1329 for luxury deep plum ink tones.",
+    "Ensure all buttons have active, hover, and focus states with clear contrast."
+  ]
+}
