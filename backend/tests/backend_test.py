@@ -1,6 +1,7 @@
 """Jadiwangi App backend tests."""
 import os
 import uuid
+from datetime import date, timedelta
 import pytest
 import requests
 
@@ -252,3 +253,156 @@ class TestFinance:
         assert r.status_code == 200
         d = r.json()
         assert isinstance(d["ranking"], list)
+
+
+# ---------- Iteration 2: Report date filters ----------
+class TestReportDateFilters:
+    """Verify frm/to (YYYY-MM-DD) accepted; narrow range <= wider range."""
+
+    def _today_range(self):
+        t = date.today().isoformat()
+        return {"frm": t, "to": t}
+
+    def _month_range(self):
+        t = date.today()
+        return {"frm": t.replace(day=1).isoformat(), "to": t.isoformat()}
+
+    def test_financial_range_filter(self, s):
+        today = self._today_range(); month = self._month_range()
+        rt = s.get(f"{API}/reports/financial", params=today); assert rt.status_code == 200, rt.text
+        rm = s.get(f"{API}/reports/financial", params=month); assert rm.status_code == 200, rm.text
+        assert float(rt.json()["omzet"]) <= float(rm.json()["omzet"]) + 1e-6
+        assert float(rt.json()["pengeluaran"]) <= float(rm.json()["pengeluaran"]) + 1e-6
+
+    def test_transactions_range_filter(self, s):
+        today = self._today_range(); month = self._month_range()
+        rt = s.get(f"{API}/reports/transactions", params=today); assert rt.status_code == 200
+        rm = s.get(f"{API}/reports/transactions", params=month); assert rm.status_code == 200
+        assert int(rt.json()["total_orders"]) <= int(rm.json()["total_orders"])
+        assert float(rt.json()["total_value"]) <= float(rm.json()["total_value"]) + 1e-6
+
+    def test_employees_range_filter(self, s):
+        today = self._today_range(); month = self._month_range()
+        rt = s.get(f"{API}/reports/employees", params=today); assert rt.status_code == 200
+        rm = s.get(f"{API}/reports/employees", params=month); assert rm.status_code == 200
+        # production kg today <= month
+        assert float(rt.json()["production"]["total_kg"]) <= float(rm.json()["production"]["total_kg"]) + 1e-6
+        assert int(rt.json()["admin"]["orders_created"]) <= int(rm.json()["admin"]["orders_created"])
+
+    def test_customers_range_filter(self, s):
+        today = self._today_range(); month = self._month_range()
+        rt = s.get(f"{API}/reports/customers", params=today); assert rt.status_code == 200
+        rm = s.get(f"{API}/reports/customers", params=month); assert rm.status_code == 200
+        # top spend today <= month top spend (sum)
+        rt_spend = sum(x.get("spend", 0) for x in rt.json().get("top", []))
+        rm_spend = sum(x.get("spend", 0) for x in rm.json().get("top", []))
+        assert rt_spend <= rm_spend + 1e-6
+
+    def test_financial_bad_date_rejected(self, s):
+        # Not YYYY-MM-DD -> should not 500. Server strptime raises ValueError => Fastapi 500
+        # Accept either 400/422 or an in-app handled response. If 500 we report it.
+        r = s.get(f"{API}/reports/financial", params={"frm": "not-a-date"})
+        assert r.status_code < 500, f"got {r.status_code}: {r.text}"
+
+
+# ---------- Iteration 2: Deposit payment flow ----------
+class TestDepositPayment:
+    def _pick_service(self, s, max_price):
+        for svc in s.get(f"{API}/services").json():
+            if float(svc["price"]) <= max_price and svc.get("active", True):
+                return svc
+        return None
+
+    def test_deposit_customer_exists(self, s):
+        cs = s.get(f"{API}/customers").json()
+        deps = [c for c in cs if float(c.get("deposit") or 0) > 0]
+        assert deps, "Need at least one customer with deposit>0 for tests"
+
+    def test_deposit_payment_success_then_reject_insufficient(self, s):
+        cs = s.get(f"{API}/customers").json()
+        deps = sorted([c for c in cs if float(c.get("deposit") or 0) > 0],
+                      key=lambda c: float(c["deposit"]), reverse=True)
+        if not deps:
+            pytest.skip("no deposit customers")
+        cust = deps[0]
+        cid = cust["id"]
+        initial_deposit = float(cust["deposit"])
+        outlet_id = cust["outlet_id"]
+
+        svc = self._pick_service(s, initial_deposit)
+        assert svc, f"No service cheap enough (max {initial_deposit})"
+        qty = 1
+        price = float(svc["price"])
+        total = price * qty
+        assert total <= initial_deposit
+
+        body = {
+            "customer_id": cid, "outlet_id": outlet_id,
+            "items": [{"service_id": svc["id"], "service_name": svc["name"], "unit": svc["unit"], "qty": qty, "price": price}],
+            "payment_status": "paid",
+            "payment_method": "deposit",
+            "notes": "TEST_deposit",
+        }
+        r = s.post(f"{API}/orders", json=body)
+        assert r.status_code == 200, r.text
+        order = r.json()
+        assert order["payment_status"] == "paid"
+        assert order["payment_method"] == "deposit"
+        assert abs(float(order["total"]) - total) < 1e-6
+
+        # Verify deposit deducted
+        cs2 = s.get(f"{API}/customers").json()
+        cust2 = next((c for c in cs2 if c["id"] == cid), None)
+        assert cust2, "customer disappeared"
+        new_deposit = float(cust2["deposit"])
+        assert abs(new_deposit - (initial_deposit - total)) < 1e-6, \
+            f"expected {initial_deposit - total}, got {new_deposit}"
+
+        # Now try an order larger than remaining deposit -> should reject 400
+        big_price = new_deposit + 1000  # > deposit
+        # create a TEST service with a price greater than remaining deposit
+        svc_new = s.post(f"{API}/services", json={
+            "name": f"TEST_Big_{uuid.uuid4().hex[:6]}", "category": "Cuci", "unit": "kg",
+            "price": big_price, "icon": "washing-machine", "active": True
+        }).json()
+        body_big = {
+            "customer_id": cid, "outlet_id": outlet_id,
+            "items": [{"service_id": svc_new["id"], "service_name": svc_new["name"],
+                       "unit": "kg", "qty": 1, "price": big_price}],
+            "payment_status": "paid",
+            "payment_method": "deposit",
+            "notes": "TEST_deposit_insufficient",
+        }
+        r2 = s.post(f"{API}/orders", json=body_big)
+        assert r2.status_code == 400, f"expected 400, got {r2.status_code}: {r2.text}"
+        assert "deposit" in r2.text.lower()
+
+    def test_qris_order_paid_does_not_touch_deposit(self, s):
+        cs = s.get(f"{API}/customers").json()
+        deps = [c for c in cs if float(c.get("deposit") or 0) > 0]
+        if not deps:
+            pytest.skip("no deposit customers")
+        cust = deps[0]
+        cid = cust["id"]
+        initial_deposit = float(cust["deposit"])
+        outlet_id = cust["outlet_id"]
+
+        svcs = s.get(f"{API}/services").json()
+        svc = svcs[0]
+        body = {
+            "customer_id": cid, "outlet_id": outlet_id,
+            "items": [{"service_id": svc["id"], "service_name": svc["name"], "unit": svc["unit"], "qty": 1, "price": float(svc["price"])}],
+            "payment_status": "paid",
+            "payment_method": "qris",
+            "notes": "TEST_qris_paid",
+        }
+        r = s.post(f"{API}/orders", json=body)
+        assert r.status_code == 200, r.text
+        order = r.json()
+        assert order["payment_status"] == "paid"
+        assert order["payment_method"] == "qris"
+        # deposit unchanged
+        cs2 = s.get(f"{API}/customers").json()
+        cust2 = next(c for c in cs2 if c["id"] == cid)
+        assert abs(float(cust2["deposit"]) - initial_deposit) < 1e-6
+

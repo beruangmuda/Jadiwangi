@@ -573,21 +573,28 @@ async def create_order(b: OrderBody):
         created = now_utc()
         due = created + timedelta(hours=outlet["sla_hours"])
         code = f"JW-{created.strftime('%y%m%d')}-{random.randint(1000,9999)}"
-        oid = await conn.fetchval(
-            """insert into orders(code,customer_id,outlet_id,status,total,weight_kg,unit_qty,
-               payment_status,payment_method,delivery_type,notes,created_by,created_at,updated_at,due_at)
-               values($1,$2,$3,'received',$4,$5,$6,$7,$8,$9,$10,$11,$12,$12,$13) returning id""",
-            code, b.customer_id, b.outlet_id, total, weight, unit_qty, b.payment_status, b.payment_method,
-            b.delivery_type, b.notes, b.created_by, created, due)
-        for it in b.items:
-            sub = Decimal(str(it.price)) * Decimal(str(it.qty))
-            await conn.execute(
-                "insert into order_items(order_id,service_id,service_name,unit,qty,price,subtotal) values($1,$2,$3,$4,$5,$6,$7)",
-                oid, it.service_id, it.service_name, it.unit, it.qty, it.price, sub)
-        if b.payment_status == "paid":
-            await conn.execute(
-                "insert into transactions(order_id,outlet_id,amount,type,method) values($1,$2,$3,'income',$4)",
-                oid, b.outlet_id, total, b.payment_method)
+        if b.payment_status == "paid" and b.payment_method == "deposit":
+            cust = await conn.fetchrow("select deposit from customers where id=$1", b.customer_id)
+            if not cust or float(cust["deposit"]) < float(total):
+                raise HTTPException(400, "Saldo deposit tidak cukup")
+        async with conn.transaction():
+            oid = await conn.fetchval(
+                """insert into orders(code,customer_id,outlet_id,status,total,weight_kg,unit_qty,
+                   payment_status,payment_method,delivery_type,notes,created_by,created_at,updated_at,due_at)
+                   values($1,$2,$3,'received',$4,$5,$6,$7,$8,$9,$10,$11,$12,$12,$13) returning id""",
+                code, b.customer_id, b.outlet_id, total, weight, unit_qty, b.payment_status, b.payment_method,
+                b.delivery_type, b.notes, b.created_by, created, due)
+            for it in b.items:
+                sub = Decimal(str(it.price)) * Decimal(str(it.qty))
+                await conn.execute(
+                    "insert into order_items(order_id,service_id,service_name,unit,qty,price,subtotal) values($1,$2,$3,$4,$5,$6,$7)",
+                    oid, it.service_id, it.service_name, it.unit, it.qty, it.price, sub)
+            if b.payment_status == "paid":
+                if b.payment_method == "deposit":
+                    await conn.execute("update customers set deposit = deposit - $1 where id=$2", total, b.customer_id)
+                await conn.execute(
+                    "insert into transactions(order_id,outlet_id,amount,type,method) values($1,$2,$3,'income',$4)",
+                    oid, b.outlet_id, total, b.payment_method)
         row = await conn.fetchrow("select * from orders where id=$1", oid)
         return (await enrich_orders(conn, [row]))[0]
 
@@ -713,19 +720,29 @@ async def dashboard(outlet_id: Optional[str] = None):
         }
 
 
+def _to_date(s):
+    if not s:
+        return None
+    try:
+        return datetime.strptime(s, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        raise HTTPException(400, "Format tanggal tidak valid (YYYY-MM-DD)")
+
+
 def date_filter(field, outlet_id, frm, to, args):
     clauses = []
     if outlet_id:
         args.append(outlet_id); clauses.append(f"outlet_id=${len(args)}")
     if frm:
-        args.append(frm); clauses.append(f"{field}::date >= ${len(args)}")
+        args.append(frm); clauses.append(f"{field}::date >= ${len(args)}::date")
     if to:
-        args.append(to); clauses.append(f"{field}::date <= ${len(args)}")
+        args.append(to); clauses.append(f"{field}::date <= ${len(args)}::date")
     return clauses
 
 
 @api.get("/reports/financial")
 async def report_financial(outlet_id: Optional[str] = None, frm: Optional[str] = None, to: Optional[str] = None):
+    frm = _to_date(frm); to = _to_date(to)
     async with pool.acquire() as conn:
         args = []
         cl = date_filter("created_at", outlet_id, frm, to, args)
@@ -759,45 +776,70 @@ async def report_financial(outlet_id: Optional[str] = None, frm: Optional[str] =
 
 
 @api.get("/reports/transactions")
-async def report_transactions(outlet_id: Optional[str] = None):
+async def report_transactions(outlet_id: Optional[str] = None, frm: Optional[str] = None, to: Optional[str] = None):
+    frm = _to_date(frm); to = _to_date(to)
     async with pool.acquire() as conn:
-        oand = " and outlet_id=$1" if outlet_id else ""
-        oargs = [outlet_id] if outlet_id else []
-        total_orders = await conn.fetchval(f"select count(*) from orders where status <> 'cancelled'{oand}", *oargs)
-        cancelled = await conn.fetchval(f"select count(*) from orders where status = 'cancelled'{oand}", *oargs)
-        value = await conn.fetchval(f"select coalesce(sum(total),0) from orders where status <> 'cancelled'{oand}", *oargs)
+        args = []; parts = []
+        if outlet_id:
+            args.append(outlet_id); parts.append(f"outlet_id=${len(args)}")
+        if frm:
+            args.append(frm); parts.append(f"created_at::date >= ${len(args)}::date")
+        if to:
+            args.append(to); parts.append(f"created_at::date <= ${len(args)}::date")
+        base = (" and " + " and ".join(parts)) if parts else ""
+        total_orders = await conn.fetchval(f"select count(*) from orders where status <> 'cancelled'{base}", *args)
+        cancelled = await conn.fetchval(f"select count(*) from orders where status = 'cancelled'{base}", *args)
+        value = await conn.fetchval(f"select coalesce(sum(total),0) from orders where status <> 'cancelled'{base}", *args)
+
+        argsO = []; partsO = []
+        if outlet_id:
+            argsO.append(outlet_id); partsO.append(f"o.outlet_id=${len(argsO)}")
+        if frm:
+            argsO.append(frm); partsO.append(f"o.created_at::date >= ${len(argsO)}::date")
+        if to:
+            argsO.append(to); partsO.append(f"o.created_at::date <= ${len(argsO)}::date")
+        baseO = (" and " + " and ".join(partsO)) if partsO else ""
         recent = await conn.fetch(
             f"""select o.code,o.total,o.status,o.created_at,o.payment_status,c.name as customer_name
                 from orders o left join customers c on c.id=o.customer_id
-                where 1=1{oand} order by o.created_at desc limit 30""", *oargs)
+                where 1=1{baseO} order by o.created_at desc limit 30""", *argsO)
         cancels = await conn.fetch(
             f"""select o.code,o.total,o.cancel_reason,o.cancelled_at,c.name as customer_name
                 from orders o left join customers c on c.id=o.customer_id
-                where o.status='cancelled'{oand} order by o.cancelled_at desc limit 20""", *oargs)
+                where o.status='cancelled'{baseO} order by o.cancelled_at desc limit 20""", *argsO)
         return {"total_orders": int(total_orders or 0), "cancelled": int(cancelled or 0),
                 "total_value": float(value or 0), "recent": rows_to_list(recent), "cancellations": rows_to_list(cancels)}
 
 
 @api.get("/reports/employees")
-async def report_employees(outlet_id: Optional[str] = None):
+async def report_employees(outlet_id: Optional[str] = None, frm: Optional[str] = None, to: Optional[str] = None):
+    frm = _to_date(frm); to = _to_date(to)
     async with pool.acquire() as conn:
         oclause = " where outlet_id=$1" if outlet_id else ""
-        oand = " and outlet_id=$1" if outlet_id else ""
-        oargs = [outlet_id] if outlet_id else []
-        emps = await conn.fetch(f"select * from employees{oclause} order by role_type,name", *oargs)
+        oargs_emp = [outlet_id] if outlet_id else []
+        emps = await conn.fetch(f"select * from employees{oclause} order by role_type,name", *oargs_emp)
         by_role = {"admin": [], "produksi": [], "kurir": []}
         for e in emps:
             by_role.setdefault(e["role_type"], []).append(row_to_dict(e))
-        total_kg = await conn.fetchval(f"select coalesce(sum(weight_kg),0) from orders where status <> 'cancelled'{oand}", *oargs)
+
+        args = []; parts = []
+        if outlet_id:
+            args.append(outlet_id); parts.append(f"outlet_id=${len(args)}")
+        if frm:
+            args.append(frm); parts.append(f"created_at::date >= ${len(args)}::date")
+        if to:
+            args.append(to); parts.append(f"created_at::date <= ${len(args)}::date")
+        dc = (" and " + " and ".join(parts)) if parts else ""
+        total_kg = await conn.fetchval(f"select coalesce(sum(weight_kg),0) from orders where status <> 'cancelled'{dc}", *args)
         washed = await conn.fetchval(
-            f"select coalesce(sum(weight_kg),0) from orders where status in ('drying','ironing','packing','ready','completed'){oand}", *oargs)
+            f"select coalesce(sum(weight_kg),0) from orders where status in ('drying','ironing','packing','ready','completed'){dc}", *args)
         ironed = await conn.fetchval(
-            f"select coalesce(sum(weight_kg),0) from orders where status in ('packing','ready','completed'){oand}", *oargs)
+            f"select coalesce(sum(weight_kg),0) from orders where status in ('packing','ready','completed'){dc}", *args)
         packed = await conn.fetchval(
-            f"select coalesce(sum(weight_kg),0) from orders where status in ('ready','completed'){oand}", *oargs)
+            f"select coalesce(sum(weight_kg),0) from orders where status in ('ready','completed'){dc}", *args)
         deliveries = await conn.fetchval(
-            f"select count(*) from orders where delivery_type in ('delivery','pickup'){oand}", *oargs)
-        orders_created = await conn.fetchval(f"select count(*) from orders where 1=1{oand}", *oargs)
+            f"select count(*) from orders where delivery_type in ('delivery','pickup'){dc}", *args)
+        orders_created = await conn.fetchval(f"select count(*) from orders where 1=1{dc}", *args)
         return {
             "by_role": by_role,
             "production": {"total_kg": float(total_kg or 0), "washed_kg": float(washed or 0),
@@ -808,7 +850,8 @@ async def report_employees(outlet_id: Optional[str] = None):
 
 
 @api.get("/reports/customers")
-async def report_customers(outlet_id: Optional[str] = None):
+async def report_customers(outlet_id: Optional[str] = None, frm: Optional[str] = None, to: Optional[str] = None):
+    frm = _to_date(frm); to = _to_date(to)
     async with pool.acquire() as conn:
         oclause = " where outlet_id=$1" if outlet_id else ""
         oargs = [outlet_id] if outlet_id else []
@@ -816,11 +859,22 @@ async def report_customers(outlet_id: Optional[str] = None):
         growth = await conn.fetch(
             f"""select to_char(date_trunc('month',created_at),'Mon') as month, date_trunc('month',created_at) as m, count(*) as cnt
                 from customers{oclause} group by m order by m""", *oargs)
+
+        # top customers with order-date filter applied to the join
+        args = []; join_conds = ["o.status<>'cancelled'"]; where_conds = []
+        if outlet_id:
+            args.append(outlet_id); where_conds.append(f"c.outlet_id=${len(args)}")
+        if frm:
+            args.append(frm); join_conds.append(f"o.created_at::date >= ${len(args)}::date")
+        if to:
+            args.append(to); join_conds.append(f"o.created_at::date <= ${len(args)}::date")
+        join_clause = " and ".join(join_conds)
+        where_clause = (" where " + " and ".join(where_conds)) if where_conds else ""
         top = await conn.fetch(
             f"""select c.name, c.phone, c.points, coalesce(sum(o.total),0) as spend, count(o.id) as orders
-                from customers c left join orders o on o.customer_id=c.id and o.status<>'cancelled'
-                {(' where c.outlet_id=$1' if outlet_id else '')}
-                group by c.id,c.name,c.phone,c.points order by spend desc limit 10""", *oargs)
+                from customers c left join orders o on o.customer_id=c.id and {join_clause}
+                {where_clause}
+                group by c.id,c.name,c.phone,c.points order by spend desc limit 10""", *args)
         deposits = await conn.fetch(
             f"select name,phone,deposit from customers where {('outlet_id=$1 and ' if outlet_id else '')}deposit > 0 order by deposit desc limit 20",
             *oargs)

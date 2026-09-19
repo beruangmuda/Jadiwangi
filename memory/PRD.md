@@ -30,6 +30,14 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] Backend: outlets/services/customers/employees/orders/transactions/expenses/adjustments/leaderboard/dashboard/reports. Data contoh: 3 outlet, 8 layanan, 25 pelanggan, 6 pegawai, ~250 order sebulan, pengeluaran.
 - [x] Testing: 28/28 backend pytest + smoke frontend semua peran PASS.
 
+## Update (2026-06, iterasi 2)
+- [x] Logo image Jadiwangi tampil di header (Login, Beranda Owner, Setelan, Pelanggan) — branding konsisten.
+- [x] Tombol Keluar kembali ke halaman login untuk semua peran.
+- [x] Filter periode Laporan: Hari Ini / Minggu Ini / Bulan Ini (frm/to diteruskan ke 4 endpoint laporan; angka berubah sesuai periode).
+- [x] Bayar dengan Saldo Deposit di Buat Order: tombol muncul bila deposit cukup; deduksi + transaksi atomik (rollback bila gagal); saldo tidak cukup → error 400.
+- [x] Robustness: validasi format tanggal (400), transaksi DB atomik untuk pembayaran.
+- [x] Testing iterasi 2: 35/36 backend + semua alur frontend PASS.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Kasbon pegawai (tabel sudah ada, UI belum) & saldo deposit pelanggan (pakai untuk bayar).

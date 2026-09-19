@@ -11,33 +11,21 @@ import {
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 
 import { fonts, makeStyles, radius, shadow, spacing, useTheme } from "@/src/theme";
 import { Icon } from "@/src/components/Icon";
 
 // ---------------------------------------------------------------------------
-// Logo
+// Logo (image mark used in login + headers for consistent branding)
 // ---------------------------------------------------------------------------
-export function Logo({ size = 26 }: { size?: number }) {
-  const { colors } = useTheme();
+export function Logo({ size = 40 }: { size?: number }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-      <Text style={{ fontFamily: fonts.displayBold, fontSize: size, color: colors.brand, letterSpacing: 0.5 }}>
-        JADI WANGI
-      </Text>
-      <View
-        style={{
-          backgroundColor: colors.brandPrimary,
-          borderRadius: radius.sm,
-          paddingHorizontal: 8,
-          paddingVertical: 2,
-        }}
-      >
-        <Text style={{ fontFamily: fonts.displayBold, fontSize: size * 0.62, color: colors.onBrandPrimary }}>
-          App
-        </Text>
-      </View>
-    </View>
+    <Image
+      source={require("../../assets/images/jadiwangi-logo.png")}
+      style={{ width: size, height: size }}
+      contentFit="contain"
+    />
   );
 }
 

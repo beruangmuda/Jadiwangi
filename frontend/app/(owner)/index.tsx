@@ -34,7 +34,7 @@ export default function Dashboard() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <Logo size={20} />
+        <Logo size={40} />
         <OutletSwitcher />
       </View>
 

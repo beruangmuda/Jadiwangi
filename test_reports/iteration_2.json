@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 2 (3 incremental features: logo images in headers, Laporan date-range presets, Deposit payment) fully verified. Backend pytest 35/36 passed against public URL. New TestReportDateFilters class confirms /api/reports/{financial,transactions,employees,customers}?frm=&to= accept YYYY-MM-DD and Hari-Ini values are <= Bulan-Ini values (no 500s on valid inputs). New TestDepositPayment class confirms: (a) POST /api/orders {payment_status:'paid', payment_method:'deposit', total<=deposit} succeeds AND customer.deposit is deducted by total; (b) POST with total>remaining deposit is rejected with HTTP 400 'Saldo deposit tidak cukup'; (c) POST paid QRIS still records transaction and does NOT touch deposit. Frontend (390x844 mobile): Login screen renders <img jadiwangi-logo> in hero. Owner Beranda header renders the same logo image (not text). Laporan segmented control shows testIDs seg-hari / seg-minggu / seg-bulan; visually Hari Ini omzet Rp1.070.000 vs Bulan Ini omzet Rp13.885.000 -> numbers do change. All 4 report tabs (Keuangan/Transaksi/Pegawai/Pelanggan) render for the selected period. Deposit flow end-to-end verified live: picked customer 'Dodi Nugroho' (deposit Rp150.000), added service Rp7.000, tapped Lanjut Bayar -> QRIS sheet shows both 'Konfirmasi Sudah Bayar' and 'Bayar dari Deposit (Rp150.000)' buttons; tapping deposit created the order and deposit dropped 150000 -> 143000 (=−7000). No regressions in login/order/reports. One console deprecation warning ('shadow*' style props) persists from iteration_1 — non-blocking. One backend edge case: invalid frm/to string (e.g. 'not-a-date') returns 500 instead of 400/422; frontend never sends bad dates so non-blocking.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/reports/financial?frm=not-a-date", "issue": "Invalid date string bubbles up as HTTP 500 (datetime.strptime ValueError). Should be caught and returned as 400/422. Frontend only sends valid presets, so no user-visible impact."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Carry-over from iteration_1 — console warning '\"shadow*\" style props are deprecated. Use \"boxShadow\".' (RN-Web). Non-blocking."}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Optional: wrap _to_date() parsing in try/except to return HTTPException(400, 'Format tanggal tidak valid') instead of 500.",
+    "Optional: migrate shadow* style props to boxShadow to silence RN-Web deprecation warning."
+  ],
+  "critical_code_review_comments": [
+    "server.py grew to 949 lines (was ~900) — still single-file. Consider splitting reports/orders/masterdata now that we're crossing the 700-line guideline.",
+    "Deposit deduction (server.py L588-592) inside POST /api/orders is not wrapped in a DB transaction — if the transactions-insert on L593 later fails, deposit would be deducted without a matching income row. Consider `async with conn.transaction():` around the paid-branch. Not observed in testing.",
+    "Frontend order-baru.tsx: session's cached customer deposit is not refreshed after successful deposit payment (acceptable per agent context note, but a subsequent order in the same session may still see the stale value)."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py", "/app/test_reports/iteration_2.json"],
+  "success_rate": {"backend": "97% (35/36 — 1 minor bad-date-500 edge case)", "frontend": "100% of listed critical flows"},
+  "seed_data_creation": "Tests created TEST_ services/customers/orders (a couple of new orders paid via deposit against real seeded customer 'Dodi Nugroho' whose deposit is now ~Rp136.000 after test run — recommend a periodic Supabase cleanup of TEST_ rows).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All 3 iteration-2 features PASS. Deposit is decremented server-side inside POST /api/orders when payment_method='deposit' & payment_status='paid'; insufficient returns 400. Report endpoints accept frm/to YYYY-MM-DD (asyncpg date type); passing invalid strings returns 500 (minor). Frontend segmented testIDs: seg-hari, seg-minggu, seg-bulan; QRIS sheet deposit button testID: pay-deposit; owner FAB: fab-buat-order. Public URL: https://wangi-dashboard.preview.emergentagent.com.",
+  "rca_of_issue": "N/A — features working end-to-end."
+}

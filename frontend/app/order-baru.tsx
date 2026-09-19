@@ -41,6 +41,7 @@ export default function OrderBaru() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [qrisOpen, setQrisOpen] = useState(false);
+  const [payError, setPayError] = useState("");
 
   const { data: services, isLoading: loadingSvc } = useQuery({ queryKey: ["services"], queryFn: () => api.get("/services") });
   const { data: customers } = useQuery({
@@ -71,14 +72,14 @@ export default function OrderBaru() {
   };
 
   const create = useMutation({
-    mutationFn: (paid: boolean) =>
+    mutationFn: ({ paid, method }: { paid: boolean; method: string }) =>
       api.post("/orders", {
         customer_id: customer.id,
         outlet_id: outletId,
         delivery_type: delivery,
         notes,
         payment_status: paid ? "paid" : "unpaid",
-        payment_method: "qris",
+        payment_method: method,
         created_by: session?.role || "owner",
         items: Object.values(cart).map((c) => ({
           service_id: c.service.id,
@@ -93,10 +94,17 @@ export default function OrderBaru() {
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["leaderboard"] });
+      qc.invalidateQueries({ queryKey: ["customers"] });
       setQrisOpen(false);
       router.back();
     },
+    onError: (e: any) => {
+      setPayError(e?.message || "Pembayaran gagal");
+    },
   });
+
+  const deposit = Number(customer?.deposit || 0);
+  const canDeposit = deposit >= total && total > 0;
 
   const canProceed = !!customer && !!outletId && Object.keys(cart).length > 0;
   const outletName = outlets.find((o) => o.id === outletId)?.name || session?.customer?.name || "Outlet";
@@ -221,7 +229,7 @@ export default function OrderBaru() {
           <Text style={styles.totalLabel}>{totalKg > 0 ? kg(totalKg) : `${Object.keys(cart).length} item`}</Text>
           <Text style={styles.totalValue}>{rupiah(total)}</Text>
         </View>
-        <PrimaryButton label="Lanjut Bayar" icon="arrow-right-bold" onPress={() => setQrisOpen(true)} disabled={!canProceed} testID="proceed-payment" style={{ flex: 1 }} />
+        <PrimaryButton label="Lanjut Bayar" icon="arrow-right-bold" onPress={() => { setPayError(""); setQrisOpen(true); }} disabled={!canProceed} testID="proceed-payment" style={{ flex: 1 }} />
       </View>
 
       {/* Customer picker */}
@@ -265,8 +273,14 @@ export default function OrderBaru() {
             </View>
             <Text style={styles.qrisAmount}>{rupiah(total)}</Text>
             <BodyText muted style={{ textAlign: "center" }}>Scan QR di atas dengan aplikasi e-wallet / m-banking, lalu konfirmasi.</BodyText>
-            <PrimaryButton label="Konfirmasi Sudah Bayar" icon="check-decagram" onPress={() => create.mutate(true)} loading={create.isPending} testID="confirm-paid" />
-            <Pressable testID="pay-later" onPress={() => create.mutate(false)} style={styles.later}>
+            {payError ? <Text style={styles.payError} testID="pay-error">{payError}</Text> : null}
+            <PrimaryButton label="Konfirmasi Sudah Bayar" icon="check-decagram" onPress={() => { setPayError(""); create.mutate({ paid: true, method: "qris" }); }} loading={create.isPending} testID="confirm-paid" />
+            {canDeposit ? (
+              <PrimaryButton label={`Bayar dari Deposit (${rupiah(deposit)})`} icon="wallet" tone="lavender" onPress={() => { setPayError(""); create.mutate({ paid: true, method: "deposit" }); }} loading={create.isPending} testID="pay-deposit" />
+            ) : deposit > 0 ? (
+              <Text style={styles.depositNote}>Saldo deposit {rupiah(deposit)} • tidak cukup untuk order ini</Text>
+            ) : null}
+            <Pressable testID="pay-later" onPress={() => { setPayError(""); create.mutate({ paid: false, method: "qris" }); }} style={styles.later}>
               <Text style={styles.laterText}>Simpan, Bayar Nanti</Text>
             </Pressable>
           </View>
@@ -319,4 +333,6 @@ const useStyles = makeStyles((c) => ({
   qrisAmount: { fontFamily: fonts.displayBold, fontSize: 28, color: c.brandPrimary },
   later: { paddingVertical: spacing.sm },
   laterText: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.muted },
+  payError: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.error, textAlign: "center" },
+  depositNote: { fontFamily: fonts.body, fontSize: 12, color: c.muted, textAlign: "center" },
 }));

@@ -5,9 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
+import dayjs from "dayjs";
 import { fonts, makeStyles, radius, shadow, spacing, useTheme } from "@/src/theme";
 import { Icon } from "@/src/components/Icon";
 import { Card, ChipRow, SectionHeader, Loading, EmptyState, Pill } from "@/src/components/ui";
+import { Segmented } from "@/src/components/form";
 import { OutletSwitcher } from "@/src/components/OutletSwitcher";
 import { BarChart } from "@/src/components/Chart";
 import { rupiah, rupiahShort, kg, formatDate } from "@/src/format";
@@ -19,14 +21,33 @@ const TABS = [
   { key: "pelanggan", label: "Pelanggan" },
 ];
 
+const PERIODS = [
+  { key: "hari", label: "Hari Ini" },
+  { key: "minggu", label: "Minggu Ini" },
+  { key: "bulan", label: "Bulan Ini" },
+];
+
+function rangeFor(period: string): { frm: string; to: string } {
+  const to = dayjs().format("YYYY-MM-DD");
+  if (period === "hari") return { frm: to, to };
+  if (period === "minggu") return { frm: dayjs().startOf("week").format("YYYY-MM-DD"), to };
+  return { frm: dayjs().startOf("month").format("YYYY-MM-DD"), to };
+}
+
 export default function Laporan() {
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const [tab, setTab] = useState("keuangan");
+  const [period, setPeriod] = useState("bulan");
   const outletId = session?.currentOutletId ?? null;
-  const q = outletId ? `?outlet_id=${outletId}` : "";
+  const { frm, to } = rangeFor(period);
+  const params = new URLSearchParams();
+  if (outletId) params.set("outlet_id", outletId);
+  params.set("frm", frm);
+  params.set("to", to);
+  const q = `?${params.toString()}`;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
@@ -38,6 +59,7 @@ export default function Laporan() {
         <ChipRow items={TABS} value={tab} onChange={setTab} />
       </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing["3xl"], gap: spacing.lg }}>
+        <Segmented items={PERIODS} value={period} onChange={setPeriod} />
         {tab === "keuangan" && <Keuangan q={q} />}
         {tab === "transaksi" && <Transaksi q={q} />}
         {tab === "pegawai" && <Pegawai q={q} />}
