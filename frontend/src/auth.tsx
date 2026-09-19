@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import Constants from "expo-constants";
 import { storage } from "@/src/utils/storage";
 import { api } from "@/src/api";
 
@@ -34,6 +35,10 @@ type AuthCtx = {
 };
 
 const SESSION_KEY = "jw_session_v1";
+const VERSION_KEY = "jw_app_version";
+// Versi sistem — sesi tetap tersimpan (selalu login di perangkat ini),
+// kecuali versi ini berubah (ada update sistem) → pengguna diminta login ulang.
+const APP_VERSION = Constants.expoConfig?.version || "1.0.0";
 const Ctx = createContext<AuthCtx>(null as any);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -42,6 +47,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
+      const savedVersion = await storage.getItem<string | null>(VERSION_KEY, null);
+      if (savedVersion !== APP_VERSION) {
+        // Ada update sistem → bersihkan sesi lama & paksa login ulang.
+        await storage.removeItem(SESSION_KEY);
+        await storage.setItem(VERSION_KEY, APP_VERSION as any);
+        setLoading(false);
+        return;
+      }
       const saved = await storage.getItem<Session | null>(SESSION_KEY, null);
       if (saved) setSession(saved);
       setLoading(false);
@@ -50,8 +63,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const persist = async (s: Session | null) => {
     setSession(s);
-    if (s) await storage.setItem(SESSION_KEY, s as any);
-    else await storage.removeItem(SESSION_KEY);
+    if (s) {
+      await storage.setItem(SESSION_KEY, s as any);
+      await storage.setItem(VERSION_KEY, APP_VERSION as any);
+    } else {
+      await storage.removeItem(SESSION_KEY);
+    }
   };
 
   const sessionFromRes = (res: any): Session => {
