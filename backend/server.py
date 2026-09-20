@@ -131,6 +131,7 @@ async def startup():
     await seed_data()
     await reseed_pricelist()
     await ensure_credentials()
+    await ensure_promos()
     logger.info("Database ready.")
 
 
@@ -164,6 +165,14 @@ alter table customers add column if not exists address text default '';
 alter table orders add column if not exists is_request boolean not null default false;
 alter table orders add column if not exists request_items jsonb not null default '[]';
 alter table orders add column if not exists address text default '';
+alter table orders add column if not exists express boolean not null default false;
+alter table orders add column if not exists discount numeric(12,2) not null default 0;
+alter table orders add column if not exists paid_amount numeric(12,2) not null default 0;
+create table if not exists promos (
+  id uuid primary key default gen_random_uuid(), outlet_id uuid references outlets(id),
+  title text not null, description text default '', discount_pct numeric(5,2) not null default 0,
+  code text default '', valid_until date, active boolean not null default true,
+  created_at timestamptz not null default now());
 alter table outlets add column if not exists review_url text default '';
 update outlets set review_url='https://g.page/r/CUv3jO9Cz4aAEBM/review' where city='Depok' and coalesce(review_url,'')='';
 update outlets set review_url='https://g.page/r/CT1ETVEE3zn5EBM/review' where city='Jakarta' and coalesce(review_url,'')='';
@@ -220,6 +229,26 @@ async def ensure_credentials():
         if need:
             ch = await run_in_threadpool(hash_password, "pelanggan123")
             await conn.execute("update customers set password_hash=$1 where password_hash is null", ch)
+
+
+async def ensure_promos():
+    """Seed a couple of sample promos per outlet once (owner can manage them later)."""
+    async with pool.acquire() as conn:
+        n = await conn.fetchval("select count(*) from promos")
+        if n:
+            return
+        outlets = await conn.fetch("select id, city from outlets")
+        for o in outlets:
+            await conn.execute(
+                """insert into promos(outlet_id,title,description,discount_pct,code,valid_until)
+                   values($1,$2,$3,$4,$5,current_date + 30)""",
+                o["id"], "Diskon 15% Cuci Kering Setrika",
+                "Berlaku untuk cuci kering setrika min. 5 kg, sekali pakai per pelanggan.", 15, "WANGI15")
+            await conn.execute(
+                """insert into promos(outlet_id,title,description,discount_pct,code,valid_until)
+                   values($1,$2,$3,$4,$5,current_date + 60)""",
+                o["id"], "Bayar pakai Coin, hemat 10%",
+                "Setiap pembayaran memakai saldo coin otomatis dapat potongan 10%.", 10, "COIN10")
 
 
 @app.on_event("shutdown")
@@ -691,6 +720,25 @@ class RegisterBody(BaseModel):
     phone: str
     password: str
     email: str = ""
+    outlet_id: Optional[str] = None
+
+
+class OutletPickBody(BaseModel):
+    outlet_id: str
+
+
+class PayBody(BaseModel):
+    method: str = "qris"
+
+
+class PromoBody(BaseModel):
+    outlet_id: Optional[str] = None
+    title: str
+    description: str = ""
+    discount_pct: float = 0
+    code: str = ""
+    valid_until: Optional[str] = None
+    active: bool = True
 
 
 class OutletBody(BaseModel):
@@ -852,11 +900,69 @@ async def register(body: RegisterBody):
         exists = await conn.fetchval("select count(*) from customers where phone=$1", phone)
         if exists:
             raise HTTPException(409, "Nomor HP sudah terdaftar")
-        outlet = await conn.fetchval("select id from outlets order by created_at limit 1")
+        outlet = None
+        if body.outlet_id:
+            outlet = await conn.fetchval("select id from outlets where id=$1", body.outlet_id)
+        if not outlet:
+            raise HTTPException(422, "Pilih outlet terlebih dahulu")
         row = await conn.fetchrow(
             "insert into customers(name,phone,email,outlet_id,password_hash) values($1,$2,$3,$4,$5) returning *",
             body.name.strip(), phone, body.email, outlet, pw)
         return {"role": "pelanggan", "customer": row_to_dict(row)}
+
+
+@api.patch("/customers/{cid}/outlet")
+async def pick_customer_outlet(cid: str, b: OutletPickBody):
+    async with pool.acquire() as conn:
+        outlet = await conn.fetchval("select id from outlets where id=$1", b.outlet_id)
+        if not outlet:
+            raise HTTPException(404, "Outlet tidak ditemukan")
+        row = await conn.fetchrow("update customers set outlet_id=$1 where id=$2 returning *", outlet, cid)
+        if not row:
+            raise HTTPException(404, "Pelanggan tidak ditemukan")
+        return row_to_dict(row)
+
+
+@api.get("/promos")
+async def list_promos(outlet_id: Optional[str] = None):
+    async with pool.acquire() as conn:
+        clauses = ["active=true", "(valid_until is null or valid_until >= current_date)"]
+        args = []
+        if outlet_id:
+            args.append(outlet_id)
+            clauses.append(f"(outlet_id=${len(args)} or outlet_id is null)")
+        rows = await conn.fetch(
+            f"select * from promos where {' and '.join(clauses)} order by created_at desc", *args)
+        return rows_to_list(rows)
+
+
+@api.post("/promos")
+async def create_promo(b: PromoBody):
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """insert into promos(outlet_id,title,description,discount_pct,code,valid_until,active)
+               values($1,$2,$3,$4,$5,$6,$7) returning *""",
+            b.outlet_id, b.title, b.description, b.discount_pct, b.code, _to_date(b.valid_until), b.active)
+        return row_to_dict(row)
+
+
+@api.put("/promos/{pid}")
+async def update_promo(pid: str, b: PromoBody):
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """update promos set outlet_id=$1,title=$2,description=$3,discount_pct=$4,code=$5,
+               valid_until=$6,active=$7 where id=$8 returning *""",
+            b.outlet_id, b.title, b.description, b.discount_pct, b.code, _to_date(b.valid_until), b.active, pid)
+        if not row:
+            raise HTTPException(404, "Promo tidak ditemukan")
+        return row_to_dict(row)
+
+
+@api.delete("/promos/{pid}")
+async def delete_promo(pid: str):
+    async with pool.acquire() as conn:
+        await conn.execute("delete from promos where id=$1", pid)
+        return {"ok": True}
 
 
 @api.get("/outlets")
@@ -1054,9 +1160,11 @@ async def enrich_orders(conn, rows):
 
 
 @api.get("/orders")
-async def list_orders(outlet_id: Optional[str] = None, customer_id: Optional[str] = None, status: Optional[str] = None, active: bool = False, today: bool = False, limit: int = 100):
+async def list_orders(outlet_id: Optional[str] = None, customer_id: Optional[str] = None, status: Optional[str] = None, active: bool = False, today: bool = False, unpaid: bool = False, limit: int = 100):
     async with pool.acquire() as conn:
         clauses, args = [], []
+        if unpaid:
+            clauses.append("payment_status='unpaid' and status<>'cancelled' and total > 0")
         if outlet_id:
             args.append(outlet_id); clauses.append(f"outlet_id=${len(args)}")
         if customer_id:
@@ -1205,17 +1313,34 @@ async def advance_status(oid: str, b: Optional[AdvanceBody] = None):
 
 
 @api.post("/orders/{oid}/pay")
-async def pay_order(oid: str):
+async def pay_order(oid: str, b: Optional[PayBody] = None):
+    method = (b.method if b else "qris") or "qris"
     async with pool.acquire() as conn:
         row = await conn.fetchrow("select * from orders where id=$1", oid)
         if not row:
             raise HTTPException(404, "Order tidak ditemukan")
         if row["payment_status"] == "paid":
             return (await enrich_orders(conn, [row]))[0]
-        await conn.execute("update orders set payment_status='paid', updated_at=now() where id=$1", oid)
-        await conn.execute(
-            "insert into transactions(order_id,outlet_id,amount,type,method) values($1,$2,$3,'income',$4)",
-            oid, row["outlet_id"], row["total"], row["payment_method"])
+        total = Decimal(str(row["total"]))
+        discount = Decimal(0)
+        if method == "coin":
+            discount = (total * Decimal("0.10")).quantize(Decimal("1"))
+            charged = total - discount
+            cust = await conn.fetchrow("select deposit from customers where id=$1", row["customer_id"])
+            if not cust or Decimal(str(cust["deposit"])) < charged:
+                raise HTTPException(400, "Saldo coin tidak cukup")
+        else:
+            charged = total
+        async with conn.transaction():
+            if method == "coin":
+                await conn.execute("update customers set deposit = deposit - $1 where id=$2", charged, row["customer_id"])
+            await conn.execute(
+                """update orders set payment_status='paid', payment_method=$1, discount=$2,
+                   paid_amount=$3, updated_at=now() where id=$4""",
+                method, discount, charged, oid)
+            await conn.execute(
+                "insert into transactions(order_id,outlet_id,amount,type,method) values($1,$2,$3,'income',$4)",
+                oid, row["outlet_id"], charged, method)
         row = await conn.fetchrow("select * from orders where id=$1", oid)
         return (await enrich_orders(conn, [row]))[0]
 
@@ -1640,25 +1765,54 @@ async def list_adjustments(outlet_id: Optional[str] = None):
         return rows_to_list(rows)
 
 
+POINTS_RULE = {"kg": 1, "bedcover": 1, "satuan": 2, "express_bonus": 2}
+
+
+def _mask_name(name: str) -> str:
+    parts = (name or "?").split()
+    return " ".join([(p[0] + "•" * max(2, len(p) - 1)) for p in parts[:2]])
+
+
 @api.get("/leaderboard")
 async def leaderboard(outlet_id: Optional[str] = None, customer_id: Optional[str] = None):
+    """Poin: 1 kg = 1 poin, 1 satuan = 2 poin, Bed Cover = 1 poin, order express bonus 2 poin."""
     async with pool.acquire() as conn:
-        oclause = " where outlet_id=$1" if outlet_id else ""
+        oclause = " where c.outlet_id=$1" if outlet_id else ""
         oargs = [outlet_id] if outlet_id else []
         rows = await conn.fetch(
-            f"""select id,name,points,
-                (select coalesce(sum(total),0) from orders o where o.customer_id=customers.id and o.status<>'cancelled') as spend,
-                (select count(*) from orders o where o.customer_id=customers.id and o.status<>'cancelled') as orders
-                from customers{oclause} order by points desc limit 50""", *oargs)
+            f"""select c.id, c.name,
+                   coalesce(i.pts,0) + coalesce(o.exp_pts,0) as points,
+                   coalesce(o.total_kg,0) as total_kg, coalesce(o.orders,0) as orders
+                from customers c
+                left join (
+                  select o.customer_id,
+                         sum(case when oi.unit='kg' then oi.qty
+                                  when oi.service_name ilike 'Bed Cover%' then oi.qty
+                                  else oi.qty * 2 end) as pts
+                  from order_items oi join orders o on o.id=oi.order_id
+                  where o.status<>'cancelled' group by o.customer_id
+                ) i on i.customer_id=c.id
+                left join (
+                  select customer_id, sum(weight_kg) as total_kg, count(*) as orders,
+                         sum(case when express then 2 else 0 end) as exp_pts
+                  from orders where status<>'cancelled' group by customer_id
+                ) o on o.customer_id=c.id{oclause}
+                order by points desc, total_kg desc""", *oargs)
         ranking = []
         my_rank = None
         for i, r in enumerate(rows):
-            entry = {"rank": i + 1, "id": str(r["id"]), "name": r["name"], "points": int(r["points"]),
-                     "spend": float(r["spend"]), "orders": int(r["orders"])}
+            is_me = customer_id and str(r["id"]) == customer_id
+            entry = {"rank": i + 1, "id": str(r["id"]),
+                     "name": r["name"] if is_me else _mask_name(r["name"]),
+                     "is_me": bool(is_me),
+                     "points": int(float(r["points"] or 0)),
+                     "total_kg": float(r["total_kg"] or 0),
+                     "orders": int(r["orders"] or 0)}
             ranking.append(entry)
-            if customer_id and str(r["id"]) == customer_id:
+            if is_me:
                 my_rank = entry
-        return {"ranking": ranking, "my_rank": my_rank}
+        return {"ranking": ranking[:20], "my_rank": my_rank, "total_participants": len(ranking),
+                "rules": POINTS_RULE}
 
 
 @api.get("/")

@@ -84,6 +84,16 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [ ] FASE 3 — Tracking detail & Riwayat
 - [ ] FASE 4 — Coin/Deposit (top up 50/100/250/500rb→530rb, 1rp=1coin, diskon 10% pakai coin, kadaluarsa 3 bln)
 - [ ] FASE 5 — Rating (Google review link 4-5★ + promo pelanggan pertama; 1-2★ komplain ke owner) + Promo dikelola owner
+
+## Update (2026-06, iterasi 10) — Struktur Pelanggan: Outlet, Tab Bar, Peringkat, Bayar
+- [x] Pendaftaran pelanggan WAJIB pilih outlet (OutletPicker di /login mode Daftar; POST /auth/register menolak tanpa outlet_id valid). Harga/pricelist selalu mengikuti outlet pelanggan — pelanggan tidak bisa membandingkan outlet lain.
+- [x] Pelanggan lama tanpa outlet: gate "Pilih Outlet" muncul sebelum halaman order (PATCH /api/customers/{id}/outlet), pricelist tidak diperlihatkan lebih dulu.
+- [x] Menu bar bawah pelanggan = 3 tab (grup `app/(customer)`): **Home** (Promo saat ini, Saldo Coin, Pantau Ordermu, Klasemen), **Bayar**, **Pickup/Delivery**. Layar lama /customer & /permintaan dihapus.
+- [x] Peringkat: hanya posisi saya (#N dari M pelanggan di outlet) + Poin + Total Kg; peserta lain nama/poin disamarkan (mask '•' dari backend + opacity). Nominal total belanja tidak lagi ditampilkan.
+- [x] Aturan poin: 1 kg = 1 poin, 1 satuan = 2 poin, Bed Cover = 1 poin, order express bonus +2 poin (kolom orders.express). /api/leaderboard dihitung dinamis dari order_items.
+- [x] Tab Bayar: daftar tagihan (GET /orders?unpaid=true), rincian item + total, tombol "Setujui Nota" (status quoted), metode QRIS / Tunai / Coin. Coin otomatis diskon 10% & memotong saldo (kolom orders.discount/paid_amount). Empty state "Belum ada tagihan".
+- [x] Promo: tabel `promos` + GET/POST/PUT/DELETE /api/promos (2 promo contoh per outlet), tampil di Home pelanggan. UI kelola promo untuk owner masih backlog.
+- Teruji: backend 17/17 baru + 37/37 regresi PASS, frontend semua flow PASS (iteration_7.json).
 - Google review links: Depok/Kalimulya https://g.page/r/CUv3jO9Cz4aAEBM/review ; Jakarta/Pulomas https://g.page/r/CT1ETVEE3zn5EBM/review ; Bandung/Ujungberung https://g.page/r/CQUtr3hTOpEbEBM/review
 
 ## Backlog (prioritized)

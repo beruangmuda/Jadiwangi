@@ -28,8 +28,9 @@ type AuthCtx = {
   session: Session | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
-  register: (name: string, phone: string, password: string) => Promise<void>;
+  register: (name: string, phone: string, password: string, outletId: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateCustomer: (patch: any) => void;
   setOutlet: (id: string | null) => void;
   currentOutlet: () => Outlet | null;
 };
@@ -85,9 +86,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await persist(sessionFromRes(res));
   };
 
-  const register: AuthCtx["register"] = async (name, phone, password) => {
-    const res = await api.post("/auth/register", { name, phone, password });
+  const register: AuthCtx["register"] = async (name, phone, password, outletId) => {
+    const res = await api.post("/auth/register", { name, phone, password, outlet_id: outletId });
     await persist(sessionFromRes(res));
+  };
+
+  const updateCustomer = (patch: any) => {
+    if (!session) return;
+    const customer = { ...(session.customer || {}), ...patch };
+    persist({ ...session, customer, currentOutletId: customer.outlet_id ?? session.currentOutletId });
   };
 
   const logout = async () => {
@@ -106,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ session, loading, login, register, logout, setOutlet, currentOutlet }}>
+    <Ctx.Provider value={{ session, loading, login, register, logout, updateCustomer, setOutlet, currentOutlet }}>
       {children}
     </Ctx.Provider>
   );

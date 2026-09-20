@@ -12,6 +12,7 @@ import { useAuth } from "@/src/auth";
 import { fonts, makeStyles, radius, shadow, spacing, useTheme } from "@/src/theme";
 import { Icon } from "@/src/components/Icon";
 import { PrimaryButton } from "@/src/components/ui";
+import { OutletPicker } from "@/src/components/OutletPicker";
 
 export default function Login() {
   const styles = useStyles();
@@ -25,6 +26,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [outletId, setOutletId] = useState<string | null>(null);
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -49,9 +51,10 @@ export default function Login() {
   const doRegister = async () => {
     if (!name.trim() || phone.trim().length < 7 || password.length < 6)
       return fail("Lengkapi nama, no. HP, dan kata sandi (min. 6 karakter)");
+    if (!outletId) return fail("Pilih outlet Jadiwangi kamu");
     setBusy(true); setError("");
     try {
-      await register(name.trim(), phone.trim(), password);
+      await register(name.trim(), phone.trim(), password, outletId);
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/");
     } catch (e: any) {
@@ -130,8 +133,15 @@ export default function Login() {
             </View>
           </View>
 
-          {error ? <Text testID="login-error" style={styles.error}>{error}</Text> : null}
+          {!isLogin && (
+            <View style={styles.field}>
+              <Text style={styles.label}>Pilih Outlet</Text>
+              <Text style={styles.outletHint}>Harga & layanan mengikuti outlet yang kamu pilih.</Text>
+              <OutletPicker value={outletId} onChange={setOutletId} testIDPrefix="reg-outlet" />
+            </View>
+          )}
 
+          {error ? <Text testID="login-error" style={styles.error}>{error}</Text> : null}
           <PrimaryButton
             label={isLogin ? "Masuk" : "Daftar & Masuk"}
             icon={isLogin ? "login" : "account-plus"}
@@ -166,6 +176,7 @@ const useStyles = makeStyles((c) => ({
   hint: { fontFamily: fonts.body, fontSize: 13, color: c.muted, marginBottom: spacing.sm },
   field: { gap: spacing.xs },
   label: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurfaceSecondary },
+  outletHint: { fontFamily: fonts.body, fontSize: 12, color: c.muted, marginBottom: spacing.xs },
   inputRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: c.surfaceSecondary, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, paddingHorizontal: spacing.md },
   input: { flex: 1, paddingVertical: 14, fontFamily: fonts.body, fontSize: 15, color: c.onSurface },
   error: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.error, textAlign: "center" },

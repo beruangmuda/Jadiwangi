@@ -18,7 +18,7 @@ export default function Index() {
     } else if (session.role === "pegawai") {
       router.replace("/(employee)");
     } else {
-      router.replace("/customer");
+      router.replace("/(customer)");
     }
   }, [session, loading]);
 

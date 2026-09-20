@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, Pressable, Platform } from "react-native";
+import { View, Text, Pressable, Platform, ScrollView } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -11,7 +11,8 @@ import { useAuth } from "@/src/auth";
 import { fonts, makeStyles, radius, shadow, spacing, useTheme } from "@/src/theme";
 import { Icon } from "@/src/components/Icon";
 import { PrimaryButton } from "@/src/components/ui";
-import { StackHeader, Field, Segmented } from "@/src/components/form";
+import { Field, Segmented } from "@/src/components/form";
+import { OutletPicker } from "@/src/components/OutletPicker";
 
 const CATS = [
   { key: "Cuci Kering Setrika", icon: "washing-machine", unit: "kg" },
@@ -24,23 +25,48 @@ const CATS = [
   { key: "Lainnya", icon: "dots-horizontal", unit: "item" },
 ];
 
-export default function Permintaan() {
+export default function Pesan() {
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const qc = useQueryClient();
-  const { session } = useAuth();
+  const { session, updateCustomer } = useAuth();
   const cust = session?.customer;
-  const outletId = cust?.outlet_id;
+  const outletId = cust?.outlet_id || null;
 
+  const [pick, setPick] = useState<string | null>(null);
   const [sel, setSel] = useState<Record<string, number>>({});
   const [delivery, setDelivery] = useState("self");
   const [address, setAddress] = useState(cust?.address || "");
   const [notes, setNotes] = useState("");
 
   const { data: outlets } = useQuery({ queryKey: ["outlets"], queryFn: () => api.get("/outlets") });
-  const outletName = useMemo(() => (outlets || []).find((o: any) => o.id === outletId)?.name || "Outlet kamu", [outlets, outletId]);
+  const outletName = useMemo(
+    () => (outlets || []).find((o: any) => o.id === outletId)?.name || "Outlet kamu",
+    [outlets, outletId]);
+
+  const saveOutlet = useMutation({
+    mutationFn: () => api.patch(`/customers/${cust?.id}/outlet`, { outlet_id: pick }),
+    onSuccess: (row: any) => {
+      updateCustomer({ outlet_id: row.outlet_id });
+      qc.invalidateQueries();
+    },
+  });
+
+  const submit = useMutation({
+    mutationFn: () => api.post("/orders/request", {
+      customer_id: cust?.id, outlet_id: outletId, delivery_type: delivery,
+      address: delivery === "self" ? "" : address, notes,
+      categories: Object.entries(sel).map(([category, qty]) => ({ category, qty })),
+    }),
+    onSuccess: () => {
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSel({}); setNotes("");
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
+      router.push("/(customer)");
+    },
+  });
 
   const toggle = (key: string) => {
     if (Platform.OS !== "web") Haptics.selectionAsync();
@@ -51,22 +77,35 @@ export default function Permintaan() {
       return copy;
     });
   };
-  const setQty = (key: string, delta: number) => {
+  const setQty = (key: string, delta: number) =>
     setSel((p) => ({ ...p, [key]: Math.max(1, (p[key] || 1) + delta) }));
-  };
 
-  const submit = useMutation({
-    mutationFn: () => api.post("/orders/request", {
-      customer_id: cust?.id, outlet_id: outletId, delivery_type: delivery,
-      address: delivery === "self" ? "" : address, notes,
-      categories: Object.entries(sel).map(([category, qty]) => ({ category, qty })),
-    }),
-    onSuccess: () => {
-      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      qc.invalidateQueries({ queryKey: ["my-orders"] });
-      router.replace("/customer");
-    },
-  });
+  /* ---- Gate: pilih outlet dulu sebelum halaman order ---- */
+  if (!outletId) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.surface }}>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+          <Text style={styles.headerTitle}>Pilih Outlet</Text>
+          <Text style={styles.headerSub}>Outlet menentukan harga & layanan kamu</Text>
+        </View>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}>
+          <View style={styles.info}>
+            <Icon name="information-outline" size={18} color={colors.brand} />
+            <Text style={styles.infoText}>Pilih outlet Jadiwangi terdekat. Semua pesanan dan harga akan mengikuti outlet ini.</Text>
+          </View>
+          <OutletPicker value={pick} onChange={setPick} testIDPrefix="pick-outlet" />
+          <PrimaryButton
+            label="Simpan Outlet"
+            icon="check"
+            onPress={() => saveOutlet.mutate()}
+            loading={saveOutlet.isPending}
+            disabled={!pick}
+            testID="save-outlet"
+          />
+        </ScrollView>
+      </View>
+    );
+  }
 
   const count = Object.keys(sel).length;
   const needAddr = delivery !== "self";
@@ -74,11 +113,15 @@ export default function Permintaan() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
-      <StackHeader title="Buat Permintaan" subtitle={outletName} />
-      <KeyboardAwareScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: 120 }} bottomOffset={20}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <Text style={styles.headerTitle}>Pesan Pickup / Delivery</Text>
+        <Text style={styles.headerSub}>{outletName}</Text>
+      </View>
+
+      <KeyboardAwareScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: 140 }} bottomOffset={20}>
         <View style={styles.info}>
           <Icon name="information-outline" size={18} color={colors.brand} />
-          <Text style={styles.infoText}>Pilih layanan & perkiraan jumlah. Pegawai akan menimbang dan mengirim harga untuk kamu setujui.</Text>
+          <Text style={styles.infoText}>Pilih layanan & perkiraan jumlah. Pegawai akan menimbang dan mengirim nota untuk kamu setujui di menu Bayar.</Text>
         </View>
 
         <View style={{ gap: spacing.sm }}>
@@ -138,6 +181,9 @@ export default function Permintaan() {
 }
 
 const useStyles = makeStyles((c) => ({
+  header: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, backgroundColor: c.surface, borderBottomWidth: 1, borderBottomColor: c.divider },
+  headerTitle: { fontFamily: fonts.displayBold, fontSize: 20, color: c.onSurface },
+  headerSub: { fontFamily: fonts.body, fontSize: 12, color: c.muted, marginTop: 2 },
   info: { flexDirection: "row", gap: spacing.sm, backgroundColor: c.brandTertiary, borderRadius: radius.md, padding: spacing.md },
   infoText: { flex: 1, fontFamily: fonts.body, fontSize: 13, color: c.onBrandTertiary, lineHeight: 18 },
   label: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurface },

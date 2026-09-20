@@ -1,0 +1,46 @@
+{
+  "summary": "Iter7 (customer redesign: mandatory outlet at register + patch outlet endpoint, 3-tab shell Home/Bayar/Pickup, promos per outlet, leaderboard mask/no-spend, unpaid billing, pay flow qris/cash/coin with 10% coin discount) fully verified end-to-end. Backend: 17/17 new pytest PASS in /app/backend/tests/test_iter7_customer.py + 37/37 regression PASS (backend_test.py + test_iter4_reports.py + test_iter5_payroll.py). Verified endpoints: POST /api/auth/register requires valid outlet_id (missing or unknown -> 422 'Pilih outlet terlebih dahulu'), valid outlet_id -> role=pelanggan with customer.outlet_id echoed and login-by-phone works. PATCH /api/customers/{cid}/outlet returns 404 for unknown outlet/customer and 200 with updated outlet_id on success. GET /api/promos?outlet_id= returns >=2 active seeded promos. GET /api/leaderboard?outlet_id=&customer_id= returns my_rank {rank,points,total_kg,orders,is_me:true}, total_participants int>0, ranking rows for others have masked names (contain '•'), and NO 'spend' key present anywhere. GET /api/orders?customer_id=&unpaid=true only returns payment_status='unpaid', status<>'cancelled', total>0. POST /api/orders/{oid}/pay: method=qris/cash -> discount=0, paid_amount=total; method=coin -> discount=10% of total (Rp1.000 on Rp10.000), paid_amount=total*0.9 (Rp9.000), deposit debited by paid_amount (verified pre/post via /customers), and transactions row inserted; coin with deposit=0 -> HTTP 400 'Saldo coin tidak cukup'; already-paid order -> idempotent 200 returning enriched order. Regressions: /api/dashboard, /api/reports/{financial,transactions,employees}, /api/payroll, /api/services?outlet_id=, POST /api/orders/request all healthy. Frontend (390x844 mobile web, chromium): /login shows Daftar tab with Nama, No HP, Kata Sandi and OutletPicker (testIDs reg-outlet-<outletId>); submit without outlet displays login-error text 'Pilih outlet Jadiwangi kamu'. Demo login (Pelanggan/pelanggan123) lands on /(customer) home showing testID my-rank '#12', 'dari 14 pelanggan', Poin 5, Total Kg 5; Promo Saat Ini renders 2 promo cards (COIN10, WANGI15); Uang Deposit (Coin) shows '200.000 coin' (testID coin-balance); Klasemen shows testID rank-me with real name and other rows masked with • (verified via layout — no 'Belanja pelanggan lain' Rupiah anywhere in body text). Bottom tab bar has exactly 3 tabs Home/Bayar/Pickup/Delivery and navigation works. /bayar shows 1 tagihan bill-1d76d356-… JW-260920-1569 Rp50.000; tapping opens Rincian + Total; 3 method buttons method-qris/method-cash/method-coin present; selecting Coin displays 'Diskon 10% = Rp5.000. Coin terpakai 45.000 dari 200.000' and pay button label becomes 'Bayar Sekarang · Rp45.000' (testID pay-<oid>). /pesan (Pickup/Delivery): customer already has outlet so gate is bypassed and 8 category cards testID cat-* render immediately; submit-request works — after pressing 'Kirim Permintaan (1 layanan)' navigates back to home and Pantau Ordermu shows new order (with 'Bayar' shortcut). Deprecated 'shadow*' RN-Web warnings persist (carry-over, non-blocking).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/bayar", "issues": ["Bill JW-260920-1569 (seeded) has no order_items rows so Rincian shows 'Belum ada rincian item.' — cosmetic; new orders created via POST /orders will populate items normally."]}
+    ],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Persistent RN-Web deprecation 'shadow* style props are deprecated. Use boxShadow.' (carry-over from previous iterations)"}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter7_customer.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_iter4_reports.py",
+    "/app/backend/tests/test_iter5_payroll.py",
+    "/app/test_reports/pytest/iter7_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL (carry-over): migrate shadow* to boxShadow across custom card components to silence RN-Web deprecation warnings.",
+    "OPTIONAL: consider backfilling order_items for seeded quick-bills so /bayar Rincian shows the line items (only affects seed order JW-260920-1569).",
+    "OPTIONAL (pre-existing): /app/backend/tests/test_iter6_customers.py uses os.environ['EXPO_PUBLIC_BACKEND_URL'] without default; harmless in this env because the var is exported, but a default fallback would prevent collection errors if env var missing."
+  ],
+  "critical_code_review_comments": [
+    "server.py POST /auth/register (l.888): correctly rejects missing/unknown outlet_id with 422 (single message), hashes password before insert, and returns full customer row via row_to_dict — password_hash excluded by row_to_dict guard.",
+    "server.py PATCH /customers/{cid}/outlet (l.914): validates outlet existence first (404), then attempts update; returns 404 when customer id not found — correct order.",
+    "server.py POST /orders/{oid}/pay (l.1315): computes discount using Decimal('0.10').quantize(Decimal('1')) — for total=10.000 gives 1.000 (rounds half-even). Charged=total-discount debited from deposit atomically inside a transaction; already-paid short-circuit returns enriched order (idempotent). Insufficient deposit raises 400.",
+    "server.py GET /leaderboard (l.1776): masks non-self names via _mask_name and never emits 'spend' field. Points formula: kg unit -> qty*1, satuan -> qty*2, Bed Cover* -> qty*1, plus +2 per express order — matches spec.",
+    "frontend/app/(customer)/_layout.tsx enforces the 3-tab shell; frontend/app/(customer)/bayar.tsx and index.tsx expose all required testIDs (my-rank, rank-me, coin-balance, bill-<id>, method-<m>, pay-<id>).",
+    "frontend/app/login.tsx binds OutletPicker with testIDPrefix='reg-outlet' → renders reg-outlet-<outletId> as spec.",
+    "server.py now 1825 lines — still monolithic (carry-over recommendation to split)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter7_customer.py",
+    "/app/test_reports/iteration_7.json",
+    "/app/test_reports/pytest/iter7_results.xml"
+  ],
+  "success_rate": {"backend": "100% (17/17 new + 37/37 regression)", "frontend": "100% of listed critical flows"},
+  "seed_data_creation": "Backend tests created several TEST_ customers via POST /api/customers (TEST_iter7_pick, TEST_iter7_broke, TEST_iter7_reg-<random-phone>) and multiple TEST_iter7_pay orders (small totals 8k-25k) on Depok outlet. Also topped up 1 demo Depok customer deposit to 500.000 during coin-pay test (net delta after coin test should be near-zero as it debits 9.000). Cleanup endpoint not available; TEST_ rows accumulate as with prior iterations.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iter7 customer redesign is functional. Key testIDs: reg-name, reg-phone, login-password, reg-outlet-<outletId>, register-submit/login-submit/toggle-mode, login-error; my-rank, coin-balance, rank-me, promo-<id>, order-<id>; bill-<oid>, approve-<oid>, method-qris|cash|coin, pay-<oid>, pay-error; cat-<key>, pick-outlet-<id>, save-outlet, submit-request. Demo bill available: JW-260920-1569 (Rp50.000, Diterima) on Pelanggan/pelanggan123 customer 200.000 coin — DO NOT pay it in tests unless you want to change demo state; use POST /api/orders on Depok customer to create disposable unpaid orders for pay flow testing. Backend API base: https://wangi-dashboard.preview.emergentagent.com/api. Depok outlet UUID e5fc0b12-25f5-4be2-a117-6fea0df032da, Jakarta a1564153-3b1a-4528-9132-1a4406acb094.",
+  "rca_of_issue": "N/A — no regressions. Coin discount rounding uses Decimal.quantize to whole rupiah, matching UI which displays integer Rupiah amounts."
+}
