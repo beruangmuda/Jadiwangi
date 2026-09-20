@@ -174,6 +174,27 @@ create table if not exists promos (
   code text default '', valid_until date, active boolean not null default true,
   created_at timestamptz not null default now());
 alter table outlets add column if not exists review_url text default '';
+alter table customers add column if not exists deposit_expires_at date;
+create table if not exists topups (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id) on delete cascade,
+  outlet_id uuid references outlets(id), amount numeric(12,2) not null,
+  coins numeric(12,2) not null, method text not null default 'cash',
+  status text not null default 'pending', note text default '',
+  created_at timestamptz not null default now(), confirmed_at timestamptz);
+create table if not exists reviews (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id) on delete cascade,
+  outlet_id uuid references outlets(id), order_id uuid references orders(id) on delete set null,
+  rating int not null, comment text default '', status text not null default 'new',
+  reply text default '', created_at timestamptz not null default now(), resolved_at timestamptz);
+create table if not exists vouchers (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id) on delete cascade,
+  outlet_id uuid references outlets(id), title text not null,
+  discount_pct numeric(5,2) not null default 0, reason text default '',
+  used boolean not null default false, order_id uuid, expires_at date,
+  created_at timestamptz not null default now());
 update outlets set review_url='https://g.page/r/CUv3jO9Cz4aAEBM/review' where city='Depok' and coalesce(review_url,'')='';
 update outlets set review_url='https://g.page/r/CT1ETVEE3zn5EBM/review' where city='Jakarta' and coalesce(review_url,'')='';
 update outlets set review_url='https://g.page/r/CQUtr3hTOpEbEBM/review' where city='Bandung' and coalesce(review_url,'')='';
@@ -729,6 +750,22 @@ class OutletPickBody(BaseModel):
 
 class PayBody(BaseModel):
     method: str = "qris"
+    voucher_id: Optional[str] = None
+
+
+class TopupBody(BaseModel):
+    customer_id: str
+    outlet_id: Optional[str] = None
+    amount: float
+    method: str = "cash"
+
+
+class ReviewBody(BaseModel):
+    customer_id: str
+    outlet_id: Optional[str] = None
+    order_id: Optional[str] = None
+    rating: int
+    comment: str = ""
 
 
 class PromoBody(BaseModel):
@@ -1062,6 +1099,7 @@ async def list_customers(outlet_id: Optional[str] = None, q: Optional[str] = Non
 @api.get("/customers/{cid}/detail")
 async def customer_detail(cid: str):
     async with pool.acquire() as conn:
+        await expire_deposits(conn)
         c = await conn.fetchrow("select * from customers where id=$1", cid)
         if not c:
             raise HTTPException(404, "Pelanggan tidak ditemukan")
@@ -1077,6 +1115,14 @@ async def customer_detail(cid: str):
         recent = await conn.fetch(
             "select code,total,status,weight_kg,unit_qty,created_at from orders where customer_id=$1 order by created_at desc limit 10", cid)
         d["recent_orders"] = rows_to_list(recent)
+        d["pending_topups"] = int(await conn.fetchval(
+            "select count(*) from topups where customer_id=$1 and status='pending'", cid) or 0)
+        vouchers = await conn.fetch(
+            """select * from vouchers where customer_id=$1 and used=false
+               and (expires_at is null or expires_at >= current_date) order by created_at desc""", cid)
+        d["vouchers"] = rows_to_list(vouchers)
+        d["reviews_count"] = int(await conn.fetchval(
+            "select count(*) from reviews where customer_id=$1", cid) or 0)
         return d
 
 
@@ -1315,7 +1361,9 @@ async def advance_status(oid: str, b: Optional[AdvanceBody] = None):
 @api.post("/orders/{oid}/pay")
 async def pay_order(oid: str, b: Optional[PayBody] = None):
     method = (b.method if b else "qris") or "qris"
+    voucher_id = b.voucher_id if b else None
     async with pool.acquire() as conn:
+        await expire_deposits(conn)
         row = await conn.fetchrow("select * from orders where id=$1", oid)
         if not row:
             raise HTTPException(404, "Order tidak ditemukan")
@@ -1323,17 +1371,27 @@ async def pay_order(oid: str, b: Optional[PayBody] = None):
             return (await enrich_orders(conn, [row]))[0]
         total = Decimal(str(row["total"]))
         discount = Decimal(0)
+        voucher = None
+        if voucher_id:
+            voucher = await conn.fetchrow(
+                """select * from vouchers where id=$1 and customer_id=$2 and used=false
+                   and (expires_at is null or expires_at >= current_date)""", voucher_id, row["customer_id"])
+            if not voucher:
+                raise HTTPException(400, "Voucher tidak valid atau sudah dipakai")
+            discount += (total * Decimal(str(voucher["discount_pct"])) / Decimal(100)).quantize(Decimal("1"))
         if method == "coin":
-            discount = (total * Decimal("0.10")).quantize(Decimal("1"))
+            discount += ((total - discount) * Decimal("0.10")).quantize(Decimal("1"))
             charged = total - discount
             cust = await conn.fetchrow("select deposit from customers where id=$1", row["customer_id"])
             if not cust or Decimal(str(cust["deposit"])) < charged:
                 raise HTTPException(400, "Saldo coin tidak cukup")
         else:
-            charged = total
+            charged = total - discount
         async with conn.transaction():
             if method == "coin":
                 await conn.execute("update customers set deposit = deposit - $1 where id=$2", charged, row["customer_id"])
+            if voucher:
+                await conn.execute("update vouchers set used=true, order_id=$1 where id=$2", oid, voucher["id"])
             await conn.execute(
                 """update orders set payment_status='paid', payment_method=$1, discount=$2,
                    paid_amount=$3, updated_at=now() where id=$4""",
@@ -1411,6 +1469,14 @@ async def dashboard(outlet_id: Optional[str] = None):
                 {' and o.outlet_id=$1' if outlet_id else ''}
                 group by c.id, c.name order by spend desc limit 3""", *oargs)
 
+        complaints = await conn.fetch(
+            f"""select r.id, r.rating, r.comment, r.created_at, c.name as customer_name
+                from reviews r left join customers c on c.id=r.customer_id
+                where r.rating <= 2 and r.status='new'{' and r.outlet_id=$1' if outlet_id else ''}
+                order by r.created_at desc limit 5""", *oargs)
+        pending_topups = await conn.fetchval(
+            f"select count(*) from topups where status='pending'{oand}", *oargs)
+
         return {
             "today": {"orders": int(today["orders"]), "kg": float(today["kg"]), "pcs": int(today["pcs"]),
                       "customers": int(today["customers"]), "omzet": float(today["omzet"]),
@@ -1419,6 +1485,8 @@ async def dashboard(outlet_id: Optional[str] = None):
             "queue": {"in_progress": int(in_progress or 0), "ready": int(ready or 0), "overdue": int(overdue or 0)},
             "top_services": [{"name": r["service_name"], "count": int(r["cnt"]), "revenue": float(r["revenue"])} for r in top],
             "top_customers": [{"name": r["name"], "kg": float(r["kg"]), "spend": float(r["spend"]), "orders": int(r["orders"])} for r in top_cust],
+            "complaints": rows_to_list(complaints),
+            "pending_topups": int(pending_topups or 0),
         }
 
 
@@ -1813,6 +1881,169 @@ async def leaderboard(outlet_id: Optional[str] = None, customer_id: Optional[str
                 my_rank = entry
         return {"ranking": ranking[:20], "my_rank": my_rank, "total_participants": len(ranking),
                 "rules": POINTS_RULE}
+
+
+TOPUP_PACKAGES = [
+    {"amount": 50000, "coins": 50000, "bonus": 0},
+    {"amount": 100000, "coins": 100000, "bonus": 0},
+    {"amount": 250000, "coins": 250000, "bonus": 0},
+    {"amount": 500000, "coins": 530000, "bonus": 30000},
+]
+FIRST_REVIEW_VOUCHER_PCT = 20
+
+
+async def expire_deposits(conn):
+    """Coin hangus 3 bulan sejak top-up/transaksi terakhir."""
+    await conn.execute(
+        "update customers set deposit=0, deposit_expires_at=null "
+        "where deposit_expires_at is not null and deposit_expires_at < current_date and deposit > 0")
+
+
+@api.get("/topup/packages")
+async def topup_packages():
+    return TOPUP_PACKAGES
+
+
+@api.post("/topups")
+async def create_topup(b: TopupBody):
+    pkg = next((p for p in TOPUP_PACKAGES if float(p["amount"]) == float(b.amount)), None)
+    if not pkg:
+        raise HTTPException(422, "Paket top-up tidak tersedia")
+    async with pool.acquire() as conn:
+        cust = await conn.fetchrow("select id, outlet_id from customers where id=$1", b.customer_id)
+        if not cust:
+            raise HTTPException(404, "Pelanggan tidak ditemukan")
+        row = await conn.fetchrow(
+            """insert into topups(customer_id,outlet_id,amount,coins,method,status)
+               values($1,$2,$3,$4,$5,'pending') returning *""",
+            b.customer_id, b.outlet_id or cust["outlet_id"], pkg["amount"], pkg["coins"], b.method)
+        return row_to_dict(row)
+
+
+@api.get("/topups")
+async def list_topups(outlet_id: Optional[str] = None, customer_id: Optional[str] = None,
+                      status: Optional[str] = None, limit: int = 100):
+    async with pool.acquire() as conn:
+        clauses, args = [], []
+        if outlet_id:
+            args.append(outlet_id); clauses.append(f"t.outlet_id=${len(args)}")
+        if customer_id:
+            args.append(customer_id); clauses.append(f"t.customer_id=${len(args)}")
+        if status:
+            args.append(status); clauses.append(f"t.status=${len(args)}")
+        where = (" where " + " and ".join(clauses)) if clauses else ""
+        args.append(limit)
+        rows = await conn.fetch(
+            f"""select t.*, c.name as customer_name, c.phone as customer_phone, o.name as outlet_name
+                from topups t left join customers c on c.id=t.customer_id
+                left join outlets o on o.id=t.outlet_id{where}
+                order by t.created_at desc limit ${len(args)}""", *args)
+        return rows_to_list(rows)
+
+
+@api.post("/topups/{tid}/confirm")
+async def confirm_topup(tid: str):
+    async with pool.acquire() as conn:
+        t = await conn.fetchrow("select * from topups where id=$1", tid)
+        if not t:
+            raise HTTPException(404, "Top-up tidak ditemukan")
+        if t["status"] == "confirmed":
+            return row_to_dict(t)
+        async with conn.transaction():
+            await conn.execute(
+                """update customers set deposit = deposit + $1,
+                   deposit_expires_at = (current_date + interval '3 months')::date where id=$2""",
+                t["coins"], t["customer_id"])
+            await conn.execute(
+                "update topups set status='confirmed', confirmed_at=now() where id=$1", tid)
+            await conn.execute(
+                "insert into transactions(outlet_id,amount,type,method) values($1,$2,'deposit',$3)",
+                t["outlet_id"], t["amount"], t["method"])
+        row = await conn.fetchrow("select * from topups where id=$1", tid)
+        return row_to_dict(row)
+
+
+@api.post("/topups/{tid}/reject")
+async def reject_topup(tid: str):
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "update topups set status='rejected', confirmed_at=now() where id=$1 and status='pending' returning *", tid)
+        if not row:
+            raise HTTPException(404, "Top-up tidak ditemukan / sudah diproses")
+        return row_to_dict(row)
+
+
+@api.get("/vouchers")
+async def list_vouchers(customer_id: Optional[str] = None, unused: bool = False):
+    async with pool.acquire() as conn:
+        clauses, args = [], []
+        if customer_id:
+            args.append(customer_id); clauses.append(f"customer_id=${len(args)}")
+        if unused:
+            clauses.append("used=false and (expires_at is null or expires_at >= current_date)")
+        where = (" where " + " and ".join(clauses)) if clauses else ""
+        rows = await conn.fetch(f"select * from vouchers{where} order by created_at desc", *args)
+        return rows_to_list(rows)
+
+
+@api.post("/reviews")
+async def create_review(b: ReviewBody):
+    if b.rating < 1 or b.rating > 5:
+        raise HTTPException(422, "Rating harus 1-5")
+    async with pool.acquire() as conn:
+        cust = await conn.fetchrow("select id, outlet_id, name from customers where id=$1", b.customer_id)
+        if not cust:
+            raise HTTPException(404, "Pelanggan tidak ditemukan")
+        prev = await conn.fetchval("select count(*) from reviews where customer_id=$1", b.customer_id)
+        status = "new" if b.rating <= 2 else "done"
+        row = await conn.fetchrow(
+            """insert into reviews(customer_id,outlet_id,order_id,rating,comment,status)
+               values($1,$2,$3,$4,$5,$6) returning *""",
+            b.customer_id, b.outlet_id or cust["outlet_id"], b.order_id, b.rating, b.comment, status)
+        voucher = None
+        if b.rating == 5 and not prev:
+            v = await conn.fetchrow(
+                """insert into vouchers(customer_id,outlet_id,title,discount_pct,reason,expires_at)
+                   values($1,$2,$3,$4,$5,(current_date + interval '3 months')::date) returning *""",
+                b.customer_id, b.outlet_id or cust["outlet_id"],
+                f"Diskon {FIRST_REVIEW_VOUCHER_PCT}% Order Berikutnya", FIRST_REVIEW_VOUCHER_PCT,
+                "Hadiah ulasan 5 bintang pertama")
+            voucher = row_to_dict(v)
+        out = row_to_dict(row)
+        out["voucher"] = voucher
+        return out
+
+
+@api.get("/reviews")
+async def list_reviews(outlet_id: Optional[str] = None, customer_id: Optional[str] = None,
+                       max_rating: Optional[int] = None, status: Optional[str] = None):
+    async with pool.acquire() as conn:
+        clauses, args = [], []
+        if outlet_id:
+            args.append(outlet_id); clauses.append(f"r.outlet_id=${len(args)}")
+        if customer_id:
+            args.append(customer_id); clauses.append(f"r.customer_id=${len(args)}")
+        if max_rating:
+            args.append(max_rating); clauses.append(f"r.rating <= ${len(args)}")
+        if status:
+            args.append(status); clauses.append(f"r.status=${len(args)}")
+        where = (" where " + " and ".join(clauses)) if clauses else ""
+        rows = await conn.fetch(
+            f"""select r.*, c.name as customer_name, c.phone as customer_phone, o.name as outlet_name
+                from reviews r left join customers c on c.id=r.customer_id
+                left join outlets o on o.id=r.outlet_id{where}
+                order by r.created_at desc limit 100""", *args)
+        return rows_to_list(rows)
+
+
+@api.patch("/reviews/{rid}/resolve")
+async def resolve_review(rid: str):
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "update reviews set status='resolved', resolved_at=now() where id=$1 returning *", rid)
+        if not row:
+            raise HTTPException(404, "Ulasan tidak ditemukan")
+        return row_to_dict(row)
 
 
 @api.get("/")

@@ -112,7 +112,7 @@ export default function CustomerHome() {
 
         {/* 2. Saldo coin */}
         <Card>
-          <SectionHeader title="🪙 Uang Deposit (Coin)" />
+          <SectionHeader title="🪙 Uang Deposit (Coin)" action="Isi Saldo" onAction={() => router.push("/topup")} />
           <View style={styles.coinRow}>
             <View style={styles.coinIcon}><Icon name="hand-coin" size={24} color={colors.onBrandPrimary} /></View>
             <View style={{ flex: 1 }}>
@@ -120,17 +120,31 @@ export default function CustomerHome() {
               <Text style={styles.coinSub}>Setara {rupiah(coin)} • Bayar pakai coin hemat 10%</Text>
             </View>
           </View>
+          {detail?.pending_topups ? (
+            <Text style={styles.coinSub}>⏳ {detail.pending_topups} permintaan top-up menunggu konfirmasi outlet.</Text>
+          ) : null}
+          {(detail?.vouchers || []).map((v: any) => (
+            <View key={v.id} style={styles.voucherRow} testID={`voucher-${v.id}`}>
+              <Icon name="ticket-percent" size={18} color={colors.onBrand} />
+              <Text style={styles.voucherText}>{v.title}</Text>
+            </View>
+          ))}
         </Card>
 
         {/* 3. Pantau ordermu */}
         <Card>
-          <SectionHeader title="📦 Pantau Ordermu" action={active.length ? "Bayar" : undefined} onAction={() => router.push("/(customer)/bayar")} />
+          <SectionHeader title="📦 Pantau Ordermu" action="Riwayat" onAction={() => router.push("/(customer)/riwayat")} />
           {active.length === 0 ? (
             <Text style={styles.empty}>Belum ada pesanan aktif. Yuk pesan laundry!</Text>
           ) : (
             <View style={{ gap: spacing.sm }}>
               {active.map((o: any) => (
-                <View key={o.id} style={styles.orderRow} testID={`order-${o.id}`}>
+                <Pressable
+                  key={o.id}
+                  testID={`order-${o.id}`}
+                  onPress={() => router.push(`/order-detail/${o.id}`)}
+                  style={({ pressed }) => [styles.orderRow, pressed && { opacity: 0.7 }]}
+                >
                   <View style={[styles.dot, { backgroundColor: o.overdue ? colors.error : colors.brandPrimary }]} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.orderCode}>{o.code}</Text>
@@ -140,7 +154,8 @@ export default function CustomerHome() {
                     </Text>
                   </View>
                   <View style={styles.statusPill}><Text style={styles.statusText}>{o.stage_label}</Text></View>
-                </View>
+                  <Icon name="chevron-right" size={18} color={colors.muted} />
+                </Pressable>
               ))}
             </View>
           )}
@@ -214,6 +229,8 @@ const useStyles = makeStyles((c) => ({
   coinIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: c.brandPrimary, alignItems: "center", justifyContent: "center" },
   coinValue: { fontFamily: fonts.displayBold, fontSize: 22, color: c.onSurface },
   coinSub: { fontFamily: fonts.body, fontSize: 12, color: c.muted, marginTop: 2 },
+  voucherRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: c.brand, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm },
+  voucherText: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 13, color: c.onBrand },
   orderRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: c.surfaceSecondary, borderRadius: radius.md, padding: spacing.md },
   dot: { width: 10, height: 10, borderRadius: 5 },
   orderCode: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurface },

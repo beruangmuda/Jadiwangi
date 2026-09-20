@@ -83,7 +83,7 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [ ] FASE 2 — Persetujuan Nota & Bayar (pegawai timbang+quote → customer approve → QRIS/Cash/Coin)
 - [ ] FASE 3 — Tracking detail & Riwayat
 - [ ] FASE 4 — Coin/Deposit (top up 50/100/250/500rb→530rb, 1rp=1coin, diskon 10% pakai coin, kadaluarsa 3 bln)
-- [ ] FASE 5 — Rating (Google review link 4-5★ + promo pelanggan pertama; 1-2★ komplain ke owner) + Promo dikelola owner
+- [x] FASE 5 — Rating (Google review link 4-5★ + promo pelanggan pertama; 1-2★ komplain ke owner) + Promo dikelola owner
 
 ## Update (2026-06, iterasi 10) — Struktur Pelanggan: Outlet, Tab Bar, Peringkat, Bayar
 - [x] Pendaftaran pelanggan WAJIB pilih outlet (OutletPicker di /login mode Daftar; POST /auth/register menolak tanpa outlet_id valid). Harga/pricelist selalu mengikuti outlet pelanggan — pelanggan tidak bisa membandingkan outlet lain.
@@ -94,6 +94,15 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] Tab Bayar: daftar tagihan (GET /orders?unpaid=true), rincian item + total, tombol "Setujui Nota" (status quoted), metode QRIS / Tunai / Coin. Coin otomatis diskon 10% & memotong saldo (kolom orders.discount/paid_amount). Empty state "Belum ada tagihan".
 - [x] Promo: tabel `promos` + GET/POST/PUT/DELETE /api/promos (2 promo contoh per outlet), tampil di Home pelanggan. UI kelola promo untuk owner masih backlog.
 - Teruji: backend 17/17 baru + 37/37 regresi PASS, frontend semua flow PASS (iteration_7.json).
+
+## Update (2026-06, iterasi 11) — Coin Top-up, Promo Owner, Ulasan & Riwayat
+- [x] **Top-up Coin**: paket 50rb/100rb/250rb/500rb (500rb → 530.000 coin, bonus 30rb). Alur: pelanggan ajukan (status `pending`) → bayar tunai/QRIS di outlet → pegawai/owner konfirmasi → saldo masuk & `deposit_expires_at = hari ini + 3 bulan`. Transaksi dicatat `type='deposit'` supaya tidak menambah pendapatan. Coin hangus otomatis (fungsi `expire_deposits`) bila lewat masa berlaku. Layar: `/topup` (pelanggan), `/manage/topup` (owner via Setelan, pegawai via ikon coin di header).
+- [x] **Kelola Promo (owner)**: Setelan → Pelanggan & Promosi → Promo & Voucher (`/manage/promo`): buat, ubah, aktif/nonaktif, hapus promo per outlet; langsung tampil di Home pelanggan.
+- [x] **Nilai & Ulas**: di detail order berstatus `completed`, pelanggan beri bintang 1-5. Bintang 5 (ulasan pertama) → voucher **diskon 20% untuk order berikutnya** + tombol buka Google Maps review outlet. Bintang 1-2 → wajib isi kolom keluhan → jadi **notifikasi di Beranda owner** + daftar `/manage/pengaduan` (bisa ditandai Selesai).
+- [x] **Voucher saat bayar**: `POST /orders/{id}/pay` menerima `voucher_id`; diskon voucher 20% lalu tambahan 10% bila bayar dengan coin; voucher ditandai terpakai.
+- [x] **Riwayat Pesanan**: tab ke-4 di menu bawah pelanggan (`/(customer)/riwayat`) + layar detail order `/order-detail/[id]` (timeline status, rincian nota, total, tombol bayar). Kartu di "Pantau Ordermu" juga bisa diklik ke detail.
+- [x] Tabel baru: `topups`, `reviews`, `vouchers`; kolom `customers.deposit_expires_at`. Dashboard menambah `pending_topups` & `complaints`.
+- Teruji: backend 17/17 baru + regresi PASS (iteration_8.json), coin-expiry diverifikasi manual, seluruh flow frontend PASS.
 - Google review links: Depok/Kalimulya https://g.page/r/CUv3jO9Cz4aAEBM/review ; Jakarta/Pulomas https://g.page/r/CT1ETVEE3zn5EBM/review ; Bandung/Ujungberung https://g.page/r/CQUtr3hTOpEbEBM/review
 
 ## Backlog (prioritized)

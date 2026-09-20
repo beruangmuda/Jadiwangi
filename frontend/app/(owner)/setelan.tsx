@@ -22,6 +22,14 @@ const GROUPS: { title: string; items: Item[] }[] = [
     ],
   },
   {
+    title: "Pelanggan & Promosi",
+    items: [
+      { icon: "tag-multiple", label: "Promo & Voucher", desc: "Buat & hentikan promo per outlet", route: "/manage/promo" },
+      { icon: "hand-coin", label: "Konfirmasi Top-up Coin", desc: "Setujui isi saldo pelanggan", route: "/manage/topup" },
+      { icon: "message-alert", label: "Pengaduan & Ulasan", desc: "Keluhan bintang 1-2 & semua ulasan", route: "/manage/pengaduan" },
+    ],
+  },
+  {
     title: "Keuangan",
     items: [
       { icon: "cash-minus", label: "Pencatatan Pengeluaran", desc: "Catat biaya operasional", route: "/manage/pengeluaran" },

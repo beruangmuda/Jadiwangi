@@ -36,6 +36,9 @@ export default function EmployeeHome() {
             <Text style={styles.role}>{session?.employee?.role_type === "produksi" ? "Produksi" : session?.employee?.role_type === "kurir" ? "Kurir" : "Admin"}</Text>
           </View>
         </View>
+        <Pressable testID="employee-topup" onPress={() => router.push("/manage/topup")} hitSlop={10} style={styles.coinBtn}>
+          <Icon name="hand-coin" size={20} color={colors.brandPrimary} />
+        </Pressable>
         <Pressable testID="logout-btn" onPress={async () => { await logout(); router.replace("/login"); }} hitSlop={10} style={styles.logoutBtn}>
           <Icon name="logout" size={20} color={colors.error} />
         </Pressable>
@@ -80,6 +83,7 @@ const useStyles = makeStyles((c) => ({
   hello: { fontFamily: fonts.displayBold, fontSize: 18, color: c.onSurface },
   role: { fontFamily: fonts.bodySemi, fontSize: 13, color: c.muted },
   logoutBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#FFE4E6", alignItems: "center", justifyContent: "center" },
+  coinBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.brandTertiary, alignItems: "center", justifyContent: "center", marginRight: spacing.sm },
   statStrip: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   stat: { flex: 1, backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, padding: spacing.md, gap: 2, ...shadow.card },
   statValue: { fontFamily: fonts.displayBold, fontSize: 22, color: c.onSurface },

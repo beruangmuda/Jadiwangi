@@ -50,6 +50,36 @@ export default function Dashboard() {
           <Text style={styles.sub}>Ringkasan performa hari ini</Text>
         </View>
 
+        {/* NOTIFIKASI: pengaduan & top-up */}
+        {(data?.complaints || []).length > 0 || (data?.pending_topups ?? 0) > 0 ? (
+          <View style={{ gap: spacing.sm }}>
+            {(data?.pending_topups ?? 0) > 0 ? (
+              <Pressable testID="notif-topup" onPress={() => router.push("/manage/topup")} style={({ pressed }) => [styles.notif, pressed && { opacity: 0.85 }]}>
+                <View style={[styles.notifIcon, { backgroundColor: colors.brandTertiary }]}>
+                  <Icon name="hand-coin" size={20} color={colors.brandPrimary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.notifTitle}>{data.pending_topups} top-up coin menunggu konfirmasi</Text>
+                  <Text style={styles.notifSub}>Setujui setelah pelanggan bayar di outlet</Text>
+                </View>
+                <Icon name="chevron-right" size={20} color={colors.muted} />
+              </Pressable>
+            ) : null}
+            {(data?.complaints || []).map((cp: any) => (
+              <Pressable key={cp.id} testID={`notif-complaint-${cp.id}`} onPress={() => router.push("/manage/pengaduan")} style={({ pressed }) => [styles.notif, { borderColor: colors.error }, pressed && { opacity: 0.85 }]}>
+                <View style={[styles.notifIcon, { backgroundColor: "#FFE4E6" }]}>
+                  <Icon name="message-alert" size={20} color={colors.error} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.notifTitle}>Pengaduan {cp.rating}★ dari {cp.customer_name || "pelanggan"}</Text>
+                  <Text style={styles.notifSub} numberOfLines={2}>{cp.comment || "Tanpa keterangan"}</Text>
+                </View>
+                <Icon name="chevron-right" size={20} color={colors.muted} />
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
         {isLoading ? (
           <>
             <View style={{ flexDirection: "row", gap: spacing.md }}>
@@ -211,4 +241,8 @@ const useStyles = makeStyles((c) => ({
   serviceRev: { fontFamily: fonts.displayBold, fontSize: 14, color: c.brandPrimary },
   fab: { position: "absolute", right: spacing.lg, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: c.brandPrimary, borderRadius: radius.pill, paddingVertical: 14, paddingHorizontal: 20, ...shadow.soft },
   fabText: { fontFamily: fonts.displayBold, fontSize: 15, color: c.onBrandPrimary },
+  notif: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, padding: spacing.md },
+  notifIcon: { width: 38, height: 38, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  notifTitle: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurface },
+  notifSub: { fontFamily: fonts.body, fontSize: 12, color: c.muted },
 }));

@@ -8,6 +8,7 @@ const ICONS: Record<string, { on: string; off: string }> = {
   index: { on: "home-variant", off: "home-variant-outline" },
   bayar: { on: "wallet", off: "wallet-outline" },
   pesan: { on: "moped", off: "moped-outline" },
+  riwayat: { on: "history", off: "history" },
 };
 
 export default function CustomerLayout() {
@@ -36,6 +37,7 @@ export default function CustomerLayout() {
       <Tabs.Screen name="index" options={{ title: "Home" }} />
       <Tabs.Screen name="bayar" options={{ title: "Bayar" }} />
       <Tabs.Screen name="pesan" options={{ title: "Pickup/Delivery" }} />
+      <Tabs.Screen name="riwayat" options={{ title: "Riwayat" }} />
     </Tabs>
   );
 }

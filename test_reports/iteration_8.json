@@ -1,0 +1,46 @@
+{
+  "summary": "Iter8 (top-up coin, promo management UI, reviews & vouchers, complaints/notif, riwayat + order-detail) verified end-to-end. Backend: 17 PASS + 1 SKIP (coin-expiry needs DB manipulation) in /app/backend/tests/test_iter8_topup_reviews.py. GET /api/topup/packages returns 4 packages with 500000 → coins 530000, bonus 30000. POST /api/topups accepts valid packages, returns 422 for 75000, 404 for unknown customer_id; listing enriched with customer_name, customer_phone, outlet_name. POST /api/topups/{id}/confirm: deposit += coins, deposit_expires_at = today+3 months (~90d), status confirmed, second call idempotent, transactions type='deposit' inserted (does NOT change /reports/financial income). POST /api/topups/{id}/reject: status rejected, deposit unchanged; second reject → 404. POST /api/reviews: rating=5 first-time returns voucher{discount_pct=20, expires_at≈today+90d}; 2nd rating=5 → voucher null; rating 1-2 → status='new' and appears in GET /api/reviews?max_rating=2; PATCH /api/reviews/{id}/resolve → status='resolved'; rating<1 or >5 → 422. GET /api/vouchers?customer_id=&unused=true works; POST /api/orders/{oid}/pay {method:'qris', voucher_id}: discount=20% of total, paid_amount=total*0.8, voucher marked used; reuse same voucher → 400. Coin stacking {method:'coin', voucher_id}: voucher 20% then +10% of remainder (2000+800=2800 on Rp10.000), paid_amount=7200 debited from deposit. GET /api/dashboard: new fields pending_topups (int) and complaints (list max5 with customer_name & comment). GET /api/customers/{id}/detail: new fields pending_topups, vouchers, reviews_count present. Regressions PASS: /promos CRUD, /orders?unpaid=true, /leaderboard, /reports/{financial,transactions,employees}, /payroll, /auth/register (requires outlet). Frontend (390x844 web): demo login Pelanggan/pelanggan123 → 4 bottom tabs (Home/Bayar/Pickup-Delivery/Riwayat). Home shows coin-balance='200.000 coin', clicking 'Isi Saldo' opens /topup with testID topup-balance; pkg-50000/100000/250000/500000 all present, Segmented Tunai/QRIS, submit-topup posts and testID topup-success renders with 'Menunggu' pill in riwayat. Riwayat tab renders 4 hist-<id> rows; tapping hist-70cca6fa-… navigates to /order-detail/[id] with order-status='Selesai', timeline + Rincian Nota Rp30.000. Review section: star-1..5 tappable, submit-review with star-5 renders voucher-granted card + open-gmaps button; returning to Home shows voucher-<id> (1 voucher). Home 'Pantau Ordermu' order-<id> rows are Pressable and route to /order-detail. Owner login (owner/owner123) → Beranda after ~9s renders notif-topup ('2 top-up coin menunggu konfirmasi') and notif-complaint-<id> (2★ TEST_iter8_dash 'Kurang wangi'), both tap-navigable to /manage/topup and /manage/pengaduan. Setelan owner shows 'Promo & Voucher', Top-up/Persetujuan, and 'Pengaduan' menu items. /manage/promo renders promo-title, promo-desc, promo-pct, promo-code, promo-until, save-promo, and outlet chips (Depok/Jakarta/Bandung). /manage/topup lists 2 pending with confirm-<id> and reject-<id> buttons. /manage/pengaduan lists 1 unresolved complaint with resolve-<id>. Deprecated 'shadow*' RN-Web warnings persist (carry-over).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Persistent RN-Web deprecation 'shadow* style props are deprecated. Use boxShadow.' (carry-over from earlier iterations)"}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter8_topup_reviews.py",
+    "/app/test_reports/pytest/iter8_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL (carry-over): migrate shadow* style props to boxShadow across custom cards to silence RN-Web deprecation warnings.",
+    "OPTIONAL: seed order JW-260920-1569 (Rp50.000, Diterima, Belum bayar) is used by demo Pelanggan for tab Bayar/Riwayat — do NOT auto-complete or auto-pay it in future seeds.",
+    "OPTIONAL: expose an admin endpoint (PATCH /api/customers/{id}/deposit_expires_at) so future testing agents can verify the coin-expiry path automatically (currently covered by code review only)."
+  ],
+  "critical_code_review_comments": [
+    "server.py POST /topups (l.1907): validates package via exact match on TOPUP_PACKAGES amounts (50k/100k/250k/500k) → 422 for other nominals; falls back to customer.outlet_id when body outlet_id missing.",
+    "server.py POST /topups/{id}/confirm (l.1944): wraps deposit update + status update + transactions(type='deposit') in a single transaction; idempotent short-circuit when status already 'confirmed'.",
+    "server.py POST /topups/{id}/reject (l.1966): only updates rows with status='pending' → returning None triggers 404 on second reject.",
+    "server.py expire_deposits (l.1895): zero-out deposit + null out expiry when deposit_expires_at < current_date and deposit>0. Called at start of /customers/{id}/detail and /orders/{oid}/pay.",
+    "server.py POST /reviews (l.1989): 422 outside 1-5, status='new' when rating<=2, and voucher granted only when rating==5 AND prev review count is 0 for that customer.",
+    "server.py POST /orders/{oid}/pay (l.1361): voucher discount = total*pct/100 (quantized to whole rupiah), then coin adds +10% of remainder; enforces coin-sufficient deposit; marks voucher used=true tied to order; already-paid → idempotent enriched response.",
+    "server.py /dashboard adds complaints (max 5 rating<=2 status='new' with customer_name) and pending_topups fields; /customers/{id}/detail adds pending_topups, vouchers, reviews_count.",
+    "frontend topup.tsx uses correct testIDs (topup-balance, pkg-<amount>, submit-topup, topup-success, topup-<id>) and correctly invalidates ['my-topups','cust-detail'] queries after post.",
+    "frontend (customer)/_layout.tsx has 4 tabs (index/bayar/pesan/riwayat) matching spec.",
+    "frontend order-detail/[id].tsx supports both high-rating (voucher-granted+open-gmaps) and low-rating (complaint-input required, submit-review) branches; testID order-status is present.",
+    "frontend (owner)/index.tsx renders notif-topup (from dashboard.pending_topups) and notif-complaint-<id> (per dashboard.complaints[]) and routes to /manage/topup and /manage/pengaduan.",
+    "server.py is now 2056 lines — carry-over recommendation to split into routers (topups/reviews/promos/orders)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter8_topup_reviews.py",
+    "/app/test_reports/iteration_8.json",
+    "/app/test_reports/pytest/iter8_results.xml"
+  ],
+  "success_rate": {"backend": "100% (17 passed, 1 skipped by design)", "frontend": "100% of listed critical flows"},
+  "seed_data_creation": "Backend tests created TEST_iter8 customers (TEST_iter8_rev5, TEST_iter8_rev1, TEST_iter8_revinv, TEST_iter8_pay_v, TEST_iter8_pay_coin, TEST_iter8_dash, TEST_iter8_expiry) on Depok outlet and TEST_iter8_pay orders (~Rp10.000). One TEST customer (TEST_iter8_pay_coin) has a confirmed 500k top-up that adds ~522.800 to deposit residue (after paying 7.200). Frontend test on demo customer submitted 1 real 5-star review on JW-260920-2733 which grants a 20% voucher visible on Home — this is now part of demo state.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All iter8 features working end-to-end. Demo customer Pelanggan has: 200.000 coin, 1 pending JW-260920-1569 unpaid bill Rp50.000, 4 orders in Riwayat, at least 1 unused 20% voucher (from frontend review). New key testIDs: topup-balance, pkg-<amount>, submit-topup, topup-success, topup-<id>, hist-<id>, order-status, star-1..5, review-comment, complaint-input, submit-review, voucher-granted, open-gmaps, voucher-<id>, order-<id>, notif-topup, notif-complaint-<id>, promo-title, promo-desc, promo-pct, promo-code, promo-until, save-promo, edit-promo-<id>, toggle-promo-<id>, del-promo-<id>, confirm-<id>, reject-<id>, resolve-<id>. Backend base https://wangi-dashboard.preview.emergentagent.com/api. Depok outlet UUID e5fc0b12-25f5-4be2-a117-6fea0df032da. Coin expiry path can't be automated over public API; consider adding a test-only endpoint to set deposit_expires_at.",
+  "rca_of_issue": "N/A — no regressions."
+}
