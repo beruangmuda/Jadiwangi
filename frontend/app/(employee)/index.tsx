@@ -50,7 +50,7 @@ export default function EmployeeHome() {
         <Stat icon="basket-check" label="Siap Diambil" value={String(queue?.ready ?? 0)} />
       </View>
 
-      <OrdersPipeline outletId={outletId} employeeId={session?.employee?.id} employeeName={session?.name} canCancel={false} />
+      <OrdersPipeline outletId={outletId} employeeId={session?.employee?.id} employeeName={session?.name} canCancel={false} todayOnly />
 
       <Pressable
         testID="fab-buat-order"

@@ -13,6 +13,8 @@ import { Card, PrimaryButton, Loading, Pill, SectionHeader } from "@/src/compone
 import { StackHeader, Field } from "@/src/components/form";
 import { rupiah, formatDateTime, kg } from "@/src/format";
 import { PIPELINE, STAGE } from "@/src/status";
+import { photoUrl } from "@/src/photos";
+import { Image } from "expo-image";
 
 export default function OrderDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -48,6 +50,15 @@ export default function OrderDetail() {
       setComment("");
       qc.invalidateQueries({ queryKey: ["my-reviews"] });
       qc.invalidateQueries({ queryKey: ["cust-detail"] });
+    },
+  });
+
+  const confirmReceipt = useMutation({
+    mutationFn: () => api.post(`/orders/${id}/confirm-receipt`, {}),
+    onSuccess: () => {
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      qc.invalidateQueries({ queryKey: ["order-detail"] });
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
     },
   });
 
@@ -126,6 +137,16 @@ export default function OrderDetail() {
             <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>{rupiah(order.total)}</Text>
           </View>
+          {Array.isArray(order.photos) && order.photos.length ? (
+            <View style={{ gap: spacing.sm }} testID="order-photos">
+              <Text style={styles.itemName}>Foto Pakaian</Text>
+              <View style={styles.photoRow}>
+                {order.photos.map((p: string) => (
+                  <Image key={p} source={{ uri: photoUrl(p) }} style={styles.photo} contentFit="cover" />
+                ))}
+              </View>
+            </View>
+          ) : null}
           {order.payment_status !== "paid" && Number(order.total) > 0 ? (
             <PrimaryButton label="Bayar Sekarang" icon="wallet" onPress={() => router.push("/(customer)/bayar")} testID="go-bayar" />
           ) : null}
@@ -133,6 +154,36 @@ export default function OrderDetail() {
 
         {order.notes ? (
           <Card><SectionHeader title="Catatan" /><Text style={styles.hint}>{order.notes}</Text></Card>
+        ) : null}
+
+        {/* Antar jemput */}
+        {order.delivery_type !== "self" ? (
+          <Card style={{ gap: spacing.sm }}>
+            <SectionHeader title={order.delivery_type === "pickup" ? "Penjemputan" : "Pengantaran"} />
+            {order.delivery_type === "pickup" ? (
+              <Text style={styles.hint}>
+                {order.picked_up_at ? `✅ Sudah dijemput kurir pada ${formatDateTime(order.picked_up_at)}` : "⏳ Menunggu kurir menjemput laundry kamu."}
+              </Text>
+            ) : (
+              <Text style={styles.hint}>
+                {order.delivered_at ? `🚚 Diantar kurir pada ${formatDateTime(order.delivered_at)}` : "⏳ Kurir akan mengantar setelah laundry selesai."}
+              </Text>
+            )}
+            {order.customer_confirmed_at ? (
+              <View style={styles.confirmed} testID="receipt-confirmed">
+                <Icon name="check-decagram" size={18} color="#15803D" />
+                <Text style={styles.confirmedText}>Kamu sudah mengonfirmasi penerimaan pada {formatDateTime(order.customer_confirmed_at)}</Text>
+              </View>
+            ) : order.delivered_at || order.picked_up_at ? (
+              <PrimaryButton
+                label={order.delivery_type === "pickup" ? "Konfirmasi Laundry Sudah Dijemput" : "Konfirmasi Laundry Sudah Diterima"}
+                icon="hand-okay"
+                onPress={() => confirmReceipt.mutate()}
+                loading={confirmReceipt.isPending}
+                testID="confirm-receipt"
+              />
+            ) : null}
+          </Card>
         ) : null}
 
         {/* Ulasan */}
@@ -241,5 +292,9 @@ const useStyles = makeStyles((c) => ({
   warn: { flexDirection: "row", gap: spacing.sm, backgroundColor: "#FFE4E6", borderRadius: radius.md, padding: spacing.md },
   warnText: { flex: 1, fontFamily: fonts.body, fontSize: 12, color: c.error, lineHeight: 17 },
   reward: { flexDirection: "row", gap: spacing.sm, backgroundColor: c.surfaceSecondary, borderRadius: radius.md, padding: spacing.md },
+  confirmed: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: "#DCFCE7", borderRadius: radius.md, padding: spacing.md },
+  confirmedText: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 12, color: "#15803D", lineHeight: 17 },
+  photoRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  photo: { width: 84, height: 84, borderRadius: radius.md },
   noteText: { flex: 1, fontFamily: fonts.body, fontSize: 12, color: c.onSurfaceSecondary, lineHeight: 17 },
 }));

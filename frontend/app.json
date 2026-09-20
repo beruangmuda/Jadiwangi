@@ -9,14 +9,22 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.emergent.wangidashboard.drt3ni"
+      "bundleIdentifier": "com.emergent.wangidashboard.drt3ni",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Foto pakaian untuk nota pelanggan",
+        "NSPhotoLibraryUsageDescription": "Pilih foto pakaian untuk nota pelanggan"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.emergent.wangidashboard.drt3ni"
+      "package": "com.emergent.wangidashboard.drt3ni",
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -39,7 +47,14 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-status-bar",
-      "@react-native-vector-icons/material-design-icons"
+      "@react-native-vector-icons/material-design-icons",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pilih foto pakaian untuk nota pelanggan",
+          "cameraPermission": "Foto pakaian untuk nota pelanggan"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

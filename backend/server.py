@@ -10,8 +10,10 @@ from typing import Optional, List
 
 import asyncpg
 import bcrypt
+import requests
 from starlette.concurrency import run_in_threadpool
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -133,6 +135,11 @@ async def startup():
     await reseed_pricelist()
     await ensure_credentials()
     await ensure_promos()
+    try:
+        await run_in_threadpool(init_storage)
+        logger.info("Object storage ready.")
+    except Exception as e:
+        logger.warning("Object storage init failed: %s", e)
     logger.info("Database ready.")
 
 
@@ -164,6 +171,10 @@ create table if not exists payroll_manual (
 create unique index if not exists payroll_manual_uq on payroll_manual (employee_id, period);
 alter table customers add column if not exists address text default '';
 alter table orders add column if not exists is_request boolean not null default false;
+alter table orders add column if not exists picked_up_at timestamptz;
+alter table orders add column if not exists delivered_at timestamptz;
+alter table orders add column if not exists customer_confirmed_at timestamptz;
+alter table orders add column if not exists photos jsonb not null default '[]'::jsonb;
 alter table orders add column if not exists request_items jsonb not null default '[]';
 alter table orders add column if not exists address text default '';
 alter table orders add column if not exists express boolean not null default false;
@@ -752,6 +763,7 @@ class OutletPickBody(BaseModel):
 class PayBody(BaseModel):
     method: str = "qris"
     voucher_id: Optional[str] = None
+    promo_code: Optional[str] = None
 
 
 class TopupBody(BaseModel):
@@ -878,6 +890,21 @@ class AdvanceBody(BaseModel):
     employee_name: str = ""
 
 
+class WeighBody(BaseModel):
+    items: List[OrderItemIn]
+    express: bool = False
+    employee_id: Optional[str] = None
+    employee_name: str = ""
+    notes: Optional[str] = None
+    photos: List[str] = Field(default_factory=list)
+
+
+class TripBody(BaseModel):
+    type: str = "pickup"
+    employee_id: Optional[str] = None
+    employee_name: str = ""
+
+
 class ExpenseBody(BaseModel):
     outlet_id: str
     category: str = "Operasional"
@@ -972,6 +999,19 @@ async def list_promos(outlet_id: Optional[str] = None):
         rows = await conn.fetch(
             f"select * from promos where {' and '.join(clauses)} order by created_at desc", *args)
         return rows_to_list(rows)
+
+
+@api.get("/promos/validate")
+async def validate_promo(code: str, outlet_id: Optional[str] = None):
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """select * from promos where lower(code)=lower($1) and active=true
+               and (valid_until is null or valid_until >= current_date)
+               and ($2::uuid is null or outlet_id is null or outlet_id=$2::uuid)
+               order by created_at desc limit 1""", code.strip(), outlet_id)
+        if not row:
+            raise HTTPException(404, "Kode promo tidak ditemukan atau sudah kedaluwarsa")
+        return row_to_dict(row)
 
 
 @api.post("/promos")
@@ -1193,29 +1233,43 @@ async def update_employee(eid: str, b: EmployeeBody):
 
 
 async def enrich_orders(conn, rows):
+    ids = [r["id"] for r in rows]
+    cust_ids = list({r["customer_id"] for r in rows if r["customer_id"]})
+    customers = {}
+    if cust_ids:
+        for c in await conn.fetch("select id,name,phone from customers where id = any($1::uuid[])", cust_ids):
+            customers[c["id"]] = c
+    summaries: dict = {}
+    if ids:
+        for i in await conn.fetch(
+                "select order_id, service_name, qty, unit from order_items where order_id = any($1::uuid[])", ids):
+            summaries.setdefault(i["order_id"], []).append(
+                f"{i['service_name']} {float(i['qty']):g} {i['unit']}")
     result = []
     for r in rows:
         d = row_to_dict(r)
-        ri = d.get("request_items")
-        if isinstance(ri, str):
-            try:
-                d["request_items"] = json.loads(ri) if ri else []
-            except ValueError:
-                d["request_items"] = []
-        elif ri is None:
-            d["request_items"] = []
-        cust = await conn.fetchrow("select name,phone from customers where id=$1", r["customer_id"])
+        for key in ("request_items", "photos"):
+            v = d.get(key)
+            if isinstance(v, str):
+                try:
+                    d[key] = json.loads(v) if v else []
+                except ValueError:
+                    d[key] = []
+            elif v is None:
+                d[key] = []
+        cust = customers.get(r["customer_id"])
         d["customer_name"] = cust["name"] if cust else "-"
         d["customer_phone"] = cust["phone"] if cust else ""
         d["stage_label"] = STAGE_LABELS.get(r["status"], r["status"])
         due = r["due_at"]
         d["overdue"] = bool(due and due < now_utc() and r["status"] not in ("completed", "cancelled"))
+        d["items_summary"] = ", ".join(summaries.get(r["id"], []))
         result.append(d)
     return result
 
 
 @api.get("/orders")
-async def list_orders(outlet_id: Optional[str] = None, customer_id: Optional[str] = None, status: Optional[str] = None, active: bool = False, today: bool = False, unpaid: bool = False, limit: int = 100):
+async def list_orders(outlet_id: Optional[str] = None, customer_id: Optional[str] = None, status: Optional[str] = None, active: bool = False, today: bool = False, unpaid: bool = False, speed: Optional[str] = None, sort: Optional[str] = None, limit: int = 100):
     async with pool.acquire() as conn:
         clauses, args = [], []
         if unpaid:
@@ -1230,9 +1284,14 @@ async def list_orders(outlet_id: Optional[str] = None, customer_id: Optional[str
             clauses.append("status in ('received','washing','drying','ironing','packing','ready')")
         if today:
             clauses.append("created_at::date = now()::date")
+        if speed == "express":
+            clauses.append("express = true")
+        elif speed == "regular":
+            clauses.append("express = false")
         where = (" where " + " and ".join(clauses)) if clauses else ""
+        order_by = "express desc, created_at asc" if sort == "fifo" else "created_at desc"
         args.append(limit)
-        rows = await conn.fetch(f"select * from orders{where} order by created_at desc limit ${len(args)}", *args)
+        rows = await conn.fetch(f"select * from orders{where} order by {order_by} limit ${len(args)}", *args)
         return await enrich_orders(conn, rows)
 
 
@@ -1331,6 +1390,74 @@ async def update_status(oid: str, b: StatusBody):
         return (await enrich_orders(conn, [row]))[0]
 
 
+@api.post("/orders/{oid}/weigh")
+async def weigh_order(oid: str, b: WeighBody):
+    """Pegawai menimbang & menetapkan harga final → nota dikirim ke pelanggan (status 'quoted')."""
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("select * from orders where id=$1", oid)
+        if not row:
+            raise HTTPException(404, "Order tidak ditemukan")
+        if not b.items:
+            raise HTTPException(422, "Minimal 1 item layanan")
+        total = Decimal(0); weight = Decimal(0); unit_qty = 0
+        for it in b.items:
+            sub = Decimal(str(it.qty)) * Decimal(str(it.price))
+            total += sub
+            if it.unit == "kg":
+                weight += Decimal(str(it.qty))
+            else:
+                unit_qty += int(it.qty)
+        async with conn.transaction():
+            await conn.execute("delete from order_items where order_id=$1", oid)
+            for it in b.items:
+                sub = Decimal(str(it.qty)) * Decimal(str(it.price))
+                await conn.execute(
+                    """insert into order_items(order_id,service_id,service_name,unit,qty,price,subtotal)
+                       values($1,$2,$3,$4,$5,$6,$7)""",
+                    oid, it.service_id, it.service_name, it.unit, it.qty, it.price, sub)
+            await conn.execute(
+                """update orders set total=$1, weight_kg=$2, unit_qty=$3, express=$4,
+                   is_request=false, status='quoted', notes=coalesce($5, notes),
+                   photos=$6::jsonb, updated_at=now()
+                   where id=$7""",
+                total, weight, unit_qty, b.express, b.notes, json.dumps(b.photos), oid)
+        row = await conn.fetchrow("select * from orders where id=$1", oid)
+        return (await enrich_orders(conn, [row]))[0]
+
+
+@api.post("/orders/{oid}/trip")
+async def record_trip(oid: str, b: TripBody):
+    """Kurir konfirmasi penjemputan / pengantaran. Trip tercatat untuk perhitungan gaji."""
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("select * from orders where id=$1", oid)
+        if not row:
+            raise HTTPException(404, "Order tidak ditemukan")
+        field = "picked_up_at" if b.type == "pickup" else "delivered_at"
+        async with conn.transaction():
+            await conn.execute(f"update orders set {field}=now(), updated_at=now() where id=$1", oid)
+            if b.employee_id:
+                exists = await conn.fetchval(
+                    "select 1 from work_logs where order_id=$1 and employee_id=$2 and stage='trip'", oid, b.employee_id)
+                if not exists:
+                    await conn.execute(
+                        """insert into work_logs(order_id,employee_id,employee_name,outlet_id,stage,weight_kg,unit_qty)
+                           values($1,$2,$3,$4,'trip',0,0)""",
+                        oid, b.employee_id, b.employee_name, row["outlet_id"])
+        row = await conn.fetchrow("select * from orders where id=$1", oid)
+        return (await enrich_orders(conn, [row]))[0]
+
+
+@api.post("/orders/{oid}/confirm-receipt")
+async def confirm_receipt(oid: str):
+    """Pelanggan mengonfirmasi laundry sudah diterima."""
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "update orders set customer_confirmed_at=now(), updated_at=now() where id=$1 returning *", oid)
+        if not row:
+            raise HTTPException(404, "Order tidak ditemukan")
+        return (await enrich_orders(conn, [row]))[0]
+
+
 @api.post("/orders/{oid}/advance")
 async def advance_status(oid: str, b: Optional[AdvanceBody] = None):
     async with pool.acquire() as conn:
@@ -1371,6 +1498,7 @@ async def advance_status(oid: str, b: Optional[AdvanceBody] = None):
 async def pay_order(oid: str, b: Optional[PayBody] = None):
     method = (b.method if b else "qris") or "qris"
     voucher_id = b.voucher_id if b else None
+    promo_code = (b.promo_code or "").strip() if b else ""
     async with pool.acquire() as conn:
         await expire_deposits(conn)
         row = await conn.fetchrow("select * from orders where id=$1", oid)
@@ -1380,6 +1508,15 @@ async def pay_order(oid: str, b: Optional[PayBody] = None):
             return (await enrich_orders(conn, [row]))[0]
         total = Decimal(str(row["total"]))
         discount = Decimal(0)
+        if promo_code:
+            promo = await conn.fetchrow(
+                """select * from promos where lower(code)=lower($1) and active=true
+                   and (valid_until is null or valid_until >= current_date)
+                   and (outlet_id is null or outlet_id=$2)
+                   order by created_at desc limit 1""", promo_code, row["outlet_id"])
+            if not promo:
+                raise HTTPException(400, "Kode promo tidak valid")
+            discount += (total * Decimal(str(promo["discount_pct"])) / Decimal(100)).quantize(Decimal("1"))
         voucher = None
         if voucher_id:
             voucher = await conn.fetchrow(
@@ -1388,6 +1525,8 @@ async def pay_order(oid: str, b: Optional[PayBody] = None):
             if not voucher:
                 raise HTTPException(400, "Voucher tidak valid atau sudah dipakai")
             discount += (total * Decimal(str(voucher["discount_pct"])) / Decimal(100)).quantize(Decimal("1"))
+        if discount > total:
+            discount = total
         if method == "coin":
             discount += ((total - discount) * Decimal("0.10")).quantize(Decimal("1"))
             charged = total - discount
@@ -2053,6 +2192,67 @@ async def resolve_review(rid: str):
         if not row:
             raise HTTPException(404, "Ulasan tidak ditemukan")
         return row_to_dict(row)
+
+
+STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
+STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
+EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
+APP_NAME = "jadiwangi-app"
+storage_key: Optional[str] = None
+
+
+def init_storage():
+    """Call once; returns a reusable storage_key."""
+    global storage_key
+    if storage_key:
+        return storage_key
+    resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
+    resp.raise_for_status()
+    storage_key = resp.json()["storage_key"]
+    return storage_key
+
+
+def put_object(path: str, data: bytes, content_type: str) -> dict:
+    key = init_storage()
+    resp = requests.put(f"{STORAGE_URL}/objects/{path}",
+                        headers={"X-Storage-Key": key, "Content-Type": content_type}, data=data, timeout=120)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_object(path: str):
+    key = init_storage()
+    resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
+
+@api.post("/upload")
+async def upload_file(file: UploadFile = File(...), folder: str = Form("orders")):
+    data = await file.read()
+    if len(data) > 8 * 1024 * 1024:
+        raise HTTPException(413, "Ukuran file maksimal 8 MB")
+    ext = (file.filename or "foto.jpg").rsplit(".", 1)[-1].lower()
+    if ext not in ("jpg", "jpeg", "png", "webp", "heic"):
+        ext = "jpg"
+    path = f"{APP_NAME}/uploads/{folder}/{uuid.uuid4()}.{ext}"
+    try:
+        await run_in_threadpool(put_object, path, data, file.content_type or "image/jpeg")
+    except requests.HTTPError as e:
+        code = e.response.status_code if e.response is not None else 500
+        if code == 402:
+            raise HTTPException(402, "Kuota penyimpanan habis. Hubungi owner.")
+        raise HTTPException(502, "Gagal mengunggah foto, coba lagi.")
+    return {"path": path, "url": f"/api/files/{path}"}
+
+
+@api.get("/files/{path:path}")
+async def serve_file(path: str):
+    try:
+        content, ctype = await run_in_threadpool(get_object, path)
+    except Exception:
+        raise HTTPException(404, "Berkas tidak ditemukan")
+    return Response(content=content, media_type=ctype, headers={"Cache-Control": "public, max-age=86400"})
 
 
 @api.get("/")
