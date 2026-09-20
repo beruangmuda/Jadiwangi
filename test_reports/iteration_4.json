@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 4 (Custom date range + payment method split + per-employee kg + transactions kg/pcs/m) verified end-to-end. Backend: 9/9 new tests PASS in /app/backend/tests/test_iter4_reports.py plus 17/17 regression tests (iter3) still PASS. GET /api/reports/financial returns income_by_method as ordered array [cash,qris,emoney,deposit] with labels Tunai/QRIS/E-Money/Saldo Deposit and honors frm/to (far-future range yields all zeros). GET /api/reports/transactions returns total_orders/cancelled/total_value/total_kg/total_pcs/total_m/recent/cancellations. GET /api/reports/employees returns per_employee[{name,wash_kg,iron_kg,total_kg,notes}]. POST /api/orders accepts payment_method cash/qris/emoney and persists it (verified via GET). POST /api/orders/{id}/advance out of washing with body{employee_id, employee_name} inserts a work_log crediting Joko: per_employee.wash_kg for Joko Produksi increased by exactly the order weight (7 kg). Frontend (390x844 mobile web): Owner login works. Laporan > Keuangan: 'Rentang Tanggal Kustom' opens DateRangeSheet (cal-prev/next, cal-day-YYYY-MM-DD, cal-apply); picking 05 Aug 2026 -> 20 Aug 2026 then Terapkan closes sheet and range button reflects '05 Aug 2026 — 20 Aug 2026', 'Uang Masuk per Metode' card shows Tunai/QRIS/E-Money/Saldo Deposit rows (Rp0 for that far-past range as expected). Laporan > Transaksi/Pegawai tabs load. Order-baru (owner FAB): pay sheet exposes paymethod-cash, paymethod-qris, paymethod-emoney; confirming with Tunai creates the order and returns to /home. Employee login (joko/pegawai123, produksi Depok/Kalimulya) opens Antrian with stage chips (Aktif/Diterima/Cuci/Pengering/Setrika/Packing/Siap Diambil); tapping advance-<code> on a Packing order advances silently — no error toast, no red screen. No regressions in reguler/express toggle flow (iter3 pytest all green).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Persistent RN-Web console deprecation 'shadow* style props are deprecated. Use boxShadow.' Non-blocking; carried over from iter3."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter4_reports.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/iter4_results.xml"
+  ],
+  "action_items": [
+    "Optional: migrate shadow* styles to boxShadow to silence RN-Web deprecation (carried over)."
+  ],
+  "critical_code_review_comments": [
+    "server.py now 1425 lines — still monolithic. Splitting into services/orders/reports/masterdata modules would help maintenance.",
+    "/api/reports/financial income_by_method aggregation is correct (LEFT JOIN via GROUP BY method, safe fallback for unknown method keys) and always returns cash/qris/emoney/deposit in fixed order with Rp labels.",
+    "/api/orders/{id}/advance inserts work_log only for stages washing/drying/ironing/packing when employee_id is provided — correct: no double-count on received->washing transition since 'received' isn't in that list.",
+    "DateRangeSheet correctly disables future days (iso > today) and enforces Terapkan disabled until both start+end picked; robust UX.",
+    "laporan.tsx passes outlet_id when session.currentOutletId is set — matches backend contract."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter4_reports.py",
+    "/app/test_reports/iteration_4.json",
+    "/app/test_reports/pytest/iter4_results.xml"
+  ],
+  "success_rate": {"backend": "100% (9/9 new + 17/17 regression)", "frontend": "100% of listed critical flows"},
+  "seed_data_creation": "Test suite created ~4 test orders on Depok (TEST_cash / TEST_qris / TEST_emoney / TEST_advance_attribution) and one advanced through washing stage crediting Joko Produksi with +7 kg wash_kg. UI test created one additional Tunai order via order-baru. No test customers/services created this run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 4 feature set is fully functional. Key testIDs: laporan open-custom-range, cal-prev, cal-next, cal-day-YYYY-MM-DD, cal-apply, wage-rate (Upah per Kg input). Order pay sheet: paymethod-cash / paymethod-qris / paymethod-emoney / confirm-paid / pay-deposit / pay-later. Employee: order-card-<code>, advance-<code>, pay-<code>, cancel-<code>. Auth payload: POST /api/auth/login returns {role:'pegawai'|'owner', employee:{id,name,role_type,outlet_id,...}, outlets:[...]}. Backend base URL: https://wangi-dashboard.preview.emergentagent.com/api. Outlet UUIDs unchanged (Depok e5fc0b12-25f5-4be2-a117-6fea0df032da / Jakarta a1564153-... / Bandung 654ab50b-...). income_by_method order: cash, qris, emoney, deposit with labels Tunai/QRIS/E-Money/Saldo Deposit.",
+  "rca_of_issue": "N/A — feature set works end-to-end. Only historical shadow* RN-Web deprecation persists (cosmetic)."
+}

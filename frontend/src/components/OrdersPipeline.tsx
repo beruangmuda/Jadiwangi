@@ -21,7 +21,7 @@ const FILTERS = [
   { key: "completed", label: "Selesai" },
 ];
 
-export function OrdersPipeline({ outletId }: { outletId: string | null }) {
+export function OrdersPipeline({ outletId, employeeId, employeeName }: { outletId: string | null; employeeId?: string; employeeName?: string }) {
   const styles = useStyles();
   const { colors } = useTheme();
   const qc = useQueryClient();
@@ -44,7 +44,7 @@ export function OrdersPipeline({ outletId }: { outletId: string | null }) {
   });
 
   const advance = useMutation({
-    mutationFn: (id: string) => api.post(`/orders/${id}/advance`),
+    mutationFn: (id: string) => api.post(`/orders/${id}/advance`, employeeId ? { employee_id: employeeId, employee_name: employeeName || "" } : {}),
     onSuccess: () => {
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       qc.invalidateQueries({ queryKey: ["orders"] });

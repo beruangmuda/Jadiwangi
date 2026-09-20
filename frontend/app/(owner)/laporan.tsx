@@ -1,10 +1,11 @@
-import React, { useState } from "react";
-import { View, Text, ScrollView, useWindowDimensions } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, ScrollView, useWindowDimensions, Pressable, TextInput } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
+import { storage } from "@/src/utils/storage";
 import dayjs from "dayjs";
 import { fonts, makeStyles, radius, shadow, spacing, useTheme } from "@/src/theme";
 import { Icon } from "@/src/components/Icon";
@@ -12,6 +13,7 @@ import { Card, ChipRow, SectionHeader, Loading, EmptyState, Pill } from "@/src/c
 import { Segmented } from "@/src/components/form";
 import { OutletSwitcher } from "@/src/components/OutletSwitcher";
 import { BarChart } from "@/src/components/Chart";
+import { DateRangeSheet } from "@/src/components/DateRangeSheet";
 import { rupiah, rupiahShort, kg, formatDate } from "@/src/format";
 
 const TABS = [
@@ -41,8 +43,10 @@ export default function Laporan() {
   const { session } = useAuth();
   const [tab, setTab] = useState("keuangan");
   const [period, setPeriod] = useState("bulan");
+  const [custom, setCustom] = useState<{ frm: string; to: string } | null>(null);
+  const [calOpen, setCalOpen] = useState(false);
   const outletId = session?.currentOutletId ?? null;
-  const { frm, to } = rangeFor(period);
+  const { frm, to } = period === "custom" && custom ? custom : rangeFor(period);
   const params = new URLSearchParams();
   if (outletId) params.set("outlet_id", outletId);
   params.set("frm", frm);
@@ -59,12 +63,29 @@ export default function Laporan() {
         <ChipRow items={TABS} value={tab} onChange={setTab} />
       </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing["3xl"], gap: spacing.lg }}>
-        <Segmented items={PERIODS} value={period} onChange={setPeriod} />
+        <Segmented items={PERIODS} value={period === "custom" ? "" : period} onChange={setPeriod} />
+        <Pressable testID="open-custom-range" onPress={() => setCalOpen(true)} style={[styles.rangeBtn, period === "custom" && { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary }]}>
+          <Icon name="calendar-range" size={18} color={colors.brand} />
+          <Text style={styles.rangeText}>
+            {period === "custom" && custom
+              ? `${dayjs(custom.frm).format("DD MMM YYYY")} — ${dayjs(custom.to).format("DD MMM YYYY")}`
+              : "Rentang Tanggal Kustom"}
+          </Text>
+          <Icon name="chevron-right" size={18} color={colors.muted} />
+        </Pressable>
         {tab === "keuangan" && <Keuangan q={q} />}
         {tab === "transaksi" && <Transaksi q={q} />}
         {tab === "pegawai" && <Pegawai q={q} />}
         {tab === "pelanggan" && <Pelanggan q={q} />}
       </ScrollView>
+
+      <DateRangeSheet
+        visible={calOpen}
+        initialFrm={custom?.frm}
+        initialTo={custom?.to}
+        onClose={() => setCalOpen(false)}
+        onApply={(f, t) => { setCustom({ frm: f, to: t }); setPeriod("custom"); setCalOpen(false); }}
+      />
     </View>
   );
 }
@@ -101,8 +122,26 @@ function Keuangan({ q }: { q: string }) {
       </View>
       <Card>
         <SectionHeader title="Laba Bersih" />
-        <Text style={[styles.bigMoney, { color: data.laba >= 0 ? colors.success : colors.error }]} numberOfLines={1} adjustsFontSizeToFit>{rupiah(data.laba)}</Text>
+        <Text style={[styles.bigMoney, { color: data.laba >= 0 ? colors.success : colors.error }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{rupiah(data.laba)}</Text>
         <Text style={styles.hintMuted}>Pendapatan − Pengeluaran − Kasbon</Text>
+      </Card>
+      <Card>
+        <SectionHeader title="Uang Masuk per Metode" />
+        <View style={{ gap: spacing.sm }}>
+          {(data.income_by_method || []).map((m: any) => {
+            const tone: any = { Tunai: colors.success, QRIS: colors.brandPrimary, "E-Money": colors.brand, "Saldo Deposit": colors.warning };
+            const icon: any = { Tunai: "cash", QRIS: "qrcode", "E-Money": "wallet", "Saldo Deposit": "wallet-plus" };
+            return (
+              <View key={m.method} style={styles.methodRow}>
+                <View style={[styles.methodIcon, { backgroundColor: colors.surfaceSecondary }]}>
+                  <Icon name={icon[m.label] || "cash"} size={18} color={tone[m.label] || colors.brand} />
+                </View>
+                <Text style={styles.methodLabel}>{m.label}</Text>
+                <Text style={[styles.methodValue, { color: tone[m.label] || colors.onSurface }]}>{rupiah(m.total)}</Text>
+              </View>
+            );
+          })}
+        </View>
       </Card>
       <Card>
         <SectionHeader title="Rincian Pengeluaran" />
@@ -136,6 +175,9 @@ function Transaksi({ q }: { q: string }) {
       <View style={styles.grid}>
         <StatTile icon="receipt-text-check" label="Order Selesai/Aktif" value={String(data.total_orders)} tone="azure" />
         <StatTile icon="receipt-text-remove" label="Pembatalan" value={String(data.cancelled)} tone="error" />
+        <StatTile icon="scale-balance" label="Total Kiloan" value={kg(data.total_kg)} tone="brand" />
+        <StatTile icon="tshirt-crew" label="Total Satuan" value={`${Number(data.total_pcs || 0)} pcs`} tone="success" />
+        <StatTile icon="ruler" label="Total Meter" value={`${Number(data.total_m || 0)} m`} tone="warning" />
       </View>
       <Card>
         <SectionHeader title="Nilai Transaksi" />
@@ -184,7 +226,13 @@ function Pegawai({ q }: { q: string }) {
   const styles = useStyles();
   const { colors } = useTheme();
   const { data, isLoading } = useQuery({ queryKey: ["rep-emp", q], queryFn: () => api.get(`/reports/employees${q}`) });
+  const [rate, setRate] = useState("2000");
+  useEffect(() => {
+    (async () => { const v = await storage.getItem<string | null>("jw_wage_per_kg", null); if (v) setRate(String(v)); })();
+  }, []);
+  const onRate = (t: string) => { setRate(t); storage.setItem("jw_wage_per_kg", t as any); };
   if (isLoading) return <Loading />;
+  const rateNum = Number(rate) || 0;
   const roleMeta: Record<string, { label: string; icon: string }> = {
     admin: { label: "Admin", icon: "clipboard-account" },
     produksi: { label: "Produksi", icon: "washing-machine" },
@@ -192,6 +240,39 @@ function Pegawai({ q }: { q: string }) {
   };
   return (
     <>
+      <Card>
+        <SectionHeader title="Produksi & Upah per Pegawai" />
+        <View style={styles.rateRow}>
+          <Text style={styles.rateLabel}>Upah per Kg</Text>
+          <View style={styles.rateInputBox}>
+            <Text style={styles.ratePrefix}>Rp</Text>
+            <TextInput testID="wage-rate" value={rate} onChangeText={onRate} keyboardType="number-pad" style={styles.rateInput} placeholder="2000" placeholderTextColor={colors.muted} />
+          </View>
+        </View>
+        {(data.per_employee || []).length === 0 ? (
+          <EmptyState icon="account-clock" title="Belum ada data produksi" subtitle="Muncul saat pegawai menyelesaikan tahap cuci/setrika." />
+        ) : (
+          <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
+            {(data.per_employee || []).map((e: any, i: number) => (
+              <View key={i} style={styles.empProd}>
+                <View style={styles.avatar}><Icon name="account-hard-hat" size={18} color={colors.onBrandPrimary} /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.lineLabel}>{e.name}</Text>
+                  <View style={{ flexDirection: "row", gap: spacing.md, marginTop: 2, flexWrap: "wrap" }}>
+                    <Text style={styles.prodMeta}>Cuci {kg(e.wash_kg)}</Text>
+                    <Text style={styles.prodMeta}>Setrika {kg(e.iron_kg)}</Text>
+                    <Text style={styles.prodMeta}>{e.notes} nota</Text>
+                  </View>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={styles.wageValue}>{rupiah(e.total_kg * rateNum)}</Text>
+                  <Text style={styles.prodMeta}>{kg(e.total_kg)}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </Card>
       <Card>
         <SectionHeader title="Statistik Produksi" />
         <View style={styles.grid}>
@@ -323,4 +404,18 @@ const useStyles = makeStyles((c) => ({
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.brandPrimary, alignItems: "center", justifyContent: "center" },
   rankBadge: { width: 30, height: 30, borderRadius: 15, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   rankText: { fontFamily: fonts.displayBold, fontSize: 14, color: c.brand },
+  rangeBtn: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, padding: spacing.md },
+  rangeText: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurface },
+  methodRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  methodIcon: { width: 34, height: 34, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  methodLabel: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurface },
+  methodValue: { fontFamily: fonts.displayBold, fontSize: 15 },
+  rateRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, marginTop: spacing.xs },
+  rateLabel: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurfaceSecondary },
+  rateInputBox: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: c.surfaceTertiary, borderRadius: radius.md, paddingHorizontal: spacing.md, minWidth: 120 },
+  ratePrefix: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.muted },
+  rateInput: { flex: 1, paddingVertical: 10, fontFamily: fonts.displayBold, fontSize: 15, color: c.onSurface },
+  empProd: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: c.surfaceSecondary, borderRadius: radius.md, padding: spacing.md },
+  prodMeta: { fontFamily: fonts.bodySemi, fontSize: 12, color: c.muted },
+  wageValue: { fontFamily: fonts.displayBold, fontSize: 15, color: c.brandPrimary },
 }));

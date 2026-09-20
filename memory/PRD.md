@@ -56,6 +56,14 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] Layar Produk & Layanan: tab outlet, tampil 2 harga + durasi, form lengkap (harga reg/express, durasi, min kg).
 - [x] Data contoh (order/transaksi/pengeluaran) di-reset & di-generate ulang per outlet dengan pricelist baru (guard pricelist_v).
 
+## Update (2026-06, iterasi 6)
+- [x] Laporan Keuangan: filter rentang tanggal KUSTOM (kalender DateRangeSheet, from–to) + kartu "Uang Masuk per Metode" (Tunai/QRIS/E-Money/Saldo Deposit).
+- [x] Laporan Transaksi: total transaksi + Total Kiloan (kg) + Total Satuan (pcs) + Total Meter (m).
+- [x] Laporan Pegawai: produksi per-pegawai (cuci kg, setrika kg, jumlah nota) dari work_logs + input "Upah per Kg" untuk estimasi gaji kiloan (disimpan lokal jw_wage_per_kg).
+- [x] Buat Order: pemilih metode bayar Tunai/QRIS/E-Money.
+- [x] Pipeline Pegawai: saat pegawai menuntaskan tahap cuci/setrika, kiloan nota diatribusikan ke pegawai tsb (work_logs) → dasar penggajian.
+- [x] Reseed pricelist_v=5 menghasilkan metode bayar bervariasi + work_logs contoh. Teruji backend 9/9 + regресi 17/17 + alur frontend semua PASS.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Kasbon pegawai (tabel sudah ada, UI belum) & saldo deposit pelanggan (pakai untuk bayar).

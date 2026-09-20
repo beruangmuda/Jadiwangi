@@ -142,6 +142,10 @@ alter table services add column if not exists price_express numeric(12,2);
 alter table services add column if not exists duration text default '';
 alter table services add column if not exists duration_express text default '';
 alter table services add column if not exists min_kg numeric(10,2);
+create table if not exists work_logs (
+  id uuid primary key default gen_random_uuid(), order_id uuid references orders(id) on delete cascade,
+  employee_id uuid references employees(id), employee_name text default '', outlet_id uuid references outlets(id),
+  stage text not null, weight_kg numeric(10,2) not null default 0, created_at timestamptz not null default now());
 """
 
 MAX_BCRYPT_BYTES = 72
@@ -360,7 +364,7 @@ async def seed_data():
 # ---------------------------------------------------------------------------
 # Pricelist per outlet (Depok / Jakarta / Bandung) + reseed of sample data
 # ---------------------------------------------------------------------------
-PRICELIST_VERSION = "3"
+PRICELIST_VERSION = "5"
 
 # Common satuan durations
 _D2 = ("2 Hari", "6 Jam")
@@ -490,6 +494,7 @@ async def reseed_pricelist():
         if not outlets:
             return
         # wipe transactional + service data (keep outlets, customers, employees)
+        await conn.execute("delete from work_logs")
         await conn.execute("delete from order_items")
         await conn.execute("delete from transactions")
         await conn.execute("delete from orders")
@@ -521,7 +526,14 @@ async def reseed_pricelist():
             cust_by_outlet.setdefault(c["outlet_id"], []).append(c["id"])
         sla_by_outlet = {o["id"]: o["sla_hours"] for o in outlets}
 
-        orders = []; items = []; txns = []
+        # produksi employees per outlet (for work-log attribution)
+        prod_rows = await conn.fetch("select id, name, outlet_id from employees where role_type='produksi'")
+        prod_by_outlet: dict = {}
+        for e in prod_rows:
+            prod_by_outlet.setdefault(e["outlet_id"], []).append((e["id"], e["name"]))
+
+        orders = []; items = []; txns = []; wlogs = []
+        methods = ["cash", "qris", "emoney"]
         points_by_cust: dict = {}
         code_seq = 1000
         for oid, custs in cust_by_outlet.items():
@@ -559,13 +571,19 @@ async def reseed_pricelist():
                     cancelled_at = created + timedelta(hours=random.randint(1, 5)) if status == "cancelled" else None
                     code_seq += 1
                     code = f"JW-{created.strftime('%y%m%d')}-{code_seq}"
+                    pmethod = random.choice(methods)
                     orders.append((ordid, code, cust_id, oid, status, total, weight, unit_qty, payment_status,
-                                   "qris", delivery, "", "owner", created, created, due_at, completed_at, cancelled_at,
+                                   pmethod, delivery, "", "owner", created, created, due_at, completed_at, cancelled_at,
                                    "Salah input" if status == "cancelled" else ""))
                     if payment_status == "paid" and status != "cancelled":
-                        txns.append((uuid.uuid4(), ordid, oid, total, "income", "qris", created))
+                        txns.append((uuid.uuid4(), ordid, oid, total, "income", pmethod, created))
                     if status == "completed":
                         points_by_cust[cust_id] = points_by_cust.get(cust_id, 0) + int(total / Decimal(1000))
+                        prods = prod_by_outlet.get(oid, [])
+                        if prods and weight > 0:
+                            for stage in ("washing", "ironing"):
+                                emp_id, emp_name = random.choice(prods)
+                                wlogs.append((uuid.uuid4(), ordid, emp_id, emp_name, oid, stage, weight, completed_at or created))
 
         if orders:
             await conn.copy_records_to_table(
@@ -581,6 +599,10 @@ async def reseed_pricelist():
             await conn.copy_records_to_table(
                 "transactions", records=txns,
                 columns=["id", "order_id", "outlet_id", "amount", "type", "method", "created_at"])
+        if wlogs:
+            await conn.copy_records_to_table(
+                "work_logs", records=wlogs,
+                columns=["id", "order_id", "employee_id", "employee_name", "outlet_id", "stage", "weight_kg", "created_at"])
 
         # recompute customer points
         await conn.execute("update customers set points=0")
@@ -687,6 +709,11 @@ class StatusBody(BaseModel):
 
 class CancelBody(BaseModel):
     reason: str = ""
+
+
+class AdvanceBody(BaseModel):
+    employee_id: Optional[str] = None
+    employee_name: str = ""
 
 
 class ExpenseBody(BaseModel):
@@ -1002,7 +1029,7 @@ async def update_status(oid: str, b: StatusBody):
 
 
 @api.post("/orders/{oid}/advance")
-async def advance_status(oid: str):
+async def advance_status(oid: str, b: Optional[AdvanceBody] = None):
     async with pool.acquire() as conn:
         row = await conn.fetchrow("select * from orders where id=$1", oid)
         if not row:
@@ -1012,6 +1039,12 @@ async def advance_status(oid: str):
             raise HTTPException(400, "Order tidak dapat dilanjutkan")
         nxt = PIPELINE[PIPELINE.index(cur) + 1]
         completed_at = now_utc() if nxt == "completed" else None
+        # attribute the completed stage (cur) to the employee who finished it
+        if b and b.employee_id and cur in ("washing", "drying", "ironing", "packing"):
+            await conn.execute(
+                """insert into work_logs(order_id,employee_id,employee_name,outlet_id,stage,weight_kg)
+                   values($1,$2,$3,$4,$5,$6)""",
+                oid, b.employee_id, b.employee_name, row["outlet_id"], cur, row["weight_kg"])
         row = await conn.fetchrow(
             "update orders set status=$1, updated_at=now(), completed_at=coalesce($2,completed_at) where id=$3 returning *",
             nxt, completed_at, oid)
@@ -1152,11 +1185,28 @@ async def report_financial(outlet_id: Optional[str] = None, frm: Optional[str] =
         w4 = (" where " + " and ".join(cl4)) if cl4 else ""
         kasbon = await conn.fetchval(f"select coalesce(sum(amount),0) from kasbon{w4}", *args4)
 
+        # income breakdown by payment method
+        argsM = []
+        clM = date_filter("created_at", outlet_id, frm, to, argsM)
+        clM.append("type='income'")
+        wM = " where " + " and ".join(clM)
+        method_rows = await conn.fetch(
+            f"select method, coalesce(sum(amount),0) as total, count(*) as cnt from transactions{wM} group by method", *argsM)
+        method_labels = {"cash": "Tunai", "qris": "QRIS", "emoney": "E-Money", "deposit": "Saldo Deposit"}
+        by_method = {"cash": 0.0, "qris": 0.0, "emoney": 0.0, "deposit": 0.0}
+        for r in method_rows:
+            by_method[r["method"]] = float(r["total"]) if r["method"] in by_method else by_method.get(r["method"], 0.0) + float(r["total"])
+        income_by_method = [
+            {"method": m, "label": method_labels.get(m, m), "total": by_method.get(m, 0.0)}
+            for m in ["cash", "qris", "emoney", "deposit"]
+        ]
+
         return {
             "omzet": float(omzet or 0), "pendapatan": float(pendapatan or 0),
             "pengeluaran": float(pengeluaran or 0), "kasbon": float(kasbon or 0),
             "laba": float(pendapatan or 0) - float(pengeluaran or 0) - float(kasbon or 0),
             "expense_breakdown": [{"category": r["category"], "total": float(r["total"])} for r in exp_break],
+            "income_by_method": income_by_method,
         }
 
 
@@ -1192,8 +1242,17 @@ async def report_transactions(outlet_id: Optional[str] = None, frm: Optional[str
             f"""select o.code,o.total,o.cancel_reason,o.cancelled_at,c.name as customer_name
                 from orders o left join customers c on c.id=o.customer_id
                 where o.status='cancelled'{baseO} order by o.cancelled_at desc limit 20""", *argsO)
+
+        # quantity breakdown by unit from order_items (kg / pcs / meter)
+        unit_rows = await conn.fetch(
+            f"""select oi.unit, coalesce(sum(oi.qty),0) as qty
+                from order_items oi join orders o on o.id=oi.order_id
+                where o.status <> 'cancelled'{baseO} group by oi.unit""", *argsO)
+        um = {r["unit"]: float(r["qty"]) for r in unit_rows}
         return {"total_orders": int(total_orders or 0), "cancelled": int(cancelled or 0),
-                "total_value": float(value or 0), "recent": rows_to_list(recent), "cancellations": rows_to_list(cancels)}
+                "total_value": float(value or 0),
+                "total_kg": um.get("kg", 0.0), "total_pcs": um.get("pcs", 0.0), "total_m": um.get("m", 0.0),
+                "recent": rows_to_list(recent), "cancellations": rows_to_list(cancels)}
 
 
 @api.get("/reports/employees")
@@ -1225,12 +1284,38 @@ async def report_employees(outlet_id: Optional[str] = None, frm: Optional[str] =
         deliveries = await conn.fetchval(
             f"select count(*) from orders where delivery_type in ('delivery','pickup'){dc}", *args)
         orders_created = await conn.fetchval(f"select count(*) from orders where 1=1{dc}", *args)
+
+        # per-employee production from work_logs (for kiloan-based payroll)
+        wargs = []; wparts = []
+        if outlet_id:
+            wargs.append(outlet_id); wparts.append(f"w.outlet_id=${len(wargs)}")
+        if frm:
+            wargs.append(frm); wparts.append(f"w.created_at::date >= ${len(wargs)}::date")
+        if to:
+            wargs.append(to); wparts.append(f"w.created_at::date <= ${len(wargs)}::date")
+        wwhere = (" where " + " and ".join(wparts)) if wparts else ""
+        prod_rows = await conn.fetch(
+            f"""select w.employee_id, w.employee_name,
+                   coalesce(sum(w.weight_kg) filter (where w.stage='washing'),0) as wash_kg,
+                   coalesce(sum(w.weight_kg) filter (where w.stage='ironing'),0) as iron_kg,
+                   count(distinct w.order_id) as notes
+                from work_logs w{wwhere}
+                group by w.employee_id, w.employee_name
+                order by (coalesce(sum(w.weight_kg) filter (where w.stage='washing'),0)
+                        + coalesce(sum(w.weight_kg) filter (where w.stage='ironing'),0)) desc""", *wargs)
+        per_employee = [
+            {"employee_id": str(r["employee_id"]) if r["employee_id"] else None, "name": r["employee_name"] or "-",
+             "wash_kg": float(r["wash_kg"]), "iron_kg": float(r["iron_kg"]),
+             "total_kg": float(r["wash_kg"]) + float(r["iron_kg"]), "notes": int(r["notes"])}
+            for r in prod_rows
+        ]
         return {
             "by_role": by_role,
             "production": {"total_kg": float(total_kg or 0), "washed_kg": float(washed or 0),
                            "ironed_kg": float(ironed or 0), "packed_kg": float(packed or 0)},
             "admin": {"orders_created": int(orders_created or 0)},
             "kurir": {"deliveries": int(deliveries or 0)},
+            "per_employee": per_employee,
         }
 
 

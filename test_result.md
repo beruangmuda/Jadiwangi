@@ -142,4 +142,4 @@
 
 ## agent_communication:
 ##     -agent: "main"
-##     -message: "Pricelist per outlet loaded. Test order flow (pick customer, toggle express, add items, total reflects express price, submit order) and manage produk per outlet. Owner login owner/owner123."
+##     -message: "ITERATION 6: (1) Laporan Keuangan: custom date-range calendar (DateRangeSheet) + income_by_method (Tunai/QRIS/E-Money/Saldo). (2) Laporan Transaksi: total_kg/total_pcs/total_m. (3) Laporan Pegawai: per_employee production (wash_kg, iron_kg, notes) + editable Rp/kg wage estimate (stored jw_wage_per_kg). (4) Order payment method selector Tunai/QRIS/E-Money in order-baru. (5) Employee pipeline advance attributes completed stage (washing/ironing) to logged-in employee via work_logs. Reseed pricelist_v=5 generated varied methods + work_logs. Verified via curl: financial method breakdown, transactions kg=53/pcs=268/m=57, employee Joko cuci/setrika kg. Owner owner/owner123. Please test frontend flows + these backend report endpoints."

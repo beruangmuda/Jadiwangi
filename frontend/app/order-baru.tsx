@@ -42,6 +42,7 @@ export default function OrderBaru() {
   const [search, setSearch] = useState("");
   const [qrisOpen, setQrisOpen] = useState(false);
   const [payError, setPayError] = useState("");
+  const [payMethod, setPayMethod] = useState<"cash" | "qris" | "emoney">("qris");
   const [speeds, setSpeeds] = useState<Record<string, "regular" | "express">>({});
 
   const { data: services, isLoading: loadingSvc } = useQuery({
@@ -330,9 +331,22 @@ export default function OrderBaru() {
               <View style={styles.qrisLogo}><Text style={styles.qrisLogoText}>QRIS</Text></View>
             </View>
             <Text style={styles.qrisAmount}>{rupiah(total)}</Text>
-            <BodyText muted style={{ textAlign: "center" }}>Scan QR di atas dengan aplikasi e-wallet / m-banking, lalu konfirmasi.</BodyText>
+            <View style={styles.payMethodRow}>
+              {([["cash", "Tunai", "cash"], ["qris", "QRIS", "qrcode"], ["emoney", "E-Money", "wallet"]] as const).map(([key, label, icon]) => {
+                const on = payMethod === key;
+                return (
+                  <Pressable key={key} testID={`paymethod-${key}`} onPress={() => setPayMethod(key)} style={[styles.payMethodBtn, on && { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary }]}>
+                    <Icon name={icon} size={18} color={on ? colors.onBrandPrimary : colors.brand} />
+                    <Text style={[styles.payMethodText, on && { color: colors.onBrandPrimary }]}>{label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <BodyText muted style={{ textAlign: "center" }}>
+              {payMethod === "qris" ? "Scan QR di atas dengan e-wallet / m-banking, lalu konfirmasi." : payMethod === "cash" ? "Terima pembayaran tunai, lalu konfirmasi." : "Terima pembayaran e-money, lalu konfirmasi."}
+            </BodyText>
             {payError ? <Text style={styles.payError} testID="pay-error">{payError}</Text> : null}
-            <PrimaryButton label="Konfirmasi Sudah Bayar" icon="check-decagram" onPress={() => { setPayError(""); create.mutate({ paid: true, method: "qris" }); }} loading={create.isPending} testID="confirm-paid" />
+            <PrimaryButton label="Konfirmasi Sudah Bayar" icon="check-decagram" onPress={() => { setPayError(""); create.mutate({ paid: true, method: payMethod }); }} loading={create.isPending} testID="confirm-paid" />
             {canDeposit ? (
               <PrimaryButton label={`Bayar dari Deposit (${rupiah(deposit)})`} icon="wallet" tone="lavender" onPress={() => { setPayError(""); create.mutate({ paid: true, method: "deposit" }); }} loading={create.isPending} testID="pay-deposit" />
             ) : deposit > 0 ? (
@@ -393,6 +407,9 @@ const useStyles = makeStyles((c) => ({
   qrisLogo: { position: "absolute", backgroundColor: c.surface, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   qrisLogoText: { fontFamily: fonts.displayBold, fontSize: 16, color: c.error },
   qrisAmount: { fontFamily: fonts.displayBold, fontSize: 28, color: c.brandPrimary },
+  payMethodRow: { flexDirection: "row", gap: spacing.sm, alignSelf: "stretch" },
+  payMethodBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 10, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface },
+  payMethodText: { fontFamily: fonts.bodyBold, fontSize: 12, color: c.onSurfaceSecondary },
   later: { paddingVertical: spacing.sm },
   laterText: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.muted },
   payError: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.error, textAlign: "center" },
