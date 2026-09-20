@@ -71,6 +71,13 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] Pegawai: field Gaji Pokok & Tunjangan Kasir (Setelan → Pegawai). Login pegawai mencatat kehadiran (1/hari). advance() simpan unit_qty + log trip kurir (pickup/delivery).
 - [x] Reseed pricelist_v=7: gaji contoh, kehadiran bulan berjalan, work_logs+unit_qty, trip kurir. Teruji backend 11/11 + regресi 26/26 + frontend semua PASS. Bug sinkron outlet awal di /manage/gaji sudah difix (useEffect).
 
+## Update (2026-06, iterasi 8)
+- [x] Beranda: TrendChart diberi label & angka sumbu Y (rupiah, interval 0–100%) + angka tanggal sumbu X; judul dinamis "Trend <bulan>".
+- [x] Beranda: badge "X pelanggan" bisa diklik → layar Transaksi Hari Ini (/hari-ini) berisi nota masuk hari ini + ringkasan omzet. Pembatalan nota HANYA untuk owner (pegawai tidak bisa; OrdersPipeline canCancel=false).
+- [x] Beranda: kartu Top 3 Pelanggan bulan ini (nama, kiloan, biaya).
+- [x] Setelan → Database Pelanggan: kelola pelanggan (cari, tambah/edit dgn Alamat) + statistik per pelanggan (total kg, jumlah transaksi, total belanja) + detail (poin, deposit, transaksi pertama & terakhir, riwayat order).
+- [x] Backend: kolom address di customers, agregat di /customers, /customers/{id}/detail, filter today di /orders, top_customers di /dashboard. Teruji 13/13 + regresi 37/37 PASS.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Kasbon pegawai (tabel sudah ada, UI belum) & saldo deposit pelanggan (pakai untuk bayar).

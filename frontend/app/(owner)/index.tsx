@@ -30,6 +30,8 @@ export default function Dashboard() {
 
   const chartWidth = Math.min(width, 640) - spacing.lg * 2 - spacing.lg * 2;
   const t = data?.today;
+  const BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  const monthName = BULAN[new Date().getMonth()];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
@@ -71,10 +73,11 @@ export default function Dashboard() {
                   <Text style={styles.kpiDot}>•</Text>
                   <Text style={styles.kpiMeta}>{t?.pcs ?? 0} pcs</Text>
                 </View>
-                <View style={styles.custBadge}>
+                <Pressable testID="today-customers" onPress={() => router.push("/hari-ini")} style={styles.custBadge}>
                   <Icon name="account-group" size={13} color={colors.onBrandTertiary} />
                   <Text style={styles.custText}>{t?.customers ?? 0} pelanggan</Text>
-                </View>
+                  <Icon name="chevron-right" size={13} color={colors.onBrandTertiary} />
+                </Pressable>
               </Card>
 
               <Card style={{ flex: 1, gap: spacing.sm }} delay={90}>
@@ -91,7 +94,7 @@ export default function Dashboard() {
 
             {/* CHART */}
             <Card delay={140}>
-              <SectionHeader title="Trend Bulan Ini" />
+              <SectionHeader title={`Trend ${monthName}`} />
               <TrendChart data={data?.trend || []} width={chartWidth} />
             </Card>
 
@@ -122,6 +125,29 @@ export default function Dashboard() {
                         <Text style={styles.serviceSub}>{s.count}x order</Text>
                       </View>
                       <Text style={styles.serviceRev}>{rupiahShort(s.revenue)}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </Card>
+
+            {/* TOP CUSTOMERS */}
+            <Card delay={180}>
+              <SectionHeader title={`Top 3 Pelanggan ${monthName}`} />
+              {(data?.top_customers || []).length === 0 ? (
+                <EmptyState icon="account-group" title="Belum ada data" />
+              ) : (
+                <View style={{ gap: spacing.md }}>
+                  {(data?.top_customers || []).map((c: any, i: number) => (
+                    <View key={c.name + i} style={styles.serviceRow}>
+                      <View style={[styles.rankBadge, i === 0 && { backgroundColor: colors.brandPrimary }]}>
+                        <Text style={[styles.rankText, i === 0 && { color: colors.onBrandPrimary }]}>{i + 1}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.serviceName}>{c.name}</Text>
+                        <Text style={styles.serviceSub}>{kg(c.kg)} • {c.orders}x order</Text>
+                      </View>
+                      <Text style={styles.serviceRev}>{rupiahShort(c.spend)}</Text>
                     </View>
                   ))}
                 </View>

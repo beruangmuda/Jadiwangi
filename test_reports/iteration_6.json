@@ -1,0 +1,44 @@
+{
+  "summary": "Iter6 (Beranda axis labels + 'Trend <bulan>', tap 'X pelanggan' -> /hari-ini owner-only cancel flow, Top 3 Pelanggan card, Setelan > Database Pelanggan CRUD/detail with address) fully verified end-to-end. Backend: 13/13 new pytest cases PASS in /app/backend/tests/test_iter6_customers.py + 37/37 regression PASS (backend_test.py + test_iter4_reports.py + test_iter5_payroll.py). Verified endpoints: GET /api/dashboard returns top_customers list (<=3, ordered by spend desc, each {name, kg, spend, orders}) and trend covering current month (last point.day == today). GET /api/orders?today=true[&outlet_id=] returns only today's orders (created_at::date == today). GET /api/customers returns each row with address + aggregates {total_kg, tx_count, total_spend, first_order, last_order, outlet_name}. GET /api/customers/{id}/detail returns aggregates + recent_orders[] (code,total,status,weight_kg,unit_qty,created_at) with 404 for unknown id. POST/PUT /api/customers persist address (verified via GET/detail). POST /api/orders/{id}/cancel sets status=cancelled with cancel_reason and dashboard omzet drops by cancelled total; 404 for unknown id. Frontend (390x844 mobile web, chromium): Owner login OK. Beranda /: Trend chart title reads 'Trend September' (dynamic month per current date 20-Sep-2026); Y-axis SVG labels are rupiah short strings (Rp0, Rp503rb, Rp1,0jt, Rp1,5jt, Rp2,0jt); X-axis SVG labels are day numbers (1, 5, 9, 13, 17, 20); 'Tanggal →' hint present bottom-right. 'Top 3 Pelanggan September' card renders. Today KPI badge '19 pelanggan' (data-testid=today-customers) is tappable and navigates to /hari-ini. /hari-ini as OWNER: header 'Transaksi Hari Ini' + date subtitle 'Sunday, 20 September 2026'; summary bar shows 'Nota Masuk 33 / Omzet Rp1.835.000'; each active nota shows 'Batalkan Nota (salah input)' red button; tapping opens modal 'Batalkan Nota?' with 'Alasan Pembatalan' field; confirm cancels; after cancel the nota card shows 'Dibatalkan' pill and 'Dibatalkan: <reason>' text and drops from omzet (backend-verified). Setelan > Database Pelanggan (/manage/pelanggan): search filters list; + button opens Tambah Pelanggan form with Alamat field (testID f-address); tapping a customer opens detail modal exposing Total Kiloan, Jumlah Transaksi, Total Belanja, Saldo Deposit, Transaksi Pertama, Transaksi Terakhir, Riwayat Order Terakhir. Edit (pencil) opens form pre-filled with Alamat. Employee side (joko/pegawai123): OrdersPipeline rendered with canCancel=false — zero cancel buttons on employee home (verified via data-testid^=cancel- count = 0). Cosmetic RN-Web shadow* deprecation warnings persist (carry-over from prior iterations, non-blocking).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Persistent RN-Web deprecation 'shadow* style props are deprecated. Use boxShadow.' (carry-over)"}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter6_customers.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_iter4_reports.py",
+    "/app/backend/tests/test_iter5_payroll.py",
+    "/app/test_reports/pytest/iter6_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL (carry-over from iter5): fix outletId initial-sync race in /app/frontend/app/manage/gaji.tsx.",
+    "OPTIONAL (carry-over): migrate shadow* to boxShadow across components to silence RN-Web deprecation."
+  ],
+  "critical_code_review_comments": [
+    "Dashboard SQL query (server.py:1225-1238) uses date_trunc('month', now()) + status<>'cancelled' filter with GROUP BY c.id ORDER BY spend DESC LIMIT 3 — correct semantics for Top 3 this month.",
+    "/api/customers list uses a single left-join sub-query (server.py:909-930) for aggregates — efficient (no N+1) and correctly excludes cancelled orders.",
+    "/api/customers/{cid}/detail (server.py:933-951) correctly excludes cancelled orders in aggregate but includes them in recent_orders[] — matches UI which shows historical order status.",
+    "hari-ini.tsx: isOwner gate on the cancel Pressable (line 91) uses session.role — matches backend authorization model. Employee routes never reach hari-ini.tsx (owner-only screen) but the guard adds defense-in-depth.",
+    "OrdersPipeline canCancel=false at (employee)/index.tsx:50 correctly suppresses the cancel X button — employees cannot even trigger the cancel modal from their pipeline.",
+    "Chart.tsx: X/Y axis SVG text uses colors.muted, fontSize 9 — legible on the 390-width viewport. maxV=Math.max(1,...) prevents divide-by-zero on empty data.",
+    "manage/pelanggan.tsx save mutation posts {name,phone,email,address,deposit,outlet_id} — matches CustomerBody. openEdit spreads existing customer incl. address — persists correctly.",
+    "server.py now 1622 lines — still monolithic, split recommended (carry-over)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter6_customers.py",
+    "/app/test_reports/iteration_6.json",
+    "/app/test_reports/pytest/iter6_results.xml"
+  ],
+  "success_rate": {"backend": "100% (13/13 new + 37/37 regression)", "frontend": "100% of listed critical flows"},
+  "seed_data_creation": "Created 1 test customer 'TEST_iter6_cust' (phone 0812TEST6, address 'Jl. Baru 99' after update, deposit 5000) via POST /api/customers — no cleanup endpoint yet. Cancelled 2 today orders: 1 via pytest ('TEST_iter6 cancel') and 1 via UI ('TEST_iter6 UI reason'). No other seed data modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iter6 feature-set is functional end-to-end. Key testIDs: today-customers (KPI badge on /), cancel-<order_id> (per-nota cancel on /hari-ini), cancel-reason + confirm-cancel (modal), cust-search + add-customer-btn + cust-<id> + edit-customer (Database Pelanggan), f-name/f-phone/f-address/f-email/f-deposit + save-customer (customer form). Backend API base: https://wangi-dashboard.preview.emergentagent.com/api. Depok (Kalimulya) outlet UUID e5fc0b12-25f5-4be2-a117-6fea0df032da. Note: /api/customers has no DELETE — TEST_ customers accumulate. On very first navigation to /hari-ini after login, the initial screenshot may show a loading spinner for ~2-3 seconds while session hydration + initial /orders?today=true fetch complete; content renders correctly after that. This is not a bug (tanstack-query loading state), just requires wait_for_timeout>=5000ms in tests.",
+  "rca_of_issue": "N/A — no regressions. Backend cancel flow verified end-to-end: POST /orders/{id}/cancel sets status='cancelled' + cancel_reason + cancelled_at=now, and dashboard query excludes status<>'cancelled' so omzet decreases correctly. UI cancel flow (hari-ini) invalidates both ['orders-today'] and ['dashboard'] query keys on success — verified UI reflects change after ~2s."
+}

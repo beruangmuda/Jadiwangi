@@ -21,7 +21,7 @@ const FILTERS = [
   { key: "completed", label: "Selesai" },
 ];
 
-export function OrdersPipeline({ outletId, employeeId, employeeName }: { outletId: string | null; employeeId?: string; employeeName?: string }) {
+export function OrdersPipeline({ outletId, employeeId, employeeName, canCancel = true }: { outletId: string | null; employeeId?: string; employeeName?: string; canCancel?: boolean }) {
   const styles = useStyles();
   const { colors } = useTheme();
   const qc = useQueryClient();
@@ -125,9 +125,11 @@ export function OrdersPipeline({ outletId, employeeId, employeeName }: { outletI
                 <Icon name="arrow-right-bold" size={16} color={colors.onBrandPrimary} />
               </Pressable>
             ) : null}
-            <Pressable testID={`cancel-${item.code}`} onPress={() => setCancelId(item.id)} style={styles.cancelBtn}>
-              <Icon name="close" size={16} color={colors.error} />
-            </Pressable>
+            {canCancel ? (
+              <Pressable testID={`cancel-${item.code}`} onPress={() => setCancelId(item.id)} style={styles.cancelBtn}>
+                <Icon name="close" size={16} color={colors.error} />
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
       </View>

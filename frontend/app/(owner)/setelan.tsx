@@ -15,7 +15,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
   {
     title: "Data & Master",
     items: [
-      { icon: "account-plus", label: "Tambah Pelanggan", desc: "Daftarkan pelanggan baru", route: "/manage/pelanggan" },
+      { icon: "account-group", label: "Database Pelanggan", desc: "Kelola & pantau riwayat pelanggan", route: "/manage/pelanggan" },
       { icon: "tshirt-crew", label: "Produk & Layanan", desc: "Kelola layanan & harga", route: "/manage/produk" },
       { icon: "account-hard-hat", label: "Pegawai & Hak Akses", desc: "Tambah pegawai & atur akses", route: "/manage/pegawai" },
       { icon: "store-edit", label: "Edit Outlet", desc: "Informasi 3 cabang", route: "/manage/outlet" },

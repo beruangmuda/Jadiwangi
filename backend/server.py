@@ -158,6 +158,7 @@ create table if not exists payroll_manual (
   period text not null, lembur_shifts int not null default 0, perjalanan_dinas numeric(12,2) not null default 0,
   note text default '');
 create unique index if not exists payroll_manual_uq on payroll_manual (employee_id, period);
+alter table customers add column if not exists address text default '';
 """
 
 MAX_BCRYPT_BYTES = 72
@@ -710,6 +711,7 @@ class CustomerBody(BaseModel):
     name: str
     phone: str = ""
     email: str = ""
+    address: str = ""
     deposit: float = 0
     outlet_id: Optional[str] = None
     password: str = ""
@@ -909,12 +911,44 @@ async def list_customers(outlet_id: Optional[str] = None, q: Optional[str] = Non
     async with pool.acquire() as conn:
         clauses, args = [], []
         if outlet_id:
-            args.append(outlet_id); clauses.append(f"outlet_id=${len(args)}")
+            args.append(outlet_id); clauses.append(f"c.outlet_id=${len(args)}")
         if q:
-            args.append(f"%{q}%"); clauses.append(f"(name ilike ${len(args)} or phone ilike ${len(args)})")
+            args.append(f"%{q}%"); clauses.append(f"(c.name ilike ${len(args)} or c.phone ilike ${len(args)})")
         where = (" where " + " and ".join(clauses)) if clauses else ""
-        rows = await conn.fetch(f"select * from customers{where} order by name", *args)
+        rows = await conn.fetch(
+            f"""select c.*, o.name as outlet_name,
+                   coalesce(s.total_kg,0) as total_kg, coalesce(s.tx_count,0) as tx_count,
+                   coalesce(s.total_spend,0) as total_spend, s.first_order, s.last_order
+                from customers c
+                left join outlets o on o.id=c.outlet_id
+                left join (
+                  select customer_id, sum(weight_kg) total_kg, count(*) tx_count, sum(total) total_spend,
+                         min(created_at) first_order, max(created_at) last_order
+                  from orders where status<>'cancelled' group by customer_id
+                ) s on s.customer_id=c.id{where}
+                order by coalesce(s.total_spend,0) desc, c.name""", *args)
         return rows_to_list(rows)
+
+
+@api.get("/customers/{cid}/detail")
+async def customer_detail(cid: str):
+    async with pool.acquire() as conn:
+        c = await conn.fetchrow("select * from customers where id=$1", cid)
+        if not c:
+            raise HTTPException(404, "Pelanggan tidak ditemukan")
+        d = row_to_dict(c)
+        s = await conn.fetchrow(
+            """select coalesce(sum(weight_kg),0) total_kg, count(*) tx_count, coalesce(sum(total),0) total_spend,
+                   min(created_at) first_order, max(created_at) last_order
+               from orders where customer_id=$1 and status<>'cancelled'""", cid)
+        d.update({"total_kg": float(s["total_kg"]), "tx_count": int(s["tx_count"]),
+                  "total_spend": float(s["total_spend"]),
+                  "first_order": s["first_order"].isoformat() if s["first_order"] else None,
+                  "last_order": s["last_order"].isoformat() if s["last_order"] else None})
+        recent = await conn.fetch(
+            "select code,total,status,weight_kg,unit_qty,created_at from orders where customer_id=$1 order by created_at desc limit 10", cid)
+        d["recent_orders"] = rows_to_list(recent)
+        return d
 
 
 @api.post("/customers")
@@ -922,8 +956,8 @@ async def create_customer(b: CustomerBody):
     pw = await run_in_threadpool(hash_password, b.password or "pelanggan123")
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "insert into customers(name,phone,email,deposit,outlet_id,password_hash) values($1,$2,$3,$4,$5,$6) returning *",
-            b.name, b.phone, b.email, b.deposit, b.outlet_id, pw)
+            "insert into customers(name,phone,email,address,deposit,outlet_id,password_hash) values($1,$2,$3,$4,$5,$6,$7) returning *",
+            b.name, b.phone, b.email, b.address, b.deposit, b.outlet_id, pw)
         return row_to_dict(row)
 
 
@@ -931,8 +965,8 @@ async def create_customer(b: CustomerBody):
 async def update_customer(cid: str, b: CustomerBody):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "update customers set name=$1,phone=$2,email=$3,deposit=$4,outlet_id=$5 where id=$6 returning *",
-            b.name, b.phone, b.email, b.deposit, b.outlet_id, cid)
+            "update customers set name=$1,phone=$2,email=$3,address=$4,deposit=$5,outlet_id=$6 where id=$7 returning *",
+            b.name, b.phone, b.email, b.address, b.deposit, b.outlet_id, cid)
         if not row:
             raise HTTPException(404, "Pelanggan tidak ditemukan")
         return row_to_dict(row)
@@ -997,7 +1031,7 @@ async def enrich_orders(conn, rows):
 
 
 @api.get("/orders")
-async def list_orders(outlet_id: Optional[str] = None, status: Optional[str] = None, active: bool = False, limit: int = 100):
+async def list_orders(outlet_id: Optional[str] = None, status: Optional[str] = None, active: bool = False, today: bool = False, limit: int = 100):
     async with pool.acquire() as conn:
         clauses, args = [], []
         if outlet_id:
@@ -1006,6 +1040,8 @@ async def list_orders(outlet_id: Optional[str] = None, status: Optional[str] = N
             args.append(status); clauses.append(f"status=${len(args)}")
         if active:
             clauses.append("status in ('received','washing','drying','ironing','packing','ready')")
+        if today:
+            clauses.append("created_at::date = now()::date")
         where = (" where " + " and ".join(clauses)) if clauses else ""
         args.append(limit)
         rows = await conn.fetch(f"select * from orders{where} order by created_at desc limit ${len(args)}", *args)
@@ -1193,6 +1229,14 @@ async def dashboard(outlet_id: Optional[str] = None):
                 {' and o.outlet_id=$1' if outlet_id else ''}
                 group by oi.service_name order by cnt desc limit 5""", *oargs)
 
+        top_cust = await conn.fetch(
+            f"""select c.name, coalesce(sum(o.weight_kg),0) as kg, coalesce(sum(o.total),0) as spend,
+                   count(*) as orders
+                from orders o join customers c on c.id=o.customer_id
+                where date_trunc('month',o.created_at)=date_trunc('month',now()) and o.status <> 'cancelled'
+                {' and o.outlet_id=$1' if outlet_id else ''}
+                group by c.id, c.name order by spend desc limit 3""", *oargs)
+
         return {
             "today": {"orders": int(today["orders"]), "kg": float(today["kg"]), "pcs": int(today["pcs"]),
                       "customers": int(today["customers"]), "omzet": float(today["omzet"]),
@@ -1200,6 +1244,7 @@ async def dashboard(outlet_id: Optional[str] = None):
             "trend": trend,
             "queue": {"in_progress": int(in_progress or 0), "ready": int(ready or 0), "overdue": int(overdue or 0)},
             "top_services": [{"name": r["service_name"], "count": int(r["cnt"]), "revenue": float(r["revenue"])} for r in top],
+            "top_customers": [{"name": r["name"], "kg": float(r["kg"]), "spend": float(r["spend"]), "orders": int(r["orders"])} for r in top_cust],
         }
 
 
