@@ -38,7 +38,7 @@ export default function ManagePegawai() {
 
   const save = useMutation({
     mutationFn: () => {
-      const body = { name: form.name, role_type: form.role_type, pin: form.pin || "0000", username: form.username, password: form.password, outlet_id: form.outlet_id, active: form.active, permissions: form.permissions };
+      const body = { name: form.name, role_type: form.role_type, pin: form.pin || "0000", username: form.username, password: form.password, outlet_id: form.outlet_id, active: form.active, gaji_pokok: Number(form.gaji_pokok) || 0, tunjangan_kasir: Number(form.tunjangan_kasir) || 0, permissions: form.permissions };
       return form.id ? api.put(`/employees/${form.id}`, body) : api.post("/employees", body);
     },
     onSuccess: () => {
@@ -48,8 +48,8 @@ export default function ManagePegawai() {
     },
   });
 
-  const openAdd = () => { setForm({ id: "", name: "", role_type: "admin", pin: "0000", username: "", password: "", outlet_id: outlets[0]?.id || "", active: true, permissions: { orders: true, reports: false, delivery: false } }); setModal(true); };
-  const openEdit = (e: any) => { setForm({ ...e, password: "", permissions: e.permissions || {} }); setModal(true); };
+  const openAdd = () => { setForm({ id: "", name: "", role_type: "admin", pin: "0000", username: "", password: "", outlet_id: outlets[0]?.id || "", active: true, gaji_pokok: "", tunjangan_kasir: "", permissions: { orders: true, reports: false, delivery: false } }); setModal(true); };
+  const openEdit = (e: any) => { setForm({ ...e, password: "", gaji_pokok: String(e.gaji_pokok ?? ""), tunjangan_kasir: String(e.tunjangan_kasir ?? ""), permissions: e.permissions || {} }); setModal(true); };
 
   const grouped = (role: string) => (employees || []).filter((e: any) => e.role_type === role);
 
@@ -105,6 +105,14 @@ export default function ManagePegawai() {
                         </Pressable>
                       );
                     })}
+                  </View>
+                </View>
+                <View style={{ flexDirection: "row", gap: spacing.sm }}>
+                  <View style={{ flex: 1 }}>
+                    <Field label="Gaji Pokok" value={form.gaji_pokok} onChangeText={(t) => setForm({ ...form, gaji_pokok: t })} placeholder="1500000" keyboardType="number-pad" testID="emp-gaji" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Field label="Tunjangan Kasir" value={form.tunjangan_kasir} onChangeText={(t) => setForm({ ...form, tunjangan_kasir: t })} placeholder="0" keyboardType="number-pad" testID="emp-tunjangan" />
                   </View>
                 </View>
                 <View style={{ gap: spacing.xs }}>

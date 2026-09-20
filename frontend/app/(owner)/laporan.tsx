@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, useWindowDimensions, Pressable, TextInput } from "react-native";
+import React, { useState } from "react";
+import { View, Text, ScrollView, useWindowDimensions, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
-import { storage } from "@/src/utils/storage";
 import dayjs from "dayjs";
 import { fonts, makeStyles, radius, shadow, spacing, useTheme } from "@/src/theme";
 import { Icon } from "@/src/components/Icon";
@@ -226,13 +225,7 @@ function Pegawai({ q }: { q: string }) {
   const styles = useStyles();
   const { colors } = useTheme();
   const { data, isLoading } = useQuery({ queryKey: ["rep-emp", q], queryFn: () => api.get(`/reports/employees${q}`) });
-  const [rate, setRate] = useState("2000");
-  useEffect(() => {
-    (async () => { const v = await storage.getItem<string | null>("jw_wage_per_kg", null); if (v) setRate(String(v)); })();
-  }, []);
-  const onRate = (t: string) => { setRate(t); storage.setItem("jw_wage_per_kg", t as any); };
   if (isLoading) return <Loading />;
-  const rateNum = Number(rate) || 0;
   const roleMeta: Record<string, { label: string; icon: string }> = {
     admin: { label: "Admin", icon: "clipboard-account" },
     produksi: { label: "Produksi", icon: "washing-machine" },
@@ -241,14 +234,7 @@ function Pegawai({ q }: { q: string }) {
   return (
     <>
       <Card>
-        <SectionHeader title="Produksi & Upah per Pegawai" />
-        <View style={styles.rateRow}>
-          <Text style={styles.rateLabel}>Upah per Kg</Text>
-          <View style={styles.rateInputBox}>
-            <Text style={styles.ratePrefix}>Rp</Text>
-            <TextInput testID="wage-rate" value={rate} onChangeText={onRate} keyboardType="number-pad" style={styles.rateInput} placeholder="2000" placeholderTextColor={colors.muted} />
-          </View>
-        </View>
+        <SectionHeader title="Produksi per Pegawai" />
         {(data.per_employee || []).length === 0 ? (
           <EmptyState icon="account-clock" title="Belum ada data produksi" subtitle="Muncul saat pegawai menyelesaikan tahap cuci/setrika." />
         ) : (
@@ -258,15 +244,11 @@ function Pegawai({ q }: { q: string }) {
                 <View style={styles.avatar}><Icon name="account-hard-hat" size={18} color={colors.onBrandPrimary} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.lineLabel}>{e.name}</Text>
-                  <View style={{ flexDirection: "row", gap: spacing.md, marginTop: 2, flexWrap: "wrap" }}>
-                    <Text style={styles.prodMeta}>Cuci {kg(e.wash_kg)}</Text>
-                    <Text style={styles.prodMeta}>Setrika {kg(e.iron_kg)}</Text>
-                    <Text style={styles.prodMeta}>{e.notes} nota</Text>
-                  </View>
+                  <Text style={styles.prodMeta}>{e.notes} nota dikerjakan</Text>
                 </View>
-                <View style={{ alignItems: "flex-end" }}>
-                  <Text style={styles.wageValue}>{rupiah(e.total_kg * rateNum)}</Text>
-                  <Text style={styles.prodMeta}>{kg(e.total_kg)}</Text>
+                <View style={{ alignItems: "flex-end", gap: 2 }}>
+                  <Text style={styles.prodKg}>Cuci {kg(e.wash_kg)}</Text>
+                  <Text style={styles.prodKg}>Setrika {kg(e.iron_kg)}</Text>
                 </View>
               </View>
             ))}
@@ -410,12 +392,7 @@ const useStyles = makeStyles((c) => ({
   methodIcon: { width: 34, height: 34, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
   methodLabel: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurface },
   methodValue: { fontFamily: fonts.displayBold, fontSize: 15 },
-  rateRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, marginTop: spacing.xs },
-  rateLabel: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurfaceSecondary },
-  rateInputBox: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: c.surfaceTertiary, borderRadius: radius.md, paddingHorizontal: spacing.md, minWidth: 120 },
-  ratePrefix: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.muted },
-  rateInput: { flex: 1, paddingVertical: 10, fontFamily: fonts.displayBold, fontSize: 15, color: c.onSurface },
   empProd: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: c.surfaceSecondary, borderRadius: radius.md, padding: spacing.md },
   prodMeta: { fontFamily: fonts.bodySemi, fontSize: 12, color: c.muted },
-  wageValue: { fontFamily: fonts.displayBold, fontSize: 15, color: c.brandPrimary },
+  prodKg: { fontFamily: fonts.displayBold, fontSize: 13, color: c.brand },
 }));

@@ -146,6 +146,18 @@ create table if not exists work_logs (
   id uuid primary key default gen_random_uuid(), order_id uuid references orders(id) on delete cascade,
   employee_id uuid references employees(id), employee_name text default '', outlet_id uuid references outlets(id),
   stage text not null, weight_kg numeric(10,2) not null default 0, created_at timestamptz not null default now());
+alter table work_logs add column if not exists unit_qty numeric(10,2) not null default 0;
+alter table employees add column if not exists gaji_pokok numeric(12,2) not null default 0;
+alter table employees add column if not exists tunjangan_kasir numeric(12,2) not null default 0;
+create table if not exists attendance (
+  id uuid primary key default gen_random_uuid(), employee_id uuid references employees(id),
+  outlet_id uuid references outlets(id), day date not null, created_at timestamptz not null default now());
+create unique index if not exists attendance_uq on attendance (employee_id, day);
+create table if not exists payroll_manual (
+  id uuid primary key default gen_random_uuid(), employee_id uuid references employees(id),
+  period text not null, lembur_shifts int not null default 0, perjalanan_dinas numeric(12,2) not null default 0,
+  note text default '');
+create unique index if not exists payroll_manual_uq on payroll_manual (employee_id, period);
 """
 
 MAX_BCRYPT_BYTES = 72
@@ -364,7 +376,7 @@ async def seed_data():
 # ---------------------------------------------------------------------------
 # Pricelist per outlet (Depok / Jakarta / Bandung) + reseed of sample data
 # ---------------------------------------------------------------------------
-PRICELIST_VERSION = "5"
+PRICELIST_VERSION = "7"
 
 # Common satuan durations
 _D2 = ("2 Hari", "6 Jam")
@@ -495,12 +507,19 @@ async def reseed_pricelist():
             return
         # wipe transactional + service data (keep outlets, customers, employees)
         await conn.execute("delete from work_logs")
+        await conn.execute("delete from attendance")
+        await conn.execute("delete from payroll_manual")
         await conn.execute("delete from order_items")
         await conn.execute("delete from transactions")
         await conn.execute("delete from orders")
         await conn.execute("delete from expenses")
         await conn.execute("delete from adjustments")
         await conn.execute("delete from services")
+
+        # set example salary config on employees
+        await conn.execute("update employees set gaji_pokok=1500000, tunjangan_kasir=300000 where role_type='admin'")
+        await conn.execute("update employees set gaji_pokok=1200000, tunjangan_kasir=0 where role_type='produksi'")
+        await conn.execute("update employees set gaji_pokok=1250000, tunjangan_kasir=0 where role_type='kurir'")
 
         # insert pricelist per outlet
         svc_records = []
@@ -531,6 +550,10 @@ async def reseed_pricelist():
         prod_by_outlet: dict = {}
         for e in prod_rows:
             prod_by_outlet.setdefault(e["outlet_id"], []).append((e["id"], e["name"]))
+        kurir_rows = await conn.fetch("select id, name, outlet_id from employees where role_type='kurir'")
+        kurir_by_outlet: dict = {}
+        for e in kurir_rows:
+            kurir_by_outlet.setdefault(e["outlet_id"], []).append((e["id"], e["name"]))
 
         orders = []; items = []; txns = []; wlogs = []
         methods = ["cash", "qris", "emoney"]
@@ -580,10 +603,14 @@ async def reseed_pricelist():
                     if status == "completed":
                         points_by_cust[cust_id] = points_by_cust.get(cust_id, 0) + int(total / Decimal(1000))
                         prods = prod_by_outlet.get(oid, [])
-                        if prods and weight > 0:
+                        if prods and (weight > 0 or unit_qty > 0):
                             for stage in ("washing", "ironing"):
                                 emp_id, emp_name = random.choice(prods)
-                                wlogs.append((uuid.uuid4(), ordid, emp_id, emp_name, oid, stage, weight, completed_at or created))
+                                wlogs.append((uuid.uuid4(), ordid, emp_id, emp_name, oid, stage, weight, unit_qty, completed_at or created))
+                        kurs = kurir_by_outlet.get(oid, [])
+                        if kurs and delivery in ("pickup", "delivery"):
+                            emp_id, emp_name = random.choice(kurs)
+                            wlogs.append((uuid.uuid4(), ordid, emp_id, emp_name, oid, "trip", Decimal(0), 0, completed_at or created))
 
         if orders:
             await conn.copy_records_to_table(
@@ -602,7 +629,22 @@ async def reseed_pricelist():
         if wlogs:
             await conn.copy_records_to_table(
                 "work_logs", records=wlogs,
-                columns=["id", "order_id", "employee_id", "employee_name", "outlet_id", "stage", "weight_kg", "created_at"])
+                columns=["id", "order_id", "employee_id", "employee_name", "outlet_id", "stage", "weight_kg", "unit_qty", "created_at"])
+
+        # sample attendance for current month (each employee ~20-26 days up to today)
+        all_emps = await conn.fetch("select id, outlet_id from employees")
+        att = []
+        today_d = now.date()
+        month_start = today_d.replace(day=1)
+        days_so_far = (today_d - month_start).days + 1
+        for e in all_emps:
+            present = sorted(random.sample(range(days_so_far), min(days_so_far, random.randint(max(1, days_so_far - 4), days_so_far))))
+            for off in present:
+                att.append((uuid.uuid4(), e["id"], e["outlet_id"], month_start + timedelta(days=off)))
+        if att:
+            await conn.copy_records_to_table(
+                "attendance", records=att,
+                columns=["id", "employee_id", "outlet_id", "day"])
 
         # recompute customer points
         await conn.execute("update customers set points=0")
@@ -681,7 +723,16 @@ class EmployeeBody(BaseModel):
     password: str = ""
     outlet_id: Optional[str] = None
     active: bool = True
+    gaji_pokok: float = 0
+    tunjangan_kasir: float = 0
     permissions: dict = Field(default_factory=dict)
+
+
+class PayrollManualBody(BaseModel):
+    employee_id: str
+    period: str
+    lembur_shifts: int = 0
+    perjalanan_dinas: float = 0
 
 
 class OrderItemIn(BaseModel):
@@ -746,6 +797,10 @@ async def login(body: LoginBody):
         # pegawai
         emp = await conn.fetchrow("select * from employees where lower(username)=$1 and active=true", uname)
         if emp and await run_in_threadpool(verify_password, body.password, emp["password_hash"]):
+            # catat kehadiran hari ini (1 login/hari = 1 shift hadir)
+            await conn.execute(
+                "insert into attendance(employee_id,outlet_id,day) values($1,$2,current_date) on conflict (employee_id, day) do nothing",
+                emp["id"], emp["outlet_id"])
             outlets = rows_to_list(await conn.fetch("select * from outlets order by created_at"))
             return {"role": "pegawai", "employee": row_to_dict(emp), "outlets": outlets}
 
@@ -903,8 +958,8 @@ async def create_employee(b: EmployeeBody):
         if dup:
             username = f"{username}{str(uuid.uuid4())[:4]}"
         row = await conn.fetchrow(
-            "insert into employees(name,role_type,pin,username,password_hash,outlet_id,active,permissions) values($1,$2,$3,$4,$5,$6,$7,$8::jsonb) returning *",
-            b.name, b.role_type, b.pin, username, pw, b.outlet_id, b.active, json.dumps(b.permissions))
+            "insert into employees(name,role_type,pin,username,password_hash,outlet_id,active,gaji_pokok,tunjangan_kasir,permissions) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb) returning *",
+            b.name, b.role_type, b.pin, username, pw, b.outlet_id, b.active, b.gaji_pokok, b.tunjangan_kasir, json.dumps(b.permissions))
         return row_to_dict(row)
 
 
@@ -916,12 +971,12 @@ async def update_employee(eid: str, b: EmployeeBody):
         if b.password:
             pw = await run_in_threadpool(hash_password, b.password)
             row = await conn.fetchrow(
-                "update employees set name=$1,role_type=$2,pin=$3,username=$4,password_hash=$5,outlet_id=$6,active=$7,permissions=$8::jsonb where id=$9 returning *",
-                b.name, b.role_type, b.pin, username, pw, b.outlet_id, b.active, json.dumps(b.permissions), eid)
+                "update employees set name=$1,role_type=$2,pin=$3,username=$4,password_hash=$5,outlet_id=$6,active=$7,gaji_pokok=$8,tunjangan_kasir=$9,permissions=$10::jsonb where id=$11 returning *",
+                b.name, b.role_type, b.pin, username, pw, b.outlet_id, b.active, b.gaji_pokok, b.tunjangan_kasir, json.dumps(b.permissions), eid)
         else:
             row = await conn.fetchrow(
-                "update employees set name=$1,role_type=$2,pin=$3,username=$4,outlet_id=$5,active=$6,permissions=$7::jsonb where id=$8 returning *",
-                b.name, b.role_type, b.pin, username, b.outlet_id, b.active, json.dumps(b.permissions), eid)
+                "update employees set name=$1,role_type=$2,pin=$3,username=$4,outlet_id=$5,active=$6,gaji_pokok=$7,tunjangan_kasir=$8,permissions=$9::jsonb where id=$10 returning *",
+                b.name, b.role_type, b.pin, username, b.outlet_id, b.active, b.gaji_pokok, b.tunjangan_kasir, json.dumps(b.permissions), eid)
         if not row:
             raise HTTPException(404, "Pegawai tidak ditemukan")
         return row_to_dict(row)
@@ -1040,11 +1095,21 @@ async def advance_status(oid: str, b: Optional[AdvanceBody] = None):
         nxt = PIPELINE[PIPELINE.index(cur) + 1]
         completed_at = now_utc() if nxt == "completed" else None
         # attribute the completed stage (cur) to the employee who finished it
-        if b and b.employee_id and cur in ("washing", "drying", "ironing", "packing"):
-            await conn.execute(
-                """insert into work_logs(order_id,employee_id,employee_name,outlet_id,stage,weight_kg)
-                   values($1,$2,$3,$4,$5,$6)""",
-                oid, b.employee_id, b.employee_name, row["outlet_id"], cur, row["weight_kg"])
+        if b and b.employee_id:
+            if cur in ("washing", "drying", "ironing", "packing"):
+                await conn.execute(
+                    """insert into work_logs(order_id,employee_id,employee_name,outlet_id,stage,weight_kg,unit_qty)
+                       values($1,$2,$3,$4,$5,$6,$7)""",
+                    oid, b.employee_id, b.employee_name, row["outlet_id"], cur, row["weight_kg"], row["unit_qty"])
+            if row["delivery_type"] in ("pickup", "delivery"):
+                # 1 trip per order per employee (dedup on distinct order in reports)
+                exists = await conn.fetchval(
+                    "select 1 from work_logs where order_id=$1 and employee_id=$2 and stage='trip'", oid, b.employee_id)
+                if not exists:
+                    await conn.execute(
+                        """insert into work_logs(order_id,employee_id,employee_name,outlet_id,stage,weight_kg,unit_qty)
+                           values($1,$2,$3,$4,'trip',0,0)""",
+                        oid, b.employee_id, b.employee_name, row["outlet_id"])
         row = await conn.fetchrow(
             "update orders set status=$1, updated_at=now(), completed_at=coalesce($2,completed_at) where id=$3 returning *",
             nxt, completed_at, oid)
@@ -1355,6 +1420,92 @@ async def report_customers(outlet_id: Optional[str] = None, frm: Optional[str] =
                      "spend": float(r["spend"]), "orders": int(r["orders"])} for r in top],
             "deposits": rows_to_list(deposits),
         }
+
+
+def _period_range(period: Optional[str]):
+    """period 'YYYY-MM' → (first_day, last_day) dates. Defaults to current month."""
+    if not period:
+        d = now_utc().date()
+    else:
+        try:
+            d = datetime.strptime(period + "-01", "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            raise HTTPException(400, "Format periode tidak valid (YYYY-MM)")
+    frm = d.replace(day=1)
+    nxt = (frm.replace(day=28) + timedelta(days=4)).replace(day=1)
+    to = nxt - timedelta(days=1)
+    return frm, to
+
+
+@api.get("/payroll")
+async def payroll(outlet_id: Optional[str] = None, period: Optional[str] = None):
+    frm, to = _period_range(period)
+    period_str = frm.strftime("%Y-%m")
+    async with pool.acquire() as conn:
+        if outlet_id:
+            emps = await conn.fetch("select * from employees where outlet_id=$1 order by role_type,name", outlet_id)
+        else:
+            emps = await conn.fetch("select * from employees order by role_type,name")
+        outlets = {str(o["id"]): o["name"] for o in await conn.fetch("select id,name from outlets")}
+        role_labels = {"admin": "Admin", "produksi": "Produksi", "kurir": "Kurir"}
+        result = []
+        for e in emps:
+            eid = e["id"]
+            kehadiran = await conn.fetchval(
+                "select count(*) from attendance where employee_id=$1 and day>=$2 and day<=$3", eid, frm, to) or 0
+            man = await conn.fetchrow(
+                "select * from payroll_manual where employee_id=$1 and period=$2", eid, period_str)
+            lembur = int(man["lembur_shifts"]) if man else 0
+            perjalanan = float(man["perjalanan_dinas"]) if man else 0.0
+            wash = await conn.fetchrow(
+                """select coalesce(sum(weight_kg),0) as kg, coalesce(sum(unit_qty),0) as pcs
+                   from work_logs where employee_id=$1 and stage='washing' and created_at::date>=$2 and created_at::date<=$3""",
+                eid, frm, to)
+            iron = await conn.fetchrow(
+                """select coalesce(sum(weight_kg),0) as kg, coalesce(sum(unit_qty),0) as pcs
+                   from work_logs where employee_id=$1 and stage='ironing' and created_at::date>=$2 and created_at::date<=$3""",
+                eid, frm, to)
+            trips = await conn.fetchval(
+                """select count(distinct order_id) from work_logs
+                   where employee_id=$1 and stage='trip' and created_at::date>=$2 and created_at::date<=$3""",
+                eid, frm, to) or 0
+            kasbon = await conn.fetchval(
+                "select coalesce(sum(amount),0) from kasbon where employee_id=$1 and created_at::date>=$2 and created_at::date<=$3",
+                eid, frm, to) or 0
+
+            wash_kg = float(wash["kg"]); wash_pcs = float(wash["pcs"])
+            iron_kg = float(iron["kg"]); iron_pcs = float(iron["pcs"])
+            gaji_pokok = float(e["gaji_pokok"] or 0)
+            tunjangan = float(e["tunjangan_kasir"] or 0)
+            uang_makan = 15000 * (int(kehadiran) + lembur)
+            bonus_cuci = ((wash_kg) + (wash_pcs * 5)) / 10 * 3000
+            bonus_setrika = (iron_kg + iron_pcs) * 1000
+            antar_jemput = 5000 * int(trips)
+            kasbon = float(kasbon)
+            total = gaji_pokok + tunjangan + uang_makan + bonus_cuci + bonus_setrika + antar_jemput + perjalanan - kasbon
+            result.append({
+                "employee_id": str(eid), "name": e["name"], "role": role_labels.get(e["role_type"], e["role_type"]),
+                "outlet_name": outlets.get(str(e["outlet_id"]), "-"), "period": period_str,
+                "gaji_pokok": gaji_pokok, "tunjangan_kasir": tunjangan,
+                "kehadiran": int(kehadiran), "lembur_shifts": lembur, "uang_makan": uang_makan,
+                "wash_kg": wash_kg, "wash_pcs": wash_pcs, "iron_kg": iron_kg, "iron_pcs": iron_pcs,
+                "bonus_cuci": round(bonus_cuci), "bonus_setrika": round(bonus_setrika),
+                "trips": int(trips), "antar_jemput": antar_jemput,
+                "perjalanan_dinas": perjalanan, "kasbon": kasbon, "total": round(total),
+            })
+        return {"period": period_str, "employees": result}
+
+
+@api.post("/payroll/manual")
+async def payroll_manual(b: PayrollManualBody):
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """insert into payroll_manual(employee_id,period,lembur_shifts,perjalanan_dinas)
+               values($1,$2,$3,$4)
+               on conflict (employee_id, period) do update set lembur_shifts=$3, perjalanan_dinas=$4
+               returning *""",
+            b.employee_id, b.period, b.lembur_shifts, b.perjalanan_dinas)
+        return row_to_dict(row)
 
 
 @api.get("/expenses")

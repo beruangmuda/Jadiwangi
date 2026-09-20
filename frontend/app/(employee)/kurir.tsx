@@ -33,7 +33,7 @@ export default function Kurir() {
   });
 
   const advance = useMutation({
-    mutationFn: (id: string) => api.post(`/orders/${id}/advance`),
+    mutationFn: (id: string) => api.post(`/orders/${id}/advance`, session?.employee?.id ? { employee_id: session.employee.id, employee_name: session.name } : {}),
     onSuccess: () => {
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       qc.invalidateQueries({ queryKey: ["orders"] });

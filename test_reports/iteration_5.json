@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 5 (Gaji Pegawai / payroll + attendance-on-login + remove Upah per Kg) fully verified end-to-end. Backend: 11/11 new pytest cases PASS in /app/backend/tests/test_iter5_payroll.py + 26/26 regression PASS (backend_test.py + test_iter4_reports.py). GET /api/payroll?outlet_id=<uuid>&period=YYYY-MM returns employees[] with the full field set (gaji_pokok, tunjangan_kasir, kehadiran, lembur_shifts, uang_makan, wash_kg/pcs, iron_kg/pcs, bonus_cuci, bonus_setrika, trips, antar_jemput, perjalanan_dinas, kasbon, total). Formulas verified per employee: total = gaji_pokok+tunjangan+uang_makan+bonus_cuci+bonus_setrika+antar_jemput+perjalanan-kasbon; uang_makan = 15000*(kehadiran+lembur); bonus_cuci = ((wash_kg)+(wash_pcs*5))/10*3000; bonus_setrika = (iron_kg+iron_pcs)*1000; antar_jemput = 5000*trips. POST /api/payroll/manual upserts (period+employee_id unique) and next /api/payroll reflects the update (uang_makan & total change). POST/PUT /api/employees persists gaji_pokok & tunjangan_kasir (verified via GET). POST /api/auth/login for pegawai inserts an attendance row for today (idempotent per day — verified: repeated logins in the same day do NOT increment kehadiran). Kurir advance on pickup/delivery order inserts a 'trip' work_log per (order,employee) — dedup verified (double advance on same order = +1 trip only). GET /api/reports/employees per_employee has no wage/upah/wage_rate fields. Frontend (390x844 mobile web): Owner login OK. Setelan > Gaji Pegawai (/manage/gaji): outlet chips (Kalimulya/Pulomas/Ujungberung), month chips (Sep..May 2026); after tapping Kalimulya, Total Gaji card renders (Rp6.735.000 for 3 pegawai), per-employee cards expand showing all breakdown rows including 'Kehadiran 0 hari + lembur 7' and 'Total Diterima'. 'Ubah Lembur / Perjalanan Dinas' modal opens; setting lembur=7 & perjalanan=175000 -> Simpan closes modal, total updates from Rp2.400.000 -> Rp2.680.000 (matches formula), Perjalanan Dinas row shows Rp175.000. Laporan > Pegawai has NO 'Upah per Kg' input and NO wage-rate testID; only kg cuci/kg setrika are shown. Setelan > Pegawai edit form has 'Gaji Pokok' and 'Tunjangan Kasir' fields side-by-side (verified for Andi Admin: 1500000 / 300000). Deprecated shadow* console warnings persist (cosmetic, carry-over).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "manage/gaji.tsx", "issue": "Initial outletId state does not sync when session.outlets loads asynchronously. On first entry to /manage/gaji, no outlet chip appears selected and the payroll query stays disabled (enabled: !!outletId), so an EmptyState 'Belum ada pegawai' briefly shows until the user manually taps a chip. Suggested fix: add a useEffect that sets outletId = session?.currentOutletId || outlets[0]?.id when outletId is '' and outlets.length > 0.", "testID": "gaji-outlet-<city>", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Persistent RN-Web deprecation 'shadow* style props are deprecated. Use boxShadow.' (carried over from prior iterations)"}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter5_payroll.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_iter4_reports.py",
+    "/app/test_reports/pytest/iter5_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: fix outletId initial-sync race in /app/frontend/app/manage/gaji.tsx (add useEffect to set outletId once outlets load). Manual tap works as a workaround.",
+    "OPTIONAL: add DELETE /api/employees/{id} endpoint (currently 405 Method Not Allowed) so TEST_ employees created by regression tests can be cleaned up. Non-blocking.",
+    "OPTIONAL: migrate shadow* to boxShadow across components to silence RN-Web deprecation."
+  ],
+  "critical_code_review_comments": [
+    "server.py now 1577 lines — still monolithic. Suggest splitting into services/orders/reports/payroll/masterdata modules.",
+    "Payroll formulas in server.py:1478-1485 exactly match spec (uang_makan/bonus_cuci/bonus_setrika/antar_jemput/total).",
+    "Attendance-on-login is idempotent via unique index (employee_id, day) — safe against repeated logins in same day. Verified.",
+    "advance_status inserts a 'trip' work_log with exists-check on (order_id, employee_id, stage='trip') — correct dedup. Verified.",
+    "GET /api/payroll uses per-employee sub-queries in a Python loop (N+1 pattern). Acceptable for small teams (<20) but should be batched to a single JOIN for scale.",
+    "GET /api/reports/employees per_employee correctly excludes any wage/upah field — matches spec.",
+    "gaji.tsx: initial state race — outletId set once from a possibly-empty outlets on first render; needs useEffect to sync (see ui_bugs).",
+    "gaji.tsx does not pass outletId when tapping edit modal — save uses `period` from state; verified correct."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter5_payroll.py",
+    "/app/test_reports/iteration_5.json",
+    "/app/test_reports/pytest/iter5_results.xml"
+  ],
+  "success_rate": {"backend": "100% (11/11 new + 26/26 regression)", "frontend": "100% of listed critical flows (after workaround for outletId race)"},
+  "seed_data_creation": "Created 1 test admin employee (TEST_test_<hex>, outlet Depok, gaji 2000000 / tunjangan 400000) that could not be auto-deleted (no DELETE /api/employees endpoint — 405). Also created 2 pickup test orders on Depok ('TEST_iter5_trip', 'TEST_iter5_trip_dup') advanced by kurir Rudi. Payroll_manual rows: Joko lembur=3/pd=150000 and TEST_admin lembur=7/pd=175000 for period 2026-09. No other seeded data changed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iter5 payroll feature-set is functional end-to-end. Key testIDs: gaji-outlet-<City> (Depok/Jakarta/Bandung, NOT lowercase — uses o.city verbatim), gaji-period-YYYY-MM, gaji-emp-<employee_id>, gaji-edit-<employee_id>, edit-lembur, edit-perjalanan, save-manual; Setelan Pegawai edit: emp-gaji, emp-tunjangan; Login attendance auto-inserted (idempotent). Backend API base: https://wangi-dashboard.preview.emergentagent.com/api. Depok outlet UUID e5fc0b12-25f5-4be2-a117-6fea0df032da. UI note: after entering /manage/gaji as owner, first render shows no outlet selected and empty payroll — tap an outlet chip to trigger the payroll query (see ui_bugs). Backend note: /api/employees has no DELETE method — TEST_ leftover employees accumulate.",
+  "rca_of_issue": "N/A — no regressions. Only outletId initial-sync race noted (medium UX bug) and cosmetic shadow* deprecation carry-over."
+}

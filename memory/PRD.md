@@ -64,6 +64,13 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] Pipeline Pegawai: saat pegawai menuntaskan tahap cuci/setrika, kiloan nota diatribusikan ke pegawai tsb (work_logs) → dasar penggajian.
 - [x] Reseed pricelist_v=5 menghasilkan metode bayar bervariasi + work_logs contoh. Teruji backend 9/9 + regресi 17/17 + alur frontend semua PASS.
 
+## Update (2026-06, iterasi 7)
+- [x] Laporan Pegawai: "Upah per Kg" dihapus — kartu "Produksi per Pegawai" kini hanya menampilkan kg cuci & kg setrika + jumlah nota.
+- [x] Menu baru Setelan → Keuangan → **Gaji Pegawai** (/manage/gaji): tab outlet + pilih bulan + kartu gaji per pegawai (breakdown lengkap) + modal ubah Lembur & Perjalanan Dinas.
+- [x] Backend GET /api/payroll & POST /api/payroll/manual. Komponen: gaji pokok, tunjangan kasir, kehadiran (dari login pegawai), uang makan=15rb×(hadir+lembur), bonus cuci=((kg)+(pcs×5))/10×3000, bonus setrika=(kg+pcs)×1000, antar jemput=5rb×trip, kasbon (potongan), perjalanan dinas.
+- [x] Pegawai: field Gaji Pokok & Tunjangan Kasir (Setelan → Pegawai). Login pegawai mencatat kehadiran (1/hari). advance() simpan unit_qty + log trip kurir (pickup/delivery).
+- [x] Reseed pricelist_v=7: gaji contoh, kehadiran bulan berjalan, work_logs+unit_qty, trip kurir. Teruji backend 11/11 + regресi 26/26 + frontend semua PASS. Bug sinkron outlet awal di /manage/gaji sudah difix (useEffect).
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Kasbon pegawai (tabel sudah ada, UI belum) & saldo deposit pelanggan (pakai untuk bayar).
