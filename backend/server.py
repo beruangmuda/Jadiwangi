@@ -829,8 +829,8 @@ async def login(body: LoginBody):
             outlets = rows_to_list(await conn.fetch("select * from outlets order by created_at"))
             return {"role": "pegawai", "employee": row_to_dict(emp), "outlets": outlets}
 
-        # pelanggan (username = phone)
-        cust = await conn.fetchrow("select * from customers where phone=$1", body.username.strip())
+        # pelanggan (username = phone, case-insensitive)
+        cust = await conn.fetchrow("select * from customers where lower(phone)=lower($1)", body.username.strip())
         if cust and await run_in_threadpool(verify_password, body.password, cust["password_hash"]):
             return {"role": "pelanggan", "customer": row_to_dict(cust)}
 
