@@ -8,6 +8,7 @@ const ICONS: Record<string, { on: string; off: string }> = {
   index: { on: "view-dashboard", off: "view-dashboard-outline" },
   order: { on: "washing-machine", off: "washing-machine" },
   laporan: { on: "chart-box", off: "chart-box-outline" },
+  gaji: { on: "cash-multiple", off: "cash-multiple" },
   setelan: { on: "cog", off: "cog-outline" },
 };
 
@@ -37,6 +38,7 @@ export default function OwnerLayout() {
       <Tabs.Screen name="index" options={{ title: "Beranda" }} />
       <Tabs.Screen name="order" options={{ title: "Order" }} />
       <Tabs.Screen name="laporan" options={{ title: "Laporan" }} />
+      <Tabs.Screen name="gaji" options={{ title: "Gaji" }} />
       <Tabs.Screen name="setelan" options={{ title: "Setelan" }} />
     </Tabs>
   );

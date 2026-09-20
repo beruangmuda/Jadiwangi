@@ -24,7 +24,6 @@ const GROUPS: { title: string; items: Item[] }[] = [
   {
     title: "Keuangan",
     items: [
-      { icon: "cash-multiple", label: "Gaji Pegawai", desc: "Hitung gaji bulanan per pegawai", route: "/manage/gaji" },
       { icon: "cash-minus", label: "Pencatatan Pengeluaran", desc: "Catat biaya operasional", route: "/manage/pengeluaran" },
       { icon: "cash-sync", label: "Koreksi Keuangan", desc: "Penyesuaian saldo kas", route: "/manage/koreksi" },
     ],
