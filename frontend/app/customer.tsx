@@ -29,6 +29,13 @@ export default function CustomerHome() {
     queryFn: () => api.get(`/leaderboard?outlet_id=${outletId}&customer_id=${customerId}`),
   });
 
+  const { data: myOrders } = useQuery({
+    queryKey: ["my-orders", customerId],
+    queryFn: () => api.get(`/orders?customer_id=${customerId}&limit=20`),
+    enabled: !!customerId,
+  });
+  const active = (myOrders || []).filter((o: any) => !["completed", "cancelled"].includes(o.status));
+
   const ranking = data?.ranking || [];
   const mine = data?.my_rank;
   const top3 = ranking.slice(0, 3);
@@ -65,6 +72,29 @@ export default function CustomerHome() {
 
         {isLoading ? <Loading /> : (
           <>
+            {/* Pesanan aktif */}
+            <Card>
+              <SectionHeader title="Pesanan Saya" />
+              {active.length === 0 ? (
+                <Text style={styles.emptyOrders}>Belum ada pesanan aktif. Yuk buat permintaan laundry!</Text>
+              ) : (
+                <View style={{ gap: spacing.sm }}>
+                  {active.map((o: any) => (
+                    <View key={o.id} style={styles.orderRow}>
+                      <View style={[styles.dot, { backgroundColor: o.overdue ? colors.error : colors.brandPrimary }]} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.orderCode}>{o.code}</Text>
+                        <Text style={styles.orderSub}>{o.is_request ? "Permintaan awal" : `${o.weight_kg} kg`}{o.delivery_type !== "self" ? ` • ${o.delivery_type === "pickup" ? "Dijemput" : "Diantar"}` : ""}</Text>
+                      </View>
+                      <View style={styles.statusPill}>
+                        <Text style={styles.statusText}>{o.stage_label}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </Card>
+
             {/* Podium */}
             {top3.length > 0 ? (
               <Card>
@@ -118,11 +148,11 @@ export default function CustomerHome() {
 
       <Pressable
         testID="order-sekarang"
-        onPress={() => router.push("/order-baru")}
+        onPress={() => router.push("/permintaan")}
         style={({ pressed }) => [styles.fab, { bottom: insets.bottom + spacing.lg }, pressed && { transform: [{ scale: 0.96 }] }]}
       >
         <Icon name="washing-machine" size={22} color={colors.onBrandPrimary} />
-        <Text style={styles.fabText}>Order Sekarang</Text>
+        <Text style={styles.fabText}>Buat Permintaan Laundry</Text>
       </Pressable>
     </View>
   );
@@ -168,4 +198,11 @@ const useStyles = makeStyles((c) => ({
   rankPts: { fontFamily: fonts.displayBold, fontSize: 14, color: c.brandPrimary },
   fab: { position: "absolute", left: spacing.lg, right: spacing.lg, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: c.brandPrimary, borderRadius: radius.pill, paddingVertical: 16, ...shadow.soft },
   fabText: { fontFamily: fonts.displayBold, fontSize: 16, color: c.onBrandPrimary },
+  emptyOrders: { fontFamily: fonts.body, fontSize: 13, color: c.muted, paddingVertical: spacing.sm },
+  orderRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: c.surfaceSecondary, borderRadius: radius.md, padding: spacing.md },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  orderCode: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurface },
+  orderSub: { fontFamily: fonts.body, fontSize: 12, color: c.muted, marginTop: 1 },
+  statusPill: { backgroundColor: c.brandTertiary, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
+  statusText: { fontFamily: fonts.bodyBold, fontSize: 11, color: c.onBrandTertiary },
 }));

@@ -78,6 +78,14 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] Setelan → Database Pelanggan: kelola pelanggan (cari, tambah/edit dgn Alamat) + statistik per pelanggan (total kg, jumlah transaksi, total belanja) + detail (poin, deposit, transaksi pertama & terakhir, riwayat order).
 - [x] Backend: kolom address di customers, agregat di /customers, /customers/{id}/detail, filter today di /orders, top_customers di /dashboard. Teruji 13/13 + regresi 37/37 PASS.
 
+## Update (2026-06, iterasi 9) — Tampilan Pelanggan (bertahap 1→5)
+- [x] FASE 1 — Buat Permintaan Awal: layar /permintaan (pilih kategori layanan multi + estimasi jumlah stepper, metode Antar Sendiri/Dijemput/Diantar + alamat, catatan). Backend: status baru 'requested' (Menunggu Ditimbang) & 'quoted' (Menunggu Persetujuan), kolom orders.is_request/request_items/address, outlets.review_url (diisi link Google review per outlet), POST /orders/request, filter customer_id di /orders. Customer home: CTA "Buat Permintaan Laundry" + bagian "Pesanan Saya" (tracking dasar). Verified end-to-end.
+- [ ] FASE 2 — Persetujuan Nota & Bayar (pegawai timbang+quote → customer approve → QRIS/Cash/Coin)
+- [ ] FASE 3 — Tracking detail & Riwayat
+- [ ] FASE 4 — Coin/Deposit (top up 50/100/250/500rb→530rb, 1rp=1coin, diskon 10% pakai coin, kadaluarsa 3 bln)
+- [ ] FASE 5 — Rating (Google review link 4-5★ + promo pelanggan pertama; 1-2★ komplain ke owner) + Promo dikelola owner
+- Google review links: Depok/Kalimulya https://g.page/r/CUv3jO9Cz4aAEBM/review ; Jakarta/Pulomas https://g.page/r/CT1ETVEE3zn5EBM/review ; Bandung/Ujungberung https://g.page/r/CQUtr3hTOpEbEBM/review
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Kasbon pegawai (tabel sudah ada, UI belum) & saldo deposit pelanggan (pakai untuk bayar).

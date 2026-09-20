@@ -36,6 +36,8 @@ api = APIRouter(prefix="/api")
 
 PIPELINE = ["received", "washing", "drying", "ironing", "packing", "ready", "completed"]
 STAGE_LABELS = {
+    "requested": "Menunggu Ditimbang",
+    "quoted": "Menunggu Persetujuan",
     "received": "Diterima",
     "washing": "Cuci",
     "drying": "Pengering",
@@ -159,6 +161,13 @@ create table if not exists payroll_manual (
   note text default '');
 create unique index if not exists payroll_manual_uq on payroll_manual (employee_id, period);
 alter table customers add column if not exists address text default '';
+alter table orders add column if not exists is_request boolean not null default false;
+alter table orders add column if not exists request_items jsonb not null default '[]';
+alter table orders add column if not exists address text default '';
+alter table outlets add column if not exists review_url text default '';
+update outlets set review_url='https://g.page/r/CUv3jO9Cz4aAEBM/review' where city='Depok' and coalesce(review_url,'')='';
+update outlets set review_url='https://g.page/r/CT1ETVEE3zn5EBM/review' where city='Jakarta' and coalesce(review_url,'')='';
+update outlets set review_url='https://g.page/r/CQUtr3hTOpEbEBM/review' where city='Bandung' and coalesce(review_url,'')='';
 """
 
 MAX_BCRYPT_BYTES = 72
@@ -764,6 +773,20 @@ class CancelBody(BaseModel):
     reason: str = ""
 
 
+class RequestItem(BaseModel):
+    category: str
+    qty: float = 1
+
+
+class OrderRequestBody(BaseModel):
+    customer_id: str
+    outlet_id: str
+    categories: List[RequestItem]
+    delivery_type: str = "self"
+    address: str = ""
+    notes: str = ""
+
+
 class AdvanceBody(BaseModel):
     employee_id: Optional[str] = None
     employee_name: str = ""
@@ -1031,11 +1054,13 @@ async def enrich_orders(conn, rows):
 
 
 @api.get("/orders")
-async def list_orders(outlet_id: Optional[str] = None, status: Optional[str] = None, active: bool = False, today: bool = False, limit: int = 100):
+async def list_orders(outlet_id: Optional[str] = None, customer_id: Optional[str] = None, status: Optional[str] = None, active: bool = False, today: bool = False, limit: int = 100):
     async with pool.acquire() as conn:
         clauses, args = [], []
         if outlet_id:
             args.append(outlet_id); clauses.append(f"outlet_id=${len(args)}")
+        if customer_id:
+            args.append(customer_id); clauses.append(f"customer_id=${len(args)}")
         if status:
             args.append(status); clauses.append(f"status=${len(args)}")
         if active:
@@ -1058,6 +1083,30 @@ async def get_order(oid: str):
         items = await conn.fetch("select * from order_items where order_id=$1", oid)
         d["items"] = rows_to_list(items)
         return d
+
+
+@api.post("/orders/request")
+async def create_order_request(b: OrderRequestBody):
+    """Customer initial request (no weight/price yet). Employee will weigh & quote."""
+    import json
+    async with pool.acquire() as conn:
+        outlet = await conn.fetchrow("select * from outlets where id=$1", b.outlet_id)
+        if not outlet:
+            raise HTTPException(404, "Outlet tidak ditemukan")
+        if not b.categories:
+            raise HTTPException(400, "Pilih minimal satu layanan")
+        created = now_utc()
+        due = created + timedelta(hours=outlet["sla_hours"])
+        code = f"JW-{created.strftime('%y%m%d')}-{random.randint(1000,9999)}"
+        req = [{"category": c.category, "qty": float(c.qty)} for c in b.categories]
+        oid = await conn.fetchval(
+            """insert into orders(code,customer_id,outlet_id,status,total,weight_kg,unit_qty,
+               payment_status,payment_method,delivery_type,notes,address,is_request,request_items,
+               created_by,created_at,updated_at,due_at)
+               values($1,$2,$3,'requested',0,0,0,'unpaid','',$4,$5,$6,true,$7::jsonb,'customer',$8,$8,$9) returning id""",
+            code, b.customer_id, b.outlet_id, b.delivery_type, b.notes, b.address, json.dumps(req), created, due)
+        row = await conn.fetchrow("select * from orders where id=$1", oid)
+        return (await enrich_orders(conn, [row]))[0]
 
 
 @api.post("/orders")
