@@ -1,6 +1,5 @@
 import React from "react";
 import { View, Text, ScrollView, Pressable, RefreshControl } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -8,7 +7,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
-import { fonts, makeStyles, radius, shadow, spacing, useTheme } from "@/src/theme";
+import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 import { Icon } from "@/src/components/Icon";
 import { Logo, Card, SectionHeader, Loading, EmptyState } from "@/src/components/ui";
 import { rupiah, formatDate } from "@/src/format";
@@ -48,9 +47,11 @@ export default function CustomerHome() {
   });
 
   const active = (myOrders || []).filter((o: any) => !["completed", "cancelled"].includes(o.status));
+  const readyOrders = (myOrders || []).filter((o: any) => o.status === "ready");
   const mine = lb?.my_rank;
   const total = lb?.total_participants ?? 0;
-  const ranking = lb?.ranking || [];
+  const top3 = (lb?.ranking || []).slice(0, 3);
+  const showMineSeparately = mine && mine.rank > 3;
   const coin = Number(detail?.deposit ?? cust?.deposit ?? 0);
 
   return (
@@ -67,22 +68,35 @@ export default function CustomerHome() {
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing["3xl"], gap: spacing.lg }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brandPrimary} />}
       >
-        {/* Peringkat saya */}
-        <Animated.View entering={FadeInDown}>
-          <LinearGradient colors={["#A78BFA", "#0096FF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
-            <Text style={styles.heroHello}>Halo, {cust?.name} 👋</Text>
-            <Text style={styles.heroLabel}>Peringkat kamu di outlet ini</Text>
-            <View style={styles.rankRow}>
-              <View>
-                <Text style={styles.rankBig} testID="my-rank">#{mine?.rank ?? "-"}</Text>
-                <Text style={styles.rankOf}>dari {total} pelanggan</Text>
-              </View>
-              <View style={styles.heroStats}>
-                <HeroStat label="Poin" value={String(mine?.points ?? 0)} />
-                <HeroStat label="Total Kg" value={`${(mine?.total_kg ?? 0).toFixed(0)} kg`} />
-              </View>
-            </View>
-          </LinearGradient>
+        {/* Sapaan + sorotan siap diambil */}
+        <Animated.View entering={FadeInDown} style={{ gap: spacing.md }}>
+          <View>
+            <Text style={styles.hello}>Halo, {cust?.name} 👋</Text>
+            <Text style={styles.helloSub}>Semoga harimu wangi terus!</Text>
+          </View>
+          {readyOrders.map((o: any) => {
+            const days = Math.max(0, Math.floor((Date.now() - new Date(o.updated_at || o.created_at).getTime()) / 86400000));
+            const urgent = days >= 2;
+            return (
+              <Pressable
+                key={o.id}
+                testID={`ready-${o.id}`}
+                onPress={() => router.push(`/order-detail/${o.id}`)}
+                style={({ pressed }) => [styles.readyCard, urgent && { backgroundColor: "#FEF3C7", borderColor: "#F59E0B" }, pressed && { opacity: 0.85 }]}
+              >
+                <View style={[styles.readyIcon, urgent && { backgroundColor: "#F59E0B" }]}>
+                  <Icon name={urgent ? "bell-alert" : "basket-check"} size={22} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.readyTitle, urgent && { color: "#B45309" }]}>Laundry {o.code} siap diambil!</Text>
+                  <Text style={[styles.readySub, urgent && { color: "#B45309" }]}>
+                    {days === 0 ? "Siap hari ini — ditunggu ya" : `Sudah ${days} hari menunggu di outlet`}
+                  </Text>
+                </View>
+                <Icon name="chevron-right" size={20} color={urgent ? "#B45309" : colors.brandPrimary} />
+              </Pressable>
+            );
+          })}
         </Animated.View>
 
         {/* 1. Promo saat ini */}
@@ -112,23 +126,21 @@ export default function CustomerHome() {
 
         {/* 2. Saldo coin */}
         <Card>
-          <SectionHeader title="🪙 Uang Deposit (Coin)" action="Isi Saldo" onAction={() => router.push("/topup")} />
+          <SectionHeader title="🪙 JW Coin" action="Isi Saldo" onAction={() => router.push("/topup")} />
           <View style={styles.coinRow}>
             <View style={styles.coinIcon}><Icon name="hand-coin" size={24} color={colors.onBrandPrimary} /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.coinValue} testID="coin-balance">{Number(coin).toLocaleString("id-ID")} coin</Text>
-              <Text style={styles.coinSub}>Setara {rupiah(coin)} • Bayar pakai coin hemat 10%</Text>
+              <Text style={styles.coinSub}>Setara {rupiah(coin)}</Text>
             </View>
           </View>
           {detail?.pending_topups ? (
             <Text style={styles.coinSub}>⏳ {detail.pending_topups} permintaan top-up menunggu konfirmasi outlet.</Text>
           ) : null}
-          {(detail?.vouchers || []).map((v: any) => (
-            <View key={v.id} style={styles.voucherRow} testID={`voucher-${v.id}`}>
-              <Icon name="ticket-percent" size={18} color={colors.onBrand} />
-              <Text style={styles.voucherText}>{v.title}</Text>
-            </View>
-          ))}
+          <View style={styles.voucherRow} testID="coin-benefit">
+            <Icon name="ticket-percent" size={18} color={colors.onBrand} />
+            <Text style={styles.voucherText}>Lebih hemat, diskon 10% untuk pembayaran dengan coin</Text>
+          </View>
         </Card>
 
         {/* 3. Pantau ordermu */}
@@ -161,31 +173,27 @@ export default function CustomerHome() {
           )}
         </Card>
 
-        {/* Klasemen (peserta lain disamarkan) */}
+        {/* Klasemen: 3 besar + posisi saya */}
         <Card>
-          <SectionHeader title="🏆 Klasemen Outlet" />
-          {isLoading ? <Loading /> : ranking.length === 0 ? (
+          <SectionHeader title="🏆 Ranking Kamu" />
+          {isLoading ? <Loading /> : top3.length === 0 ? (
             <EmptyState icon="trophy-outline" title="Belum ada data" subtitle="Mulai laundry untuk kumpulkan poin." />
           ) : (
             <View style={{ gap: spacing.sm }}>
-              {ranking.map((p: any) => (
-                <View
-                  key={p.id}
-                  testID={p.is_me ? "rank-me" : undefined}
-                  style={[styles.rankItem, p.is_me && { backgroundColor: colors.brandTertiary, borderColor: colors.brandPrimary, borderWidth: 1.5 }]}
-                >
-                  <Text style={[styles.rankNum, p.is_me && { color: colors.brandPrimary }]}>{p.rank}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.rankName, !p.is_me && styles.blurred]} numberOfLines={1}>
-                      {p.is_me ? `${p.name} (Kamu)` : p.name}
-                    </Text>
-                    <Text style={[styles.rankSub, !p.is_me && styles.blurred]}>
-                      {p.is_me ? `${Number(p.total_kg).toFixed(0)} kg • ${p.orders}x order` : "•••••"}
-                    </Text>
-                  </View>
-                  <Text style={[styles.rankPts, !p.is_me && styles.blurred]}>{p.is_me ? `${p.points} poin` : "••• poin"}</Text>
-                </View>
+              <Text style={styles.rankGroup}>3 Besar</Text>
+              {top3.map((p: any) => (
+                <RankRow key={p.id} p={p} />
               ))}
+              <Text style={styles.rankGroup}>Posisi Kamu</Text>
+              {mine ? (
+                <>
+                  {showMineSeparately ? <Text style={styles.dots}>⋮</Text> : null}
+                  <RankRow p={{ ...mine, is_me: true }} />
+                  <Text style={styles.rankMeta}>Kamu di peringkat #{mine.rank} dari {total} pelanggan outlet ini.</Text>
+                </>
+              ) : (
+                <Text style={styles.empty}>Kamu belum masuk klasemen. Yuk laundry untuk mulai kumpulkan poin!</Text>
+              )}
             </View>
           )}
           <Text style={styles.rules}>Poin: 1 kg = 1 poin · 1 satuan = 2 poin · Bed Cover = 1 poin · Express +2 poin</Text>
@@ -195,12 +203,24 @@ export default function CustomerHome() {
   );
 }
 
-function HeroStat({ label, value }: { label: string; value: string }) {
+function RankRow({ p }: { p: any }) {
   const styles = useStyles();
+  const { colors } = useTheme();
   return (
-    <View style={styles.heroStat}>
-      <Text style={styles.heroStatValue}>{value}</Text>
-      <Text style={styles.heroStatLabel}>{label}</Text>
+    <View
+      testID={p.is_me ? "rank-me" : `rank-${p.rank}`}
+      style={[styles.rankItem, p.is_me && { backgroundColor: colors.brandTertiary, borderColor: colors.brandPrimary, borderWidth: 1.5 }]}
+    >
+      <Text style={[styles.rankNum, p.is_me && { color: colors.brandPrimary }]}>{p.rank}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.rankName, !p.is_me && styles.blurred]} numberOfLines={1}>
+          {p.is_me ? `${p.name} (Kamu)` : p.name}
+        </Text>
+        <Text style={[styles.rankSub, !p.is_me && styles.blurred]}>
+          {p.is_me ? `${Number(p.total_kg).toFixed(0)} kg • ${p.orders}x order` : "•••••"}
+        </Text>
+      </View>
+      <Text style={[styles.rankPts, !p.is_me && styles.blurred]}>{p.is_me ? `${p.points} poin` : "••• poin"}</Text>
     </View>
   );
 }
@@ -208,16 +228,15 @@ function HeroStat({ label, value }: { label: string; value: string }) {
 const useStyles = makeStyles((c) => ({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: spacing.lg, paddingBottom: spacing.md, backgroundColor: c.surface, borderBottomWidth: 1, borderBottomColor: c.divider },
   logoutBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#FFE4E6", alignItems: "center", justifyContent: "center" },
-  hero: { borderRadius: radius.lg, padding: spacing.xl, gap: 4, ...shadow.soft },
-  heroHello: { fontFamily: fonts.displayBold, fontSize: 20, color: "#fff" },
-  heroLabel: { fontFamily: fonts.bodySemi, fontSize: 13, color: "rgba(255,255,255,0.85)" },
-  rankRow: { flexDirection: "row", alignItems: "center", gap: spacing.lg, marginTop: spacing.sm },
-  rankBig: { fontFamily: fonts.displayBold, fontSize: 44, color: "#fff" },
-  rankOf: { fontFamily: fonts.bodySemi, fontSize: 11, color: "rgba(255,255,255,0.85)" },
-  heroStats: { flex: 1, flexDirection: "row", justifyContent: "space-around" },
-  heroStat: { alignItems: "center" },
-  heroStatValue: { fontFamily: fonts.displayBold, fontSize: 20, color: "#fff" },
-  heroStatLabel: { fontFamily: fonts.bodySemi, fontSize: 11, color: "rgba(255,255,255,0.8)" },
+  hello: { fontFamily: fonts.displayBold, fontSize: 22, color: c.onSurface },
+  helloSub: { fontFamily: fonts.body, fontSize: 13, color: c.muted, marginTop: 2 },
+  readyCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: c.brandTertiary, borderRadius: radius.lg, borderWidth: 1.5, borderColor: c.brandPrimary, padding: spacing.md },
+  readyIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.brandPrimary, alignItems: "center", justifyContent: "center" },
+  readyTitle: { fontFamily: fonts.displayBold, fontSize: 15, color: c.onBrandTertiary },
+  readySub: { fontFamily: fonts.body, fontSize: 12, color: c.onBrandTertiary, marginTop: 2 },
+  rankGroup: { fontFamily: fonts.bodyBold, fontSize: 12, color: c.muted, textTransform: "uppercase", letterSpacing: 0.5, marginTop: spacing.xs },
+  rankMeta: { fontFamily: fonts.bodyBold, fontSize: 12, color: c.brandPrimary },
+  dots: { fontFamily: fonts.displayBold, fontSize: 18, color: c.muted, textAlign: "center" },
   empty: { fontFamily: fonts.body, fontSize: 13, color: c.muted, paddingVertical: spacing.sm },
   promoCard: { flexDirection: "row", gap: spacing.md, backgroundColor: c.surfaceSecondary, borderRadius: radius.md, padding: spacing.md },
   promoBadge: { width: 46, height: 46, borderRadius: radius.sm, backgroundColor: c.brandPrimary, alignItems: "center", justifyContent: "center" },

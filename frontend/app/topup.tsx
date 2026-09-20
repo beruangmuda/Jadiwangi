@@ -48,10 +48,10 @@ export default function TopupCoin() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
-      <StackHeader title="Isi Saldo Coin" subtitle="1 Rupiah = 1 Coin" />
+      <StackHeader title="Isi JW Coin" subtitle="1 Rupiah = 1 Coin" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing["3xl"] }}>
         <Card style={{ gap: spacing.sm }}>
-          <Text style={styles.label}>Saldo Coin Kamu</Text>
+          <Text style={styles.label}>Saldo JW Coin Kamu</Text>
           <Text style={styles.balance} testID="topup-balance">{coin.toLocaleString("id-ID")} coin</Text>
           <Text style={styles.hint}>
             Setara {rupiah(coin)}. Bayar laundry pakai coin otomatis hemat 10%.

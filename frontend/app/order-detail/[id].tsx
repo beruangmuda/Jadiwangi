@@ -98,8 +98,8 @@ export default function OrderDetail() {
         {/* Rincian */}
         <Card style={{ gap: spacing.sm }}>
           <SectionHeader title="Rincian Nota" />
-          {(order.items || []).length === 0 && (order.request_items || []).length > 0 ? (
-            (order.request_items || []).map((it: any, i: number) => (
+          {(order.items || []).length === 0 && Array.isArray(order.request_items) && order.request_items.length > 0 ? (
+            order.request_items.map((it: any, i: number) => (
               <View key={i} style={styles.itemRow}>
                 <Text style={styles.itemName}>{it.category}</Text>
                 <Text style={styles.hint}>± {it.qty}</Text>

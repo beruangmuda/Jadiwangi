@@ -168,7 +168,7 @@ export default function Pesan() {
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
         <PrimaryButton
-          label={count > 0 ? `Kirim Permintaan (${count} layanan)` : "Pilih layanan dulu"}
+          label={count > 0 ? "Pesan Sekarang" : "Pilih layanan dulu"}
           icon="send"
           onPress={() => submit.mutate()}
           loading={submit.isPending}

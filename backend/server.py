@@ -1,5 +1,6 @@
 import os
 import uuid
+import json
 import random
 import logging
 from pathlib import Path
@@ -1195,6 +1196,14 @@ async def enrich_orders(conn, rows):
     result = []
     for r in rows:
         d = row_to_dict(r)
+        ri = d.get("request_items")
+        if isinstance(ri, str):
+            try:
+                d["request_items"] = json.loads(ri) if ri else []
+            except ValueError:
+                d["request_items"] = []
+        elif ri is None:
+            d["request_items"] = []
         cust = await conn.fetchrow("select name,phone from customers where id=$1", r["customer_id"])
         d["customer_name"] = cust["name"] if cust else "-"
         d["customer_phone"] = cust["phone"] if cust else ""
