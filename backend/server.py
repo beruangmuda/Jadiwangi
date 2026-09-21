@@ -937,7 +937,7 @@ async def login(body: LoginBody):
         if emp and await run_in_threadpool(verify_password, body.password, emp["password_hash"]):
             # catat kehadiran hari ini (1 login/hari = 1 shift hadir)
             await conn.execute(
-                "insert into attendance(employee_id,outlet_id,day) values($1,$2,current_date) on conflict (employee_id, day) do nothing",
+                "insert into attendance(employee_id,outlet_id,day) values($1,$2,(now() at time zone 'Asia/Jakarta')::date) on conflict (employee_id, day) do nothing",
                 emp["id"], emp["outlet_id"])
             outlets = rows_to_list(await conn.fetch("select * from outlets order by created_at"))
             return {"role": "pegawai", "employee": row_to_dict(emp), "outlets": outlets}
@@ -1269,7 +1269,7 @@ async def enrich_orders(conn, rows):
 
 
 @api.get("/orders")
-async def list_orders(outlet_id: Optional[str] = None, customer_id: Optional[str] = None, status: Optional[str] = None, active: bool = False, today: bool = False, unpaid: bool = False, speed: Optional[str] = None, sort: Optional[str] = None, limit: int = 100):
+async def list_orders(outlet_id: Optional[str] = None, customer_id: Optional[str] = None, status: Optional[str] = None, active: bool = False, today: bool = False, queue: bool = False, unpaid: bool = False, speed: Optional[str] = None, sort: Optional[str] = None, limit: int = 100):
     async with pool.acquire() as conn:
         clauses, args = [], []
         if unpaid:
@@ -1283,7 +1283,10 @@ async def list_orders(outlet_id: Optional[str] = None, customer_id: Optional[str
         if active:
             clauses.append("status in ('received','washing','drying','ironing','packing','ready')")
         if today:
-            clauses.append("created_at::date = now()::date")
+            clauses.append("(created_at at time zone 'Asia/Jakarta')::date = (now() at time zone 'Asia/Jakarta')::date")
+        if queue:
+            clauses.append("((created_at at time zone 'Asia/Jakarta')::date = (now() at time zone 'Asia/Jakarta')::date"
+                           " or status in ('requested','quoted','received','washing','drying','ironing','packing','ready'))")
         if speed == "express":
             clauses.append("express = true")
         elif speed == "regular":
@@ -1572,10 +1575,10 @@ async def dashboard(outlet_id: Optional[str] = None):
             f"""select coalesce(count(*),0) as orders, coalesce(sum(weight_kg),0) as kg,
                    coalesce(sum(unit_qty),0) as pcs, coalesce(count(distinct customer_id),0) as customers,
                    coalesce(sum(total),0) as omzet
-                from orders where created_at::date = now()::date and status <> 'cancelled'{oand}""", *oargs)
+                from orders where (created_at at time zone 'Asia/Jakarta')::date = (now() at time zone 'Asia/Jakarta')::date and status <> 'cancelled'{oand}""", *oargs)
         pendapatan = await conn.fetchval(
             f"""select coalesce(sum(amount),0) from transactions
-                where created_at::date = now()::date and type='income'{oand}""", *oargs)
+                where (created_at at time zone 'Asia/Jakarta')::date = (now() at time zone 'Asia/Jakarta')::date and type='income'{oand}""", *oargs)
 
         trend_rows = await conn.fetch(
             f"""select created_at::date as d, coalesce(sum(total),0) as omzet from orders

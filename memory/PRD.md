@@ -103,6 +103,20 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] **Riwayat Pesanan**: tab ke-4 di menu bawah pelanggan (`/(customer)/riwayat`) + layar detail order `/order-detail/[id]` (timeline status, rincian nota, total, tombol bayar). Kartu di "Pantau Ordermu" juga bisa diklik ke detail.
 - [x] Tabel baru: `topups`, `reviews`, `vouchers`; kolom `customers.deposit_expires_at`. Dashboard menambah `pending_topups` & `complaints`.
 - Teruji: backend 17/17 baru + regresi PASS (iteration_8.json), coin-expiry diverifikasi manual, seluruh flow frontend PASS.
+
+## Update (2026-06, iterasi 12) — UI/UX Pelanggan & Alur Pegawai
+### Pelanggan
+- [x] Home: kartu hero peringkat dihapus; kini sapaan + **sorotan "Laundry siap diambil"** (makin urgent bila >2 hari), kartu **JW Coin** (tombol Isi Saldo), Promo, Pantau Ordermu (kartu bisa diklik → `/order-detail/[id]`), dan **Ranking Kamu** = 3 besar (nama lain disamarkan) + posisi pelanggan.
+- [x] Tab Bayar: notifikasi "N nota sudah ditimbang", **section Kode Promo** (`GET /api/promos/validate`, dipakai saat bayar via `promo_code`), 2 opsi bayar (JW Coin -10% / QRIS-Cash), foto pakaian dari pegawai tampil di nota, keterangan tunai "Bayar tunai diawal atau setelah pakaian ditimbang".
+- [x] Tab Pesan: tombol berubah jadi **"Pesan Sekarang"** setelah layanan dipilih.
+- [x] Detail order: timeline, rincian nota + foto, info antar/jemput, tombol **Konfirmasi Laundry Sudah Diterima** (`POST /orders/{id}/confirm-receipt`), form Nilai & Ulas.
+- [x] BUG FIX: klik order di "Pantau Ordermu" sempat error → `request_items`/`photos` kini selalu array dari backend.
+### Pegawai (2 tab: Antrian, Antar Jemput)
+- [x] **Antrian**: order antrian (hari ini WIB + semua yang masih aktif, param `queue=true`) dibagi 2 baris **⚡ Express** (atas) dan **Reguler**, masing-masing **FIFO** (`sort=fifo`). Kartu ringkas → klik untuk detail: ringkasan item, berat, SLA, **Konfirmasi Pembayaran** (Tunai/QRIS/JW Coin → Tandai Lunas) dan tombol lanjut status. Tab "Bayar"/verifikasi terpisah dihapus.
+- [x] **Antar Jemput** (digabung dengan Permintaan): chip Semua/Permintaan/Jemput/Antar. Konfirmasi Dijemput/Diantar (`POST /orders/{id}/trip`) → tercatat di `work_logs` stage `trip` dan masuk **trip_kurir** pada gaji owner. Setelah dijemput muncul tombol **Timbang Pakaian & Foto**.
+- [x] **Layar Timbang** `/timbang/[id]`: pilih layanan dari pricelist outlet, input berat/jumlah, toggle Regular/Express (harga ikut berubah), **unggah foto pakaian** (kamera/galeri, izin kontekstual) ke **Emergent Object Storage** (`POST /api/upload`, `GET /api/files/{path}`), lalu "Kirim Nota ke Pelanggan" (`POST /orders/{id}/weigh` → status `quoted`).
+- [x] Zona waktu: semua perhitungan "hari ini" memakai Asia/Jakarta.
+- Teruji: backend 20/20 PASS + regresi (iteration_9.json), frontend runtime PASS (bug klik order terverifikasi), konfirmasi pembayaran dari kartu antrian diverifikasi manual.
 - Google review links: Depok/Kalimulya https://g.page/r/CUv3jO9Cz4aAEBM/review ; Jakarta/Pulomas https://g.page/r/CT1ETVEE3zn5EBM/review ; Bandung/Ujungberung https://g.page/r/CQUtr3hTOpEbEBM/review
 
 ## Backlog (prioritized)

@@ -1,0 +1,40 @@
+{
+  "summary": "Iter9 frontend-only regression (Expo web preview @ 390x844). All 5 flows in the review request PASSED with only one data-state limitation (no orders 'today' for employee Antrian tab → pay/advance path could not be exercised at runtime but testIDs are correctly wired in OrdersPipeline.tsx). BUG FIX VERIFIED: Customer login (Pelanggan/pelanggan123) → Home has 19 order-<id> cards under 'Pantau Ordermu'; tapping the first → navigates to /order-detail/<id> with testID order-status='Menunggu Persetujuan' and section 'Rincian Nota' rendered — no blank screen. Same works from Riwayat tab (20 hist-<id> cards). Customer Home layout matches spec: hero 'peringkat lama' is GONE; sapaan 'Halo, Pelanggan Demo 👋', JW Coin card with testID coin-balance='177.050 coin' + coin-benefit ('Lebih hemat, diskon 10%…') + 'Isi Saldo' action; 'Ranking Kamu' card renders rank-1, rank-2, rank-3 and rank-me. Bayar tab: 8 bill-<id> cards. Expanding bill-b103…: promo-input accepts 'WANGI15' → promo-apply → promo-applied shows 'WANGI15 • -15% • potongan Rp12.150'. Selecting method-coin-<orderId> updates total to Rp61.965 (Rp81.000 − Rp12.150 promo − 10% coin discount = 61.965) and pay-<orderId> button visible. PEGAWAI (Pegawai/pegawai123): bottom bar has exactly 2 tabs — 'Antrian' and 'Antar Jemput'. Antar Jemput tab: chips Semua/Permintaan/Jemput/Antar all present and filter works. 7 weigh-<code> buttons found (mix of Antar Sendiri + already-picked-up Jemput). Tap weigh-JW-260920-8563 → /timbang/<id> loads with 41 svc-<serviceId> options + photo-camera + photo-library. Selecting first svc + qty-<serviceId>=4 → weigh-total updates to 'Rp40.000'. submit-weigh (enabled, aria-disabled=None) → returns to /kurir; the order JW-260920-8563 no longer appears in weigh-* list (moved to quoted/'Menunggu Persetujuan'). ANTRIAN tab RUN-TIME LIMITATION: dashboard.today.orders=0 (seed has no orders dated today), and OrdersPipeline is invoked with todayOnly=true → the Express/Reguler groups are empty; no order-card-<code> rendered in any of the filter chips (Aktif/Diterima/Cuci/Pengering/Setrika). Code review confirms testIDs order-card-<code>, pay-method-cash|qris|coin-<code>, pay-<code>, advance-<code> exist correctly in /app/frontend/src/components/OrdersPipeline.tsx (lines 101, 157, 172, 194) and 'Express'/'Reguler' section titles at lines 229/234. Trip-pickup flow: trip-pickup-JW-260920-8596 clicked; card refetch was slower than 2.5s window but 'Sudah dijemput' banner is confirmed in a subsequent screenshot. Deprecated shadow* RN-Web warnings persist (carry-over).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Pegawai Antrian pay/advance",
+        "issue": "Cannot exercise pay-method-*/pay-<code>/advance-<code> at runtime because OrdersPipeline uses todayOnly=true and demo seed has 0 orders today (Transaksi Hari Ini: 0). Consider seeding at least 1 'received' order dated today OR expose a toggle to widen the range. testIDs & 'Express/Reguler' groups verified via code review — no code bug.",
+        "affected_testIDs": ["order-card-<code>", "pay-method-cash-<code>", "pay-method-qris-<code>", "pay-method-coin-<code>", "pay-<code>", "advance-<code>"]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Persistent RN-Web deprecation 'shadow* style props are deprecated. Use boxShadow.' (carry-over from iter7/iter8). Reference: many styles in /app/frontend/src/components/OrdersPipeline.tsx, kurir.tsx, ui.tsx that spread ...shadow.card/soft."}
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_9.json"
+  ],
+  "action_items": [
+    "(OPTIONAL) Seed at least one 'received'/'washing' order dated today for outlet Jadiwangi Kalimulya so the Pegawai Antrian tab renders Express/Reguler groups and pay/advance flow can be end-to-end tested. Alternatively, make employee Antrian's todayOnly=false OR add a 'Semua' chip.",
+    "(CARRY-OVER, OPTIONAL) Migrate shadow* → boxShadow for RN-Web to silence deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "OrdersPipeline.tsx L101/L157/L172/L194 correctly renders order-card-<code>, pay-method-{cash|qris|coin}-<code>, pay-<code>, advance-<code>. Express/Reguler grouping headers at L229/L234.",
+    "kurir.tsx L123 wires trip-pickup-<code>; L146 wires weigh-<code> only when isRequest && (delivery_type!==pickup || picked_up_at). After trip.mutate → qc.invalidateQueries(['orders']) refetches both requests+quoted, so weigh should appear on re-render (measured ~3s in this env).",
+    "(customer)/index.tsx L54 correctly removed old hero-rank card; L74 sapaan; L129-144 coin-balance/coin-benefit; L183-194 rank-1..3 + rank-me.",
+    "(customer)/bayar.tsx L182-198 promo-input + promo-apply → sets promo state, then coinCharge computed on afterPromo * 0.9 (L110); method-coin-<orderId> option (L219) toggles method; pay-<orderId> at L296 posts /orders/<id>/pay with promo_code.",
+    "timbang/[id].tsx has correct svc-<id>, qty-<id>, weigh-total, submit-weigh, photo-camera, photo-library testIDs (verified via runtime probes).",
+    "(employee)/_layout.tsx has exactly 2 Tabs.Screen entries (index=Antrian, kurir=Antar Jemput) — matches spec."
+  ],
+  "updated_files": ["/app/test_reports/iteration_9.json"],
+  "success_rate": {"backend": "not tested this iteration (main agent stated 20/20 pass in iter9-backend)", "frontend": "5/5 flows verified; 1 sub-flow (pay-in-Antrian) blocked by demo seed having no 'today' orders — code path verified"},
+  "seed_data_creation": "Committed 1 mutation via employee test flow: submit-weigh on JW-260920-8563 (Cuci Kering Setrika × 4 kg = Rp40.000) — that order now has status='quoted' (Menunggu Persetujuan). Also, one order got promo/coin selected (not paid) so no financial mutation there. Customer coin balance still 177.050. Owner data untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Reported bug (order-detail from Pantau Ordermu) is FIXED end-to-end on Home AND Riwayat. Home layout matches spec (no old hero-rank card). If main agent wants to E2E-test employee Antrian pay/advance (order-card-<code>/pay-method-*), they must first seed a 'received' order dated today for the current outlet, because Antrian uses todayOnly=true. All testIDs in the review request exist in code and are wired correctly.",
+  "rca_of_issue": "Not applicable — the reported user-visible bug (blank/error on order-<id> click) is resolved. Reproduction path (Home → tap order-* card) now consistently opens /order-detail/<id> with order-status + Rincian Nota rendered. No code changes made by this test iteration."
+}

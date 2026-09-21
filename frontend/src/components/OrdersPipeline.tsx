@@ -45,7 +45,7 @@ export function OrdersPipeline({
     if (outletId) params.set("outlet_id", outletId);
     if (filter === "active") params.set("active", "true");
     else params.set("status", filter);
-    if (todayOnly) params.set("today", "true");
+    if (todayOnly) params.set("queue", "true");
     params.set("sort", "fifo");
     params.set("limit", "100");
     return `/orders?${params.toString()}`;
