@@ -34,6 +34,7 @@ export default function Bayar() {
     queryKey: ["bills", customerId],
     queryFn: () => api.get(`/orders?customer_id=${customerId}&unpaid=true&limit=50`),
     enabled: !!customerId,
+    refetchInterval: 15000,
   });
 
   const { data: detail } = useQuery({
@@ -65,15 +66,6 @@ export default function Bayar() {
     mutationFn: () => api.get(`/promos/validate?code=${encodeURIComponent(promoInput.trim())}&outlet_id=${cust?.outlet_id}`),
     onSuccess: (p: any) => { setPromo(p); setPromoError(""); },
     onError: (e: any) => { setPromo(null); setPromoError(e?.message || "Kode promo tidak valid"); },
-  });
-
-  const approve = useMutation({
-    mutationFn: (oid: string) => api.patch(`/orders/${oid}/status`, { status: "received" }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["bills"] });
-      qc.invalidateQueries({ queryKey: ["my-orders"] });
-      qc.invalidateQueries({ queryKey: ["order-detail"] });
-    },
   });
 
   const list = bills || [];
@@ -108,7 +100,6 @@ export default function Bayar() {
             const promoCut = promo ? Math.round(total * Number(promo.discount_pct) / 100) : 0;
             const afterPromo = Math.max(0, total - promoCut);
             const coinCharge = Math.round(afterPromo * 0.9);
-            const needApproval = o.status === "quoted";
             const coinEnough = coin >= coinCharge;
             return (
               <Card key={o.id}>
@@ -201,16 +192,6 @@ export default function Bayar() {
                         </>
                       )}
                     </View>
-
-                    {needApproval ? (
-                      <PrimaryButton
-                        label="Setujui Nota"
-                        icon="check-decagram"
-                        onPress={() => approve.mutate(o.id)}
-                        loading={approve.isPending}
-                        testID={`approve-${o.id}`}
-                      />
-                    ) : null}
 
                     <Text style={styles.label}>Pilih Cara Bayar</Text>
 

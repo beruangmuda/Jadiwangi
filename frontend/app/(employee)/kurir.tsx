@@ -11,7 +11,7 @@ import { fonts, makeStyles, radius, shadow, spacing, useTheme } from "@/src/them
 import { Icon } from "@/src/components/Icon";
 import { Pill, EmptyState, Loading, ChipRow } from "@/src/components/ui";
 import { STAGE, nextStage, NEXT_LABEL } from "@/src/status";
-import { rupiah } from "@/src/format";
+import { rupiah, formatDateTime } from "@/src/format";
 
 const FILTERS = [
   { key: "all", label: "Semua" },
@@ -80,6 +80,7 @@ export default function Kurir() {
     const readyToWeigh = isRequest;
     return (
       <View style={[styles.card, (isRequest || isQuoted) && { borderColor: colors.brandPrimary, borderWidth: 1.5 }]} testID={`kurir-${item.code}`}>
+        <Pressable testID={`kurir-detail-${item.code}`} onPress={() => router.push(`/order-detail/${item.id}`)} style={styles.orderDetailArea}>
         <View style={styles.rowBetween}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
             <View style={[styles.iconBox, { backgroundColor: item.delivery_type === "delivery" ? colors.brandTertiary : colors.surfaceSecondary }]}>
@@ -111,6 +112,8 @@ export default function Kurir() {
             <Text style={styles.sub}>{item.address}</Text>
           </View>
         ) : null}
+        <View style={styles.dateRow}><Icon name="calendar-clock" size={15} color={colors.brand} /><Text testID={`request-date-${item.code}`} style={styles.dateText}>{isRequest ? "Permintaan" : "Order"} • {formatDateTime(item.created_at)}</Text></View>
+        </Pressable>
 
         {/* Konfirmasi trip kurir */}
         <View style={styles.tripRow}>
@@ -208,4 +211,5 @@ const useStyles = makeStyles((c) => ({
   catRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
   catChip: { backgroundColor: c.surfaceSecondary, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
   catText: { fontFamily: fonts.bodyBold, fontSize: 11, color: c.onSurfaceSecondary },
+  orderDetailArea: { gap: spacing.sm, minHeight: 44 }, dateRow: { flexDirection: "row", alignItems: "center", gap: 6 }, dateText: { fontFamily: fonts.bodySemi, fontSize: 12, color: c.onSurfaceSecondary },
 }));

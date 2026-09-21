@@ -14,6 +14,7 @@ import { StackHeader, Segmented } from "@/src/components/form";
 import { rupiah } from "@/src/format";
 import { pickPhoto, uploadPhoto, photoUrl } from "@/src/photos";
 import { Image } from "expo-image";
+import { CameraCapture } from "@/src/components/CameraCapture";
 
 type Line = { service_id: string; service_name: string; unit: string; qty: string; price: number };
 
@@ -30,6 +31,7 @@ export default function TimbangOrder() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({ Kiloan: true });
 
   const { data: order } = useQuery({ queryKey: ["order-detail", id], queryFn: () => api.get(`/orders/${id}`), enabled: !!id });
@@ -101,7 +103,7 @@ export default function TimbangOrder() {
     setExpandedCategories((prev) => ({ ...prev, [category]: !prev[category] }));
   };
 
-  const addPhoto = async (source: "camera" | "library") => {
+  const addPhoto = async (source: "library" | "camera") => {
     setPhotoError("");
     try {
       const asset = await pickPhoto(source);
@@ -114,6 +116,17 @@ export default function TimbangOrder() {
     } finally {
       setUploading(false);
     }
+  };
+
+  const addCapturedPhoto = async (asset: { uri: string; fileName?: string; mimeType?: string }) => {
+    setPhotoError("");
+    try {
+      setUploading(true);
+      const url = await uploadPhoto(asset, "orders");
+      setPhotos((p) => [...p, url]);
+      setCameraOpen(false);
+    } catch (e: any) { setPhotoError(e?.message || "Gagal mengunggah foto kamera"); setCameraOpen(false); }
+    finally { setUploading(false); }
   };
 
   if (!order) {
@@ -144,6 +157,31 @@ export default function TimbangOrder() {
           </Text>
         </Card>
 
+        <View style={{ gap: spacing.sm }}>
+          <Text style={styles.label}>Foto Pakaian</Text>
+          <Text style={styles.hint}>Ambil foto sekarang agar pelanggan dapat melihat bukti pakaian pada nota Bayar.</Text>
+          <View style={styles.photoRow}>
+            {photos.map((u) => (
+              <View key={u} style={styles.thumbWrap}>
+                <Image source={{ uri: photoUrl(u) }} style={styles.thumb} contentFit="cover" />
+                <Pressable testID={`rm-photo-${photos.indexOf(u)}`} onPress={() => setPhotos((p) => p.filter((x) => x !== u))} style={styles.thumbX} hitSlop={6}>
+                  <Icon name="close" size={12} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
+            <Pressable testID="photo-camera" onPress={() => setCameraOpen(true)} style={styles.addPhoto}>
+              <Icon name="camera-plus" size={22} color={colors.brand} />
+              <Text style={styles.addPhotoText}>Kamera</Text>
+            </Pressable>
+            <Pressable testID="photo-library" onPress={() => addPhoto("library")} style={styles.addPhoto}>
+              <Icon name="image-multiple" size={22} color={colors.brand} />
+              <Text style={styles.addPhotoText}>Galeri</Text>
+            </Pressable>
+          </View>
+          {uploading ? <Text style={styles.hint}>Mengunggah foto…</Text> : null}
+          {photoError ? <Text style={styles.photoError} testID="photo-error">{photoError}</Text> : null}
+        </View>
+
         <View style={{ gap: spacing.xs }}>
           <Text style={styles.label}>Kecepatan Layanan</Text>
           <Segmented items={[{ key: "regular", label: "Regular" }, { key: "express", label: "Express" }]} value={speed} onChange={onSpeed} />
@@ -164,32 +202,9 @@ export default function TimbangOrder() {
           </View>)}
         </View>
 
-        {/* Foto pakaian */}
-        <View style={{ gap: spacing.sm }}>
-          <Text style={styles.label}>Foto Pakaian (dikirim ke pelanggan)</Text>
-          <Text style={styles.hint}>Sertakan foto agar pelanggan yakin saat menyetujui nota.</Text>
-          <View style={styles.photoRow}>
-            {photos.map((u) => (
-              <View key={u} style={styles.thumbWrap}>
-                <Image source={{ uri: photoUrl(u) }} style={styles.thumb} contentFit="cover" />
-                <Pressable testID={`rm-photo-${photos.indexOf(u)}`} onPress={() => setPhotos((p) => p.filter((x) => x !== u))} style={styles.thumbX} hitSlop={6}>
-                  <Icon name="close" size={12} color="#fff" />
-                </Pressable>
-              </View>
-            ))}
-            <Pressable testID="photo-camera" onPress={() => addPhoto("camera")} style={styles.addPhoto}>
-              <Icon name="camera-plus" size={22} color={colors.brand} />
-              <Text style={styles.addPhotoText}>Kamera</Text>
-            </Pressable>
-            <Pressable testID="photo-library" onPress={() => addPhoto("library")} style={styles.addPhoto}>
-              <Icon name="image-multiple" size={22} color={colors.brand} />
-              <Text style={styles.addPhotoText}>Galeri</Text>
-            </Pressable>
-          </View>
-          {uploading ? <Text style={styles.hint}>Mengunggah foto…</Text> : null}
-          {photoError ? <Text style={styles.photoError} testID="photo-error">{photoError}</Text> : null}
-        </View>
       </KeyboardAwareScrollView>
+
+      <CameraCapture visible={cameraOpen} onClose={() => setCameraOpen(false)} onCaptured={addCapturedPhoto} />
 
       <View style={styles.footer}>
         <View style={styles.totalRow}>

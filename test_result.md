@@ -104,7 +104,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-## user_problem_statement: "Order berstatus Siap Diambil harus hilang dari antrian kerja dan hanya ditutup melalui tombol Sudah Diambil pada card Siap Diambil. Di Antar Jemput, pilih layanan dan input berat harus menggunakan kartu layanan serta minimum order yang sama dengan Buat Order, dengan fitur ambil foto tetap tersedia."
+## user_problem_statement: "Semua order lintas status harus dapat dilihat Owner di laporan. Kamera foto pada timbang harus bisa dilampirkan dan setelah timbang nota dengan foto/rincian muncul langsung di Bayar pelanggan tanpa Setujui Nota. Card Antar Jemput menampilkan tanggal dan membuka detail. Request idle 14 hari dibatalkan otomatis."
 
 ## backend:
 ##   - task: "Kasbon pegawai: pencatatan dan potongan otomatis gaji per bulan"
@@ -317,7 +317,7 @@
 
 ## test_plan:
 ##   current_focus:
-##     - "Verifikasi pengguna pada operasional outlet"
+##     - "Verifikasi pengguna pada perangkat native untuk hasil capture kamera fisik"
 ##   test_all: true
 ##   test_priority: "high_first"
 
@@ -344,5 +344,7 @@
 ##     -message: "ITERATION 14 COMPLETE: Backend test 4/4 PASS. Tindak lanjut frontend: tindakan timbang tersedia langsung untuk request pickup dan daftar Siap Diambil memakai optimistic update. Screenshot membuktikan kedua alur; status completion diverifikasi API dan semua data uji dibersihkan."
 ##     -agent: "main"
 ##     -message: "CLEANUP FINAL: Menghapus 43 order dan 10 pelanggan bertanda TEST_ dari pengujian lama, termasuk transaksi, work log, serta item terkait. Pemeriksaan akhir menyatakan 0 order/pelanggan TEST_ tersisa."
+##     -agent: "main"
+##     -message: "ITERATION 18 COMPLETE: Laporan Owner semua status, kamera in-app, nota pelanggan langsung Bayar, tanggal/detail Kurir, dan auto-cancel request 14 hari telah diterapkan. Iterasi 15 menemukan photo-camera tidak terjangkau; tombol dipindahkan di atas daftar layanan. Retest iterasi 16 PASS untuk backend 4/4 dan seluruh alur UI terkait. Cleanup akhir: 0 order/pelanggan TEST_ tersisa."
 ##     -agent: "main"
 ##     -message: "ITERATION 8: (1) TrendChart now has Y-axis rupiah labels at 0/25/50/75/100% and X-axis day ticks; dashboard title 'Trend <bulan Indonesia>'. (2) Dashboard 'X pelanggan' badge is pressable -> /hari-ini screen listing today's orders/notes (GET /orders?today=true). Owner can cancel a nota (reason) via POST /orders/{id}/cancel; employees CANNOT (OrdersPipeline canCancel=false in employee index, and /hari-ini hides cancel unless session.role==owner). (3) Dashboard adds Top 3 Pelanggan bulan ini (name, kg, spend) from GET /dashboard top_customers. (4) Setelan > Database Pelanggan (/manage/pelanggan) fully reworked: search, add/edit (name, phone, ADDRESS, email, deposit, outlet), list with per-customer stats (total_kg, tx_count, total_spend), and detail modal (GET /customers/{id}/detail) showing address, points, deposit, total kiloan, jumlah transaksi, total belanja, transaksi pertama & terakhir, riwayat 10 order. Backend: added address column to customers, aggregates in list_customers, /customers/{id}/detail, today filter, top_customers. Owner owner/owner123, produksi joko/pegawai123. Please test /hari-ini owner cancel + employee cannot cancel, customer DB CRUD+detail, dashboard top_customers, and no regressions."

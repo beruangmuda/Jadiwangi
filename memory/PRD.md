@@ -159,6 +159,14 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] **Aturan owner terlindungi**: backend menolak layanan tidak aktif/lintas outlet, unit salah, dan kuantitas kilogram di bawah minimum pada Buat Order maupun Timbang.
 - [x] Teruji iterasi 14: backend 4/4 PASS. Perbaikan UI pasca-tes memverifikasi tombol timbang muncul untuk permintaan pickup dan card Siap Diambil langsung hilang lalu status order menjadi `completed`; seluruh data uji dihapus.
 
+## Update (2026-09, iterasi 18) — Laporan Owner, Kamera & Nota Pelanggan
+- [x] **Laporan seluruh order**: tab Laporan → Transaksi Owner kini menyediakan periode **Semua** dan menampilkan hingga 500 order lintas status (permintaan, siap dibayar, proses, siap diambil, selesai, dan batal). Setiap card dapat diketuk untuk membuka detail nota.
+- [x] **Foto kamera stabil**: Timbang memiliki kamera in-app berbasis `expo-camera` dengan izin, ganti sisi kamera, capture, pesan error jelas, dan konversi Base64 browser menjadi image URI yang dapat diunggah. Tombol Kamera dipindahkan tepat di bawah permintaan pelanggan agar selalu terjangkau.
+- [x] **Nota langsung ke Bayar**: selesai timbang mengubah order menjadi **Siap Dibayar** dan otomatis muncul/refetch di Bayar pelanggan setiap 15 detik, lengkap dengan rincian serta foto pakaian. Langkah **Setujui Nota** telah dihapus; pelanggan langsung memilih metode lalu Bayar Sekarang.
+- [x] **Antar Jemput informatif**: setiap card menampilkan tanggal/jam permintaan dan area card dapat diketuk untuk membuka detail order.
+- [x] **Request idle**: request berstatus `requested` yang tidak ditimbang/terkonfirmasi selama lebih dari 14 hari otomatis dibatalkan dan hilang dari antrian aktif, dengan alasan pembatalan tersimpan untuk audit Owner.
+- [x] Teruji iterasi 16: backend 4/4 PASS serta retest frontend PASS untuk tombol Kamera → modal izin/capture, detail kurir/tanggal, nota pelanggan bergambar tanpa persetujuan, dan laporan Owner. Semua order/pelanggan TEST_ dibersihkan.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).
@@ -168,6 +176,7 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - P2: Riwayat pengiriman nota WhatsApp per order (opsional).
 - P2: Notifikasi otomatis ke pelanggan ketika order berpindah ke Siap Diambil (opsional).
 - P2: Konfirmasi serah-terima menggunakan tanda tangan pelanggan (opsional).
+- P2: Notifikasi push kepada pelanggan saat nota siap dibayar (opsional).
 - P3: Dark mode.
 
 ## Notes

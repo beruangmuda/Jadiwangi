@@ -50,6 +50,12 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-status-bar",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Ambil foto pakaian untuk nota pelanggan"
+        }
+      ],
       "@react-native-vector-icons/material-design-icons",
       [
         "expo-image-picker",

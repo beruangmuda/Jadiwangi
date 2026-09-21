@@ -1,6 +1,8 @@
 import { Platform, Alert, Linking } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
+export type UploadablePhoto = Pick<ImagePicker.ImagePickerAsset, "uri"> & { fileName?: string | null; mimeType?: string | null };
+
 const BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
 
 function settingsPrompt(what: string) {
@@ -45,7 +47,7 @@ export async function pickPhoto(source: "camera" | "library"): Promise<ImagePick
 }
 
 /** Unggah ke Emergent Object Storage lewat backend; mengembalikan URL publik. */
-export async function uploadPhoto(asset: ImagePicker.ImagePickerAsset, folder = "orders"): Promise<string> {
+export async function uploadPhoto(asset: UploadablePhoto, folder = "orders"): Promise<string> {
   const name = asset.fileName || `foto-${Date.now()}.jpg`;
   const type = asset.mimeType || "image/jpeg";
   const form = new FormData();

@@ -21,6 +21,7 @@
     "dayjs": "1.11.13",
     "expo": "57.0.21",
     "expo-blur": "57.0.2",
+    "expo-camera": "~57.0.5",
     "expo-constants": "57.0.17",
     "expo-contacts": "~57.0.6",
     "expo-file-system": "~57.0.7",

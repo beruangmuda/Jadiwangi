@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, ScrollView, useWindowDimensions, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 
 import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
@@ -26,10 +27,12 @@ const PERIODS = [
   { key: "hari", label: "Hari Ini" },
   { key: "minggu", label: "Minggu Ini" },
   { key: "bulan", label: "Bulan Ini" },
+  { key: "semua", label: "Semua" },
 ];
 
-function rangeFor(period: string): { frm: string; to: string } {
+function rangeFor(period: string): { frm?: string; to?: string } {
   const to = dayjs().format("YYYY-MM-DD");
+  if (period === "semua") return {};
   if (period === "hari") return { frm: to, to };
   if (period === "minggu") return { frm: dayjs().startOf("week").format("YYYY-MM-DD"), to };
   return { frm: dayjs().startOf("month").format("YYYY-MM-DD"), to };
@@ -48,8 +51,8 @@ export default function Laporan() {
   const { frm, to } = period === "custom" && custom ? custom : rangeFor(period);
   const params = new URLSearchParams();
   if (outletId) params.set("outlet_id", outletId);
-  params.set("frm", frm);
-  params.set("to", to);
+  if (frm) params.set("frm", frm);
+  if (to) params.set("to", to);
   const q = `?${params.toString()}`;
 
   return (
@@ -167,6 +170,7 @@ function Keuangan({ q }: { q: string }) {
 function Transaksi({ q }: { q: string }) {
   const styles = useStyles();
   const { colors } = useTheme();
+  const router = useRouter();
   const { data, isLoading } = useQuery({ queryKey: ["rep-trx", q], queryFn: () => api.get(`/reports/transactions${q}`) });
   if (isLoading) return <Loading />;
   return (
@@ -183,19 +187,19 @@ function Transaksi({ q }: { q: string }) {
         <Text style={[styles.bigMoney, { color: colors.brandPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{rupiah(data.total_value)}</Text>
       </Card>
       <Card>
-        <SectionHeader title="Transaksi Terbaru" />
+        <SectionHeader title={`Semua Order (${(data.recent || []).length})`} subtitle="Ketuk order untuk melihat detail nota" />
         <View style={{ gap: spacing.md }}>
-          {(data.recent || []).slice(0, 12).map((o: any, i: number) => (
-            <View key={i} style={styles.lineRow}>
+          {(data.recent || []).map((o: any) => (
+            <Pressable key={o.id} testID={`owner-report-order-${o.code}`} onPress={() => router.push(`/order-detail/${o.id}`)} style={styles.orderRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.lineLabel}>{o.customer_name}</Text>
-                <Text style={styles.lineSub}>{o.code} • {formatDate(o.created_at)}</Text>
+                <Text style={styles.lineSub}>{o.code} • {formatDate(o.created_at)} • {o.stage_label}</Text>
               </View>
               <View style={{ alignItems: "flex-end", gap: 3 }}>
                 <Text style={styles.lineValue}>{rupiah(o.total)}</Text>
                 <Pill label={o.payment_status === "paid" ? "Lunas" : "Belum"} tone={o.payment_status === "paid" ? "success" : "warning"} />
               </View>
-            </View>
+            </Pressable>
           ))}
         </View>
       </Card>
@@ -379,6 +383,7 @@ const useStyles = makeStyles((c) => ({
   bigMoney: { fontFamily: fonts.displayBold, fontSize: 22, lineHeight: 28 },
   hintMuted: { fontFamily: fonts.body, fontSize: 12, color: c.muted },
   lineRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.md },
+  orderRow: { minHeight: 54, flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.md, paddingVertical: spacing.xs },
   lineLabel: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurface },
   lineSub: { fontFamily: fonts.body, fontSize: 12, color: c.muted },
   lineValue: { fontFamily: fonts.displayBold, fontSize: 14, color: c.onSurface },

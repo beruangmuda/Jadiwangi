@@ -40,7 +40,7 @@ api = APIRouter(prefix="/api")
 PIPELINE = ["received", "washing", "drying", "ironing", "packing", "ready", "completed"]
 STAGE_LABELS = {
     "requested": "Menunggu Ditimbang",
-    "quoted": "Menunggu Persetujuan",
+    "quoted": "Siap Dibayar",
     "received": "Diterima",
     "washing": "Cuci",
     "drying": "Pengering",
@@ -131,6 +131,7 @@ async def startup():
     async with pool.acquire() as conn:
         await conn.execute(SCHEMA)
         await conn.execute(MIGRATIONS)
+        await expire_stale_requests(conn)
     await seed_data()
     await reseed_pricelist()
     await ensure_credentials()
@@ -1316,6 +1317,7 @@ async def enrich_orders(conn, rows):
 @api.get("/orders")
 async def list_orders(outlet_id: Optional[str] = None, customer_id: Optional[str] = None, status: Optional[str] = None, active: bool = False, today: bool = False, queue: bool = False, unpaid: bool = False, speed: Optional[str] = None, sort: Optional[str] = None, limit: int = 100):
     async with pool.acquire() as conn:
+        await expire_stale_requests(conn)
         clauses, args = [], []
         if unpaid:
             clauses.append("payment_status='unpaid' and status<>'cancelled' and total > 0")
@@ -1788,9 +1790,9 @@ async def report_transactions(outlet_id: Optional[str] = None, frm: Optional[str
         if outlet_id:
             args.append(outlet_id); parts.append(f"outlet_id=${len(args)}")
         if frm:
-            args.append(frm); parts.append(f"created_at::date >= ${len(args)}::date")
+            args.append(frm); parts.append(f"(created_at at time zone 'Asia/Jakarta')::date >= ${len(args)}::date")
         if to:
-            args.append(to); parts.append(f"created_at::date <= ${len(args)}::date")
+            args.append(to); parts.append(f"(created_at at time zone 'Asia/Jakarta')::date <= ${len(args)}::date")
         base = (" and " + " and ".join(parts)) if parts else ""
         total_orders = await conn.fetchval(f"select count(*) from orders where status <> 'cancelled'{base}", *args)
         cancelled = await conn.fetchval(f"select count(*) from orders where status = 'cancelled'{base}", *args)
@@ -1800,14 +1802,14 @@ async def report_transactions(outlet_id: Optional[str] = None, frm: Optional[str
         if outlet_id:
             argsO.append(outlet_id); partsO.append(f"o.outlet_id=${len(argsO)}")
         if frm:
-            argsO.append(frm); partsO.append(f"o.created_at::date >= ${len(argsO)}::date")
+            argsO.append(frm); partsO.append(f"(o.created_at at time zone 'Asia/Jakarta')::date >= ${len(argsO)}::date")
         if to:
-            argsO.append(to); partsO.append(f"o.created_at::date <= ${len(argsO)}::date")
+            argsO.append(to); partsO.append(f"(o.created_at at time zone 'Asia/Jakarta')::date <= ${len(argsO)}::date")
         baseO = (" and " + " and ".join(partsO)) if partsO else ""
         recent = await conn.fetch(
-            f"""select o.code,o.total,o.status,o.created_at,o.payment_status,c.name as customer_name
+            f"""select o.id,o.code,o.total,o.status,o.created_at,o.payment_status,o.payment_method,o.delivery_type,c.name as customer_name
                 from orders o left join customers c on c.id=o.customer_id
-                where 1=1{baseO} order by o.created_at desc limit 30""", *argsO)
+                where 1=1{baseO} order by o.created_at desc limit 500""", *argsO)
         cancels = await conn.fetch(
             f"""select o.code,o.total,o.cancel_reason,o.cancelled_at,c.name as customer_name
                 from orders o left join customers c on c.id=o.customer_id
@@ -1822,7 +1824,7 @@ async def report_transactions(outlet_id: Optional[str] = None, frm: Optional[str
         return {"total_orders": int(total_orders or 0), "cancelled": int(cancelled or 0),
                 "total_value": float(value or 0),
                 "total_kg": um.get("kg", 0.0), "total_pcs": um.get("pcs", 0.0), "total_m": um.get("m", 0.0),
-                "recent": rows_to_list(recent), "cancellations": rows_to_list(cancels)}
+                "recent": [{**row_to_dict(r), "stage_label": STAGE_LABELS.get(r["status"], r["status"])} for r in recent], "cancellations": rows_to_list(cancels)}
 
 
 @api.get("/reports/employees")
@@ -2177,6 +2179,14 @@ async def expire_deposits(conn):
     await conn.execute(
         "update customers set deposit=0, deposit_expires_at=null "
         "where deposit_expires_at is not null and deposit_expires_at < current_date and deposit > 0")
+
+
+async def expire_stale_requests(conn):
+    """Auto-cancel requests left unconfirmed/unweighed for more than 14 days."""
+    await conn.execute(
+        """update orders set status='cancelled', cancelled_at=now(), updated_at=now(),
+               cancel_reason='Permintaan otomatis dibatalkan: tidak ada konfirmasi selama 14 hari'
+           where status='requested' and created_at < now() - interval '14 days'""")
 
 
 @api.get("/topup/packages")
