@@ -1,165 +1,82 @@
 {
-  "app_name": "Jadiwangi App",
-  "personality": "4 Tactile / Playful LIGHT",
-  "personality_one_liner": "A friendly, vibrant, and highly interactive POS experience that feels tactile, fast, and approachable.",
-  "color": {
-    "surface": "#FAFAFF",
-    "onSurface": "#1E1A34",
-    "surfaceSecondary": "#F2EFFF",
-    "onSurfaceSecondary": "#3D3664",
-    "surfaceTertiary": "#E4E0FA",
-    "onSurfaceTertiary": "#2C264D",
-    "surfaceInverse": "#1E1A34",
-    "onSurfaceInverse": "#FFFFFF",
-    "brand": "#A78BFA",
-    "onBrand": "#FFFFFF",
-    "brandPrimary": "#0096FF",
-    "onBrandPrimary": "#FFFFFF",
-    "brandSecondary": "#C4B5FD",
-    "onBrandSecondary": "#1E1A34",
-    "brandTertiary": "#E0F2FE",
-    "onBrandTertiary": "#0369A1",
-    "success": "#34D399",
-    "onSuccess": "#022C22",
-    "warning": "#FBBF24",
-    "onWarning": "#451A03",
-    "error": "#FB7185",
-    "onError": "#4C0519",
-    "info": "#0096FF",
-    "onInfo": "#FFFFFF",
-    "border": "#E4E0FA",
-    "borderStrong": "#C4B5FD",
-    "divider": "#F2EFFF",
-    "muted": "#6B648C"
+  "theme": {
+    "default": "light",
+    "rationale": "Laundry management application (Jadiwangi) uses an energetic, fresh, tactile and trustworthy palette (Warm Sand / Lavender Tint / Pure Surface / Jadiwangi Royal Blue and Violet Accents) built for Indonesian laundry operational staff and store owners."
   },
   "typography": {
-    "displayFontFamily": "Fredoka",
-    "textFontFamily": "Nunito",
+    "font_family_headings": "Poppins-Bold, Poppins-SemiBold",
+    "font_family_body": "Nunito-Regular, Nunito-SemiBold, Nunito-Bold",
+    "font_family_mono": "SpaceMono-Regular",
     "scale": {
-      "sm": 12,
-      "base": 14,
-      "lg": 16,
-      "xl": 20,
-      "2xl": 24
+      "h1": "text-2xl sm:text-3xl (24px - 28px)",
+      "h2": "text-xl sm:text-2xl (20px - 22px)",
+      "h3": "text-lg (16px - 18px)",
+      "body": "text-sm sm:text-base (14px - 15px)",
+      "caption": "text-xs (11px - 12px)",
+      "badge": "text-[10px] - text-xs font-bold uppercase tracking-wider"
     }
   },
-  "spacing": {
-    "rule": "Generous tactile spacing. Use 16px (lg) padding for screens and cards. 12px (md) gaps between elements. Large thumb-friendly touch targets with overshoot spring animations.",
-    "xs": 4,
-    "sm": 8,
-    "md": 12,
-    "lg": 16,
-    "xl": 24,
-    "2xl": 32,
-    "3xl": 48
+  "colors": {
+    "surface": "#FAFAFF",
+    "surfaceSecondary": "#F2EFFF",
+    "surfaceTertiary": "#E4E0FA",
+    "onSurface": "#1E1A34",
+    "onSurfaceSecondary": "#3D3664",
+    "muted": "#6B648C",
+    "brandPrimary": "#0096FF",
+    "onBrandPrimary": "#FFFFFF",
+    "brand": "#A78BFA",
+    "brandTertiary": "#E0F2FE",
+    "whatsappGreen": "#25D366",
+    "onWhatsapp": "#FFFFFF",
+    "border": "#E4E0FA",
+    "borderStrong": "#C4B5FD",
+    "success": "#0F9D6B",
+    "warning": "#B45309",
+    "error": "#E11D48"
   },
-  "radius_tokens": {
-    "sm": 12,
-    "md": 16,
-    "lg": 24,
-    "pill": 999
+  "component_path": {
+    "employee_home": "/app/frontend/app/(employee)/index.tsx",
+    "order_baru": "/app/frontend/app/order-baru.tsx",
+    "manage_produk": "/app/frontend/app/manage/produk.tsx",
+    "whatsapp_helper": "/app/frontend/src/whatsapp.ts",
+    "customer_modal": "/app/frontend/app/order-baru.tsx",
+    "setting_owner": "/app/frontend/app/(owner)/setelan.tsx"
   },
-  "shadow_tier": 2,
-  "navigation": "bottom_tabs",
-  "icon_set": "Phosphor",
-  "glassmorphism": {
-    "enabled": true,
-    "do's": [
-      "Use blur on the bottom tab bar and sticky headers.",
-      "Use heavy glassmorphism for the QRIS payment bottom sheet to make it feel elevated.",
-      "Use glass overlay on the login screen over the splash background."
-    ],
-    "dont's": [
-      "Do not use glassmorphism on dense data cards or chart areas.",
-      "Do not blur form fields or input elements."
-    ]
-  },
-  "platform_libraries": {
-    "glass": {
-      "ios": "expo-glass-effect",
-      "android": "expo-blur",
-      "low_end_android_fallback": "solid surfaceSecondary"
-    },
-    "image": "expo-image",
-    "blur": "expo-blur",
-    "bottom_sheet": "@gorhom/bottom-sheet",
-    "animation": "react-native-reanimated",
-    "gesture": "react-native-gesture-handler"
-  },
-  "screens": [
-    {
-      "name": "Role Selection & Login",
-      "purpose": "Allow users to securely select their role and enter their PIN to access the app.",
-      "states": {
-        "loading": "Spinner over the abstract splash background.",
-        "empty": "N/A",
-        "error": "Shake animation on PIN dots, red error text 'PIN Salah'."
-      },
-      "layout": "Full-bleed background using 'splash_abstract' image with a top-down dark gradient scrim. Top center: 'JADI WANGI App' logo (Fredoka font, 'JADI WANGI' in lavender, 'App' badge in vivid azure). Middle: 3 chunky tactile cards for Role Selection (Owner, Pegawai, Pelanggan) wrapped in a glass container. Bottom: Large numeric PIN keypad with rounded 'md' buttons (no visible borders, just soft fill on press) filling the lower third."
-    },
-    {
-      "name": "Owner Dashboard (Home)",
-      "purpose": "Provide a high-level overview of daily KPIs, monthly revenue trends, and active laundry queues.",
-      "states": {
-        "loading": "Skeleton loaders for KPI cards and chart area.",
-        "empty": "Illustration of a clean laundry basket with 'Belum ada transaksi hari ini'.",
-        "error": "Error message with 'Coba Lagi' button."
-      },
-      "layout": "Scrollable view with safe-area padding. Top: Sticky glass header with app logo and Owner avatar. Section 1 (KPIs): 2-column grid of tactile cards ('surfaceSecondary' background) showing Today's Transactions and Revenue. Section 2 (Chart): Full-width card with a Line/Bar chart for revenue trends (use vivid azure for the line, soft lavender gradient below). Section 3 (Queue): Horizontal scroll of pill-shaped counters (In-Progress, Ready, SLA-overdue). Overdue pills use 'error' colors to draw attention. Section 4 (Top Services): List rows with 'brandTertiary' tinted icon containers. FAB (Floating Action Button) in vivid azure for 'Buat Order' pinned above the bottom tabs."
-    },
-    {
-      "name": "Create Order Flow",
-      "purpose": "Step-by-step process to create an order, calculate weight, and generate a QRIS payment.",
-      "states": {
-        "loading": "Centered spinner while fetching product list.",
-        "empty": "No products available in this outlet.",
-        "error": "Failed to generate QRIS or load products."
-      },
-      "layout": "Form-like vertical scroll. Top: Outlet and Customer selector (tactile dropdowns). Middle: Grid of product/service cards (Wash, Dry, Iron, etc.). Large +/- pill-shaped stepper controls for entering weight (kg). Bottom: Fixed container (outside scroll) with a sticky 'Proceed to Payment' CTA in vivid azure. Upon CTA press, a glass bottom sheet slides up showing the QRIS code, countdown timer, and 'Confirm Payment' button."
-    },
-    {
-      "name": "Employee Pipeline",
-      "purpose": "Track and update the real-time progress of active laundry orders.",
-      "states": {
-        "loading": "Skeleton list of order cards.",
-        "empty": "Illustration of empty hangers 'Tidak ada antrian saat ini'.",
-        "error": "Failed to update order status."
-      },
-      "layout": "Top: Sticky horizontal scroll of pipeline stages (Cuci -> Pengering -> Setrika -> Lipat -> Selesai) acting as filter tabs. Active tab highlighted in vivid azure pill. Below: Vertical list of order cards. Each card contains Customer Name, SLA Timer (color shifts from success to warning to error based on time), and a chunky primary CTA button to move the order to the 'Next Stage'."
-    },
-    {
-      "name": "Customer Leaderboard",
-      "purpose": "Allow customers to view their ranking at the outlet and place new orders.",
-      "states": {
-        "loading": "Skeleton podium and list.",
-        "empty": "No ranking data yet.",
-        "error": "Failed to load leaderboard."
-      },
-      "layout": "Top half: Playful visual podium (Top 3 customers) using overlapping avatars and gold/silver/bronze badges on a soft lavender gradient background. Bottom half: List of remaining rankings. Floating sticky CTA 'Order Sekarang' at the bottom to jump into the QRIS payment flow."
-    }
-  ],
-  "images": {
-    "login_background": {
-      "url": "https://images.unsplash.com/photo-1622571887863-05410f44c014?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwxfHxmcmVzaCUyMGNsZWFuJTIwd2F0ZXIlMjBzcGxhc2glMjBibHVlJTIwcHVycGxlJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3ODk4Mjg5NjF8MA&ixlib=rb-4.1.0&q=85",
-      "alt": "Abstract blue and purple water splash"
-    },
-    "empty_state_laundry": {
-      "url": "https://images.pexels.com/photos/7691101/pexels-photo-7691101.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-      "alt": "Clean folded laundry towels minimal"
-    },
-    "qris_scan_placeholder": {
-      "url": "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA4Mzl8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBzbWFydHBob25lJTIwc2Nhbm5pbmclMjBxciUyMGNvZGUlMjBwYXltZW50fGVufDB8fHx8MTc4OTgyODk2MXww&ixlib=rb-4.1.0&q=85",
-      "alt": "Modern smartphone scanning QR code"
+  "user_experience_flow": {
+    "employee_order_flow": {
+      "step_1_trigger": "Employee taps 'Terima Order' (or FAB button on employee dashboard)",
+      "step_2_customer_selection": "Modal or bottom sheet opens showing existing customer search. Includes prominent '+ Pelanggan Baru' button.",
+      "step_3_new_customer_form": "If new customer: inline or modal form to input Nama Lengkap, Nomor HP (WhatsApp ready with +62 formatting), Alamat (opsional). Provides 'Simpan & Download vCard / Hubungkan Kontak HP' action that automatically creates the customer and triggers phone contact saving (.vcf file download / link) so the contact is stored on the phone and linked to WhatsApp.",
+      "step_4_service_selection": "Services are categorized and COLLAPSED by default (Accordion format per category: Kiloan, Add-on, Bed Cover, Selimut, Bantal & Guling, Boneka, Atasan, Bawahan, Ibadah, Sepatu & Tas, Karpet & Gorden, Kasur, Lantai). Clicking a category header smoothly expands its service cards.",
+      "step_5_service_cards_and_minimum_order": "Each service card is clickable to select and increase quantity. When an item has a minimum order (e.g. min 4 kg or min 5 kg), the card clearly displays 'Min. X kg' badge. Selecting the item or typing quantity automatically initializes or adjusts quantity to satisfy minimum order requirement with informative visual badge feedback.",
+      "step_6_addons_and_owner_setting": "Add-on category (e.g., Add-on Dettol, Parfum Premium, Anti Noda) is selectable as cards and fully configurable by Owner in Setting/Kelola Produk (owner can customize price, active state, min order, duration, icons).",
+      "step_7_whatsapp_receipt": "Once order is created or confirmed, direct action button 'Kirim Nota WhatsApp' links directly to WhatsApp with pre-composed professional digital laundry receipt."
     }
   },
   "instructions_to_main_agent": [
-    "Follow the '4 Tactile / Playful' personality rigorously. Use generous spacing (md/lg), chunky rounded radii (sm: 12, md: 16, lg: 24, pill: 999), and playful bounce/overshoot animations for interactions.",
-    "Implement the 'JADI WANGI App' logo text exactly as requested: 'JADI WANGI' in lavender (`brand`) using the bubble-like Fredoka font, and the 'App' badge styled as a vivid azure (`brandPrimary`) pill next to it.",
-    "For the Owner Dashboard, ensure the Revenue Trend chart looks modern. Use the `brandPrimary` (vivid azure) for the chart line and a subtle vertical gradient (surfaceSecondary to transparent) for the fill.",
-    "Use Phosphor icons. Active tab icons should be Filled, while inactive ones should be Outline/Regular.",
-    "Implement a strict safe-area margin at the bottom for screens with scrollable content and sticky CTAs. The 'Proceed to Payment' button must float above the scroll view.",
-    "Ensure the QRIS payment view uses a `@gorhom/bottom-sheet` with an `expo-glass-effect` or `expo-blur` background to create a premium, elevated feel.",
-    "Avoid generic blue/indigo default palettes. The entire app must strictly revolve around the provided Lavender (`#A78BFA`) and Vivid Azure (`#0096FF`) color tokens.",
-    "Integrate haptic feedback on all primary actions (tab changes, order pipeline stage advances, weight +/- adjustments) using `expo-haptics`."
+    "1. TAMPILAN PEGAWAI - BUAT ORDER (order-baru.tsx):",
+    "   - Ensure the entry button on employee page index.tsx says 'Terima Order' clearly (data-testid='btn-terima-order' & 'fab-buat-order').",
+    "   - In order-baru.tsx: Customer Picker MUST have a '+ Pelanggan Baru' toggle/button.",
+    "   - When '+ Pelanggan Baru' is active, show input fields for Nama Pelanggan, Nomor WhatsApp / HP, and Alamat.",
+    "   - On saving new customer: call api.post('/customers', { name, phone, address, outlet_id }), automatically select this new customer.",
+    "   - Enable automatic saving to phone contact via vCard generation (data URI or blob .vcf with name and TEL) or direct tel/wa link so it integrates seamlessly with device phonebook & WhatsApp.",
+    "   - CATEGORY ACCORDION: DO NOT show all services expanded at once. Group services by category and keep them collapsed by default (or expand first active category). Clicking any category header toggles expansion with smooth animated/accordion feel.",
+    "   - MINIMUM ORDER ADJUSTMENT: Services with min_kg (e.g. min 4kg, 5kg) must have their first increment automatically snap to the minimum requirement (e.g., tapping add on Cuci Kering Setrika with min_kg=4 sets qty=4 immediately instead of 1, and decrements cannot go between 1 and 3 without resetting to 0 or warning). Provide clear badge 'Minimal X kg'.",
+    "   - ADD-ON CARDS: Add-on services (Add-on Dettol, etc.) must be selectable cards with instant feedback.",
+    "   - OWNER SETTING MANAGEMENT: Confirm and enhance owner manage produk (/app/frontend/app/manage/produk.tsx) to allow setting minimum order (min_kg), pricing, add-ons, and categories so owner has complete control.",
+    "   - WHATSAPP NOTA INTEGRATION: Ensure that after creating the order, there is a prominent 'Kirim Nota via WhatsApp' button (using buildReceiptWhatsAppUrl or Linking.openURL to wa.me/<phone>) so employee can send invoice proof immediately with one click.",
+    "   - MUST keep all data-testids intact and add testids: 'btn-new-customer', 'input-new-cust-name', 'input-new-cust-phone', 'btn-save-new-customer', 'cat-accordion-[category]', 'service-card-[id]', 'btn-send-whatsapp-receipt'."
+  ],
+  "image_urls": {
+    "laundry_worker": "https://images.unsplash.com/photo-1625093440280-42de742a496d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MTN8MHwxfHNlYXJjaHwzfHxsYXVuZHJ5JTIwc2hvcCUyMHdvcmtlcnxlbnwwfHx8fDE3ODk5NjI1OTd8MA&ixlib=rb-4.1.0&q=85",
+    "laundry_folded": "https://images.unsplash.com/photo-1635274605638-d44babc08a4f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MTN8MHwxfHNlYXJjaHwxfHxsYXVuZHJ5JTIwc2hvcCUyMHdvcmtlcnxlbnwwfHx8fDE3ODk5NjI1OTd8MA&ixlib=rb-4.1.0&q=85"
+  },
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "Avoid generic centered layouts, simplistic gradients, and uniform styling.",
+    "Ensure high touch usability for phone screens (React Native / Expo Web mobile layout).",
+    "Containers with borders must have internal padding (p-4 to p-6) to avoid text collision.",
+    "Never use generic raw transparent backgrounds on modals or sticky bottom bars. Use surface colors with high contrast.",
+    "Every button and interactive element MUST have testID attribute."
   ]
 }

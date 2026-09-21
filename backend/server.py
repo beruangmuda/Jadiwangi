@@ -1179,11 +1179,31 @@ async def customer_detail(cid: str):
 
 @api.post("/customers")
 async def create_customer(b: CustomerBody):
+    name = (b.name or "").strip()
+    digits = "".join(ch for ch in (b.phone or "") if ch.isdigit())
+    if digits.startswith("0"):
+        digits = "62" + digits[1:]
+    elif digits.startswith("8"):
+        digits = "62" + digits
+    if not name:
+        raise HTTPException(422, "Nama pelanggan wajib diisi")
+    if not digits.startswith("62") or len(digits) < 10 or len(digits) > 15:
+        raise HTTPException(422, "Nomor WhatsApp Indonesia tidak valid")
+    phone = f"+{digits}"
     pw = await run_in_threadpool(hash_password, b.password or "pelanggan123")
     async with pool.acquire() as conn:
+        exists = await conn.fetchval(
+            """select id from customers
+               where regexp_replace(phone, '[^0-9]', '', 'g') = any($1::text[])
+               limit 1""", [digits, "0" + digits[2:]])
+        if exists:
+            raise HTTPException(409, "Nomor WhatsApp sudah terdaftar sebagai pelanggan")
+        outlet_id = b.outlet_id
+        if outlet_id and not await conn.fetchval("select id from outlets where id=$1", outlet_id):
+            raise HTTPException(404, "Outlet tidak ditemukan")
         row = await conn.fetchrow(
             "insert into customers(name,phone,email,address,deposit,outlet_id,password_hash) values($1,$2,$3,$4,$5,$6,$7) returning *",
-            b.name, b.phone, b.email, b.address, b.deposit, b.outlet_id, pw)
+            name, phone, b.email, (b.address or "").strip(), b.deposit, outlet_id, pw)
         return row_to_dict(row)
 
 

@@ -126,11 +126,21 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] Backend: `GET/POST/DELETE /api/kasbon`, validasi nominal positif, filter outlet/periode, dan indeks query. `GET /api/payroll` dioptimalkan dari query per-pegawai menjadi agregasi batch agar tetap responsif saat jumlah pegawai bertambah.
 - [x] Teruji: kasbon invalid (422), pengurangan payroll tepat nominal, cleanup data uji, UI modal kasbon dan CTA WhatsApp owner, serta isi/normalisasi tautan WhatsApp secara deterministik.
 
+## Update (2026-09, iterasi 14) — Buat Order Pegawai & Pelanggan Baru
+- [x] **Pelanggan Baru**: dari Buat Order Pegawai → Pilih Pelanggan → Pelanggan Baru, pegawai dapat mengisi nama, nomor WhatsApp, dan alamat. Pelanggan otomatis dipilih setelah tersimpan.
+- [x] **Kontak perangkat**: nomor disimpan dalam format `+62` yang siap untuk WhatsApp. Setelah pelanggan sukses dibuat, aplikasi meminta izin kontak dan menambahkan kontak ke perangkat Android/iOS bila izin diberikan; web dan izin yang ditolak tetap aman tanpa menggagalkan penyimpanan pelanggan.
+- [x] **Validasi pelanggan**: backend menolak nama/nomor tidak valid, mengkanonisasi `08…` / `8…` ke `+62…`, serta mencegah nomor pelanggan ganda lintas format.
+- [x] **Layanan ringkas**: kartu layanan di Buat Order dikelompokkan dalam accordion kategori. Hanya kategori Kiloan terbuka awalnya; Add-on dan kategori lain dibuka saat diketuk.
+- [x] **Minimum pesanan**: memilih layanan kiloan langsung mengisi minimum yang diatur owner; pengurangan dari minimum menghapus layanan sehingga tidak terbentuk kuantitas di bawah batas.
+- [x] **Pengaturan owner**: setiap kartu pada Produk & Layanan dapat diketuk untuk mengubah kategori, harga reguler/express, durasi, dan minimum order; status aktif tetap bisa diubah langsung.
+- [x] Teruji iterasi 11: backend 4/4 PASS, alur web Pegawai/Owner PASS, konfigurasi izin kontak serta fallback web PASS; seluruh data uji dibersihkan.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).
 - P2: QRIS dinamis via gateway (Midtrans) menggantikan statis.
 - P2: Notifikasi status order untuk pelanggan.
+- P2: Sinkronisasi kontak perangkat ke akun cloud pelanggan (opsional).
 - P3: Dark mode.
 
 ## Notes

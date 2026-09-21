@@ -22,14 +22,14 @@ export default function ManageProduk() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const { session } = useAuth();
-  const outlets = session?.outlets || [];
+  const outlets = useMemo(() => session?.outlets || [], [session?.outlets]);
   const [outletId, setOutletId] = useState<string>(session?.currentOutletId || outlets[0]?.id || "");
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState<any>(null);
 
   useEffect(() => {
     if (!outletId && outlets.length > 0) setOutletId(session?.currentOutletId || outlets[0].id);
-  }, [outlets, outletId, session]);
+  }, [outlets, outletId, session?.currentOutletId]);
 
   const emptyForm = () => ({
     id: "", name: "", category: "Kiloan", unit: "kg", price: "", price_express: "",
@@ -120,24 +120,16 @@ export default function ManageProduk() {
               <Text style={styles.catHeader}>{cat}</Text>
               {list.map((svc: any) => (
                 <View key={svc.id} style={[styles.row, !svc.active && { opacity: 0.55 }]}>
-                  <View style={styles.icon}><Icon name={svc.icon} size={20} color={colors.brand} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.name}>{svc.name}</Text>
-                    <Text style={styles.sub}>
-                      {rupiah(svc.price)}/{svc.unit}
-                      {svc.duration ? ` · ${svc.duration}` : ""}
-                    </Text>
-                    {svc.price_express != null ? (
-                      <Text style={styles.subExp}>
-                        Express {rupiah(svc.price_express)}/{svc.unit}
-                        {svc.duration_express ? ` · ${svc.duration_express}` : ""}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <Pressable testID={`edit-service-${svc.id}`} onPress={() => openEdit(svc)} style={styles.editBtn}>
+                  <Pressable testID={`service-setting-card-${svc.id}`} onPress={() => openEdit(svc)} style={styles.serviceMain}>
+                    <View style={styles.icon}><Icon name={svc.icon} size={20} color={colors.brand} /></View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.name}>{svc.name}</Text>
+                      <Text style={styles.sub}>{rupiah(svc.price)}/{svc.unit}{svc.duration ? ` · ${svc.duration}` : ""}{svc.min_kg ? ` · min. ${svc.min_kg} kg` : ""}</Text>
+                      {svc.price_express != null ? <Text style={styles.subExp}>Express {rupiah(svc.price_express)}/{svc.unit}{svc.duration_express ? ` · ${svc.duration_express}` : ""}</Text> : null}
+                    </View>
                     <Icon name="pencil" size={18} color={colors.brand} />
                   </Pressable>
-                  <Switch value={svc.active} onValueChange={() => toggle.mutate(svc)} trackColor={{ true: colors.brandPrimary, false: colors.border }} thumbColor="#fff" />
+                  <Switch testID={`service-active-${svc.id}`} value={svc.active} onValueChange={() => toggle.mutate(svc)} trackColor={{ true: colors.brandPrimary, false: colors.border }} thumbColor="#fff" />
                 </View>
               ))}
             </View>
@@ -200,6 +192,7 @@ const useStyles = makeStyles((c) => ({
   addText: { fontFamily: fonts.bodyBold, fontSize: 15, color: c.onBrandTertiary },
   catHeader: { fontFamily: fonts.displayBold, fontSize: 13, color: c.brand, textTransform: "uppercase", letterSpacing: 0.5 },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, padding: spacing.md },
+  serviceMain: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 44 },
   icon: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   name: { fontFamily: fonts.bodyBold, fontSize: 15, color: c.onSurface },
   sub: { fontFamily: fonts.body, fontSize: 12, color: c.muted },

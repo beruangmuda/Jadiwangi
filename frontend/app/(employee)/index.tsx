@@ -53,7 +53,7 @@ export default function EmployeeHome() {
       <OrdersPipeline outletId={outletId} employeeId={session?.employee?.id} employeeName={session?.name} canCancel={false} todayOnly />
 
       <Pressable
-        testID="fab-buat-order"
+        testID="btn-terima-order"
         onPress={() => router.push("/order-baru")}
         style={({ pressed }) => [styles.fab, { bottom: spacing.lg }, pressed && { transform: [{ scale: 0.95 }] }]}
       >

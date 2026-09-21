@@ -12,7 +12,8 @@
       "bundleIdentifier": "com.emergent.wangidashboard.drt3ni",
       "infoPlist": {
         "NSCameraUsageDescription": "Foto pakaian untuk nota pelanggan",
-        "NSPhotoLibraryUsageDescription": "Pilih foto pakaian untuk nota pelanggan"
+        "NSPhotoLibraryUsageDescription": "Pilih foto pakaian untuk nota pelanggan",
+        "NSContactsUsageDescription": "Simpan pelanggan agar bukti nota mudah dikirim"
       }
     },
     "android": {
@@ -23,7 +24,9 @@
       "package": "com.emergent.wangidashboard.drt3ni",
       "permissions": [
         "CAMERA",
-        "READ_MEDIA_IMAGES"
+        "READ_MEDIA_IMAGES",
+        "READ_CONTACTS",
+        "WRITE_CONTACTS"
       ]
     },
     "web": {
@@ -53,6 +56,12 @@
         {
           "photosPermission": "Pilih foto pakaian untuk nota pelanggan",
           "cameraPermission": "Foto pakaian untuk nota pelanggan"
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Simpan pelanggan agar bukti nota mudah dikirim"
         }
       ]
     ],

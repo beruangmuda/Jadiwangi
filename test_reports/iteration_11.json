@@ -1,0 +1,45 @@
+{
+  "summary": "Iterasi 11 selesai: backend /api/customers tervalidasi (canonical +62, invalid 422, duplikat lintas format 409), flow Buat Order pegawai tervalidasi di web (Pelanggan Baru fields, simpan pelanggan valid tanpa crash contacts), accordion kategori + minimum kg tervalidasi, dan owner Produk & Layanan membuka modal Edit Layanan dengan kategori/harga/minimal kg. Seluruh data uji TEST_iter11 dibersihkan.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter11_customers_whatsapp.py",
+    "/app/test_reports/pytest/iter11_customers.xml",
+    "/app/test_reports/artifacts_iter11/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter11/order_baru_minimum.jpeg",
+    "/app/test_reports/artifacts_iter11/owner_produk_edit_modal.jpeg",
+    "/app/scripts/cleanup_iter11_customers.py"
+  ],
+  "action_items": [
+    "Tidak ada blocker baru pada scope ini; lanjutkan regresi menyeluruh setelah perubahan fitur berikutnya.",
+    "Pertahankan guard Platform pada device contacts agar web tidak mencoba modul native Contacts."
+  ],
+  "critical_code_review_comments": [
+    "create_customer di backend sudah mengkanonisasi nomor ke +62 dan mencegah duplikat lintas format via normalisasi digit.",
+    "deviceContacts.ts sudah benar menerapkan guard Platform (web => unsupported) sebelum dynamic import expo-contacts.",
+    "app.json sudah memuat plugin expo-contacts, Android READ/WRITE_CONTACTS, dan NSContactsUsageDescription iOS.",
+    "Tidak ditemukan console error pada halaman Buat Order dan Produk & Layanan selama pengujian; hanya warning style shadow deprecated (non-blocking)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter11_customers_whatsapp.py",
+    "/app/scripts/cleanup_iter11_customers.py",
+    "/app/test_reports/iteration_11.json"
+  ],
+  "success_rate": {
+    "backend": "100% (4/4 test lulus)",
+    "frontend": "100% untuk skenario yang diminta pada review ini"
+  },
+  "seed_data_creation": "Membuat pelanggan uji TEST_iter11 via API/UI lalu dibersihkan seluruhnya menggunakan cleanup_iter11_customers.py (0 sisa).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Jika menguji create customer lagi, gunakan nomor unik setiap run untuk menghindari false-fail duplikasi. Endpoint delete customer tidak tersedia via API, jadi cleanup data uji pelanggan dilakukan langsung ke DB pada iterasi ini.",
+  "rca_of_issue": "Tidak ada defect produk baru yang tervalidasi pada scope ini. Kegagalan awal automation disebabkan data uji nomor statis yang sudah pernah dipakai (409), lalu diselesaikan dengan nomor unik per run; hasil akhir PASS. Catatan: QRIS payment flow tetap MOCKED dan di luar cakupan task ini."
+}

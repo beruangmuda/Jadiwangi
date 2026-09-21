@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, ScrollView, Pressable, Modal, TextInput, Platform } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { View, Text, ScrollView, Pressable, Modal, TextInput, Platform, Alert, LayoutAnimation, UIManager } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +11,7 @@ import { fonts, makeStyles, radius, shadow, spacing, useTheme } from "@/src/them
 import { Icon } from "@/src/components/Icon";
 import { PrimaryButton, Loading, EmptyState, BodyText } from "@/src/components/ui";
 import { rupiah, kg } from "@/src/format";
+import { saveCustomerDeviceContact } from "@/src/deviceContacts";
 
 type Cart = Record<string, { service: any; qty: number }>;
 
@@ -40,6 +41,10 @@ export default function OrderBaru() {
   const [notes, setNotes] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [newCustomer, setNewCustomer] = useState(false);
+  const [newCustomerForm, setNewCustomerForm] = useState({ name: "", phone: "", address: "" });
+  const [customerError, setCustomerError] = useState("");
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({ Kiloan: true });
   const [qrisOpen, setQrisOpen] = useState(false);
   const [payError, setPayError] = useState("");
   const [payMethod, setPayMethod] = useState<"cash" | "qris" | "emoney">("qris");
@@ -51,13 +56,33 @@ export default function OrderBaru() {
     enabled: !!outletId,
   });
   const { data: customers } = useQuery({
-    queryKey: ["customers", search],
-    queryFn: () => api.get(`/customers${search ? `?q=${encodeURIComponent(search)}` : ""}`),
+    queryKey: ["customers", outletId, search],
+    queryFn: () => api.get(`/customers?outlet_id=${outletId}${search ? `&q=${encodeURIComponent(search)}` : ""}`),
     enabled: pickerOpen,
   });
 
-  const priceOf = (svc: any) =>
-    speeds[svc.id] === "express" && svc.price_express != null ? Number(svc.price_express) : Number(svc.price);
+  const createCustomer = useMutation({
+    mutationFn: () => api.post("/customers", { ...newCustomerForm, outlet_id: outletId }),
+    onSuccess: async (created) => {
+      const contact = await saveCustomerDeviceContact(created.name, created.phone, created.address);
+      const notice = contact === "saved"
+        ? "Pelanggan dan kontak ponsel berhasil disimpan."
+        : contact === "denied"
+          ? "Pelanggan tersimpan. Izin kontak belum diberikan, sehingga kontak ponsel tidak dibuat."
+          : "Pelanggan tersimpan dan siap dikirimi nota WhatsApp.";
+      setCustomer(created);
+      setNewCustomerForm({ name: "", phone: "", address: "" });
+      setNewCustomer(false);
+      setPickerOpen(false);
+      setCustomerError("");
+      qc.invalidateQueries({ queryKey: ["customers"] });
+      Alert.alert("Pelanggan tersimpan", notice);
+    },
+    onError: (e: any) => setCustomerError(e?.message || "Pelanggan belum dapat disimpan"),
+  });
+
+  const priceOf = useCallback((svc: any) =>
+    speeds[svc.id] === "express" && svc.price_express != null ? Number(svc.price_express) : Number(svc.price), [speeds]);
 
   const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -69,7 +94,7 @@ export default function OrderBaru() {
 
   const total = useMemo(
     () => Object.values(cart).reduce((sum, c) => sum + priceOf(c.service) * c.qty, 0),
-    [cart, speeds]
+    [cart, priceOf]
   );
   const totalKg = useMemo(
     () => Object.values(cart).reduce((s, c) => (c.service.unit === "kg" ? s + c.qty : s), 0),
@@ -85,7 +110,8 @@ export default function OrderBaru() {
     if (Platform.OS !== "web") Haptics.selectionAsync();
     setCart((prev) => {
       const cur = prev[svc.id]?.qty || 0;
-      const next = Math.max(0, cur + delta);
+      const min = svc.unit === "kg" && Number(svc.min_kg) > 0 ? Number(svc.min_kg) : 1;
+      const next = delta > 0 ? (cur === 0 ? min : cur + delta) : (cur <= min ? 0 : cur + delta);
       const copy = { ...prev };
       if (next === 0) delete copy[svc.id];
       else copy[svc.id] = { service: svc, qty: next };
@@ -132,6 +158,15 @@ export default function OrderBaru() {
     setCart({});
     setSpeeds({});
   }, [outletId]);
+
+  useEffect(() => {
+    if (Platform.OS === "android") UIManager.setLayoutAnimationEnabledExperimental?.(true);
+  }, []);
+
+  const toggleCategory = (category: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedCategories((prev) => ({ ...prev, [category]: !prev[category] }));
+  };
 
   const canProceed = !!customer && !!outletId && Object.keys(cart).length > 0;
   const outletName = outlets.find((o) => o.id === outletId)?.name || session?.customer?.name || "Outlet";
@@ -189,8 +224,14 @@ export default function OrderBaru() {
             <View style={{ gap: spacing.lg }}>
               {grouped.map(([cat, list]) => (
                 <View key={cat} style={{ gap: spacing.sm }}>
-                  <Text style={styles.catHeader}>{cat}</Text>
-                  {list.map((svc: any) => {
+                  <Pressable testID={`cat-accordion-${cat}`} onPress={() => toggleCategory(cat)} style={styles.catHeader}>
+                    <View style={styles.catTitleRow}>
+                      <Icon name={expandedCategories[cat] ? "chevron-up" : "chevron-down"} size={20} color={colors.brand} />
+                      <Text style={styles.catTitle}>{cat}</Text>
+                    </View>
+                    <Text style={styles.catCount}>{list.length} layanan</Text>
+                  </Pressable>
+                  {expandedCategories[cat] ? list.map((svc: any) => {
                     const qty = cart[svc.id]?.qty || 0;
                     const speed = speeds[svc.id] || "regular";
                     const hasExpress = svc.price_express != null;
@@ -202,12 +243,11 @@ export default function OrderBaru() {
                           <Icon name={svc.icon} size={20} color={colors.brand} />
                         </View>
                         <View style={{ flex: 1, gap: 4 }}>
-                          <Text style={styles.svcName}>{svc.name}</Text>
-                          <Text style={styles.svcPrice}>
-                            {rupiah(shownPrice)}/{svc.unit}
-                            {svc.min_kg ? ` • min ${Number(svc.min_kg)} kg` : ""}
-                            {dur ? ` • ${dur}` : ""}
-                          </Text>
+                          <Pressable testID={`service-card-${svc.id}`} onPress={() => setQty(svc, 1)} style={styles.serviceSelect}>
+                            <Text style={styles.svcName}>{svc.name}</Text>
+                            <Text style={styles.svcPrice}>{rupiah(shownPrice)}/{svc.unit}{dur ? ` • ${dur}` : ""}</Text>
+                            {svc.min_kg ? <Text style={styles.minBadge}>Minimal {Number(svc.min_kg)} kg</Text> : null}
+                          </Pressable>
                           {hasExpress ? (
                             <View style={styles.speedRow}>
                               {(["regular", "express"] as const).map((sp) => {
@@ -233,7 +273,7 @@ export default function OrderBaru() {
                             <Pressable testID={`minus-${svc.id}`} onPress={() => setQty(svc, -1)} style={styles.stepBtn}>
                               <Icon name="minus" size={18} color={colors.onBrandPrimary} />
                             </Pressable>
-                            <Text style={styles.qty}>{qty}</Text>
+                            <Text testID={`service-qty-${svc.id}`} style={styles.qty}>{qty}</Text>
                             <Pressable testID={`plus-${svc.id}`} onPress={() => setQty(svc, 1)} style={styles.stepBtn}>
                               <Icon name="plus" size={18} color={colors.onBrandPrimary} />
                             </Pressable>
@@ -245,7 +285,7 @@ export default function OrderBaru() {
                         )}
                       </View>
                     );
-                  })}
+                  }) : null}
                 </View>
               ))}
             </View>
@@ -297,24 +337,28 @@ export default function OrderBaru() {
           <View style={[styles.pickerSheet, { paddingBottom: insets.bottom + spacing.md, maxHeight: "80%" }]}>
             <View style={styles.pickerHead}>
               <Text style={styles.pickerTitle}>Pilih Pelanggan</Text>
-              <Pressable onPress={() => setPickerOpen(false)} hitSlop={10}><Icon name="close" size={22} color={colors.onSurface} /></Pressable>
+              <Pressable testID="close-customer-picker" onPress={() => setPickerOpen(false)} hitSlop={10}><Icon name="close" size={22} color={colors.onSurface} /></Pressable>
             </View>
-            <View style={styles.searchBox}>
-              <Icon name="magnify" size={20} color={colors.muted} />
-              <TextInput testID="customer-search" value={search} onChangeText={setSearch} placeholder="Cari nama / no HP" placeholderTextColor={colors.muted} style={styles.searchInput} />
-            </View>
-            <ScrollView contentContainerStyle={{ gap: spacing.xs, paddingTop: spacing.sm }}>
-              {(customers || []).map((c: any) => (
-                <Pressable key={c.id} testID={`cust-opt-${c.id}`} onPress={() => { setCustomer(c); setPickerOpen(false); }} style={styles.custOpt}>
-                  <View style={styles.custAvatar}><Text style={styles.custInitial}>{c.name?.[0]}</Text></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.svcName}>{c.name}</Text>
-                    <Text style={styles.svcPrice}>{c.phone}</Text>
-                  </View>
-                </Pressable>
-              ))}
-              {(customers || []).length === 0 ? <EmptyState icon="account-off" title="Tidak ditemukan" /> : null}
-            </ScrollView>
+            {newCustomer ? (
+              <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.md, paddingTop: spacing.sm }}>
+                <View style={styles.newCustomerNotice}><Icon name="contacts" size={20} color={colors.brand} /><Text style={styles.newCustomerNoticeText}>Simpan nomor WhatsApp agar bukti nota mudah dikirim. Kontak ponsel dibuat setelah izin diberikan.</Text></View>
+                <View style={{ gap: spacing.xs }}><Text style={styles.fieldLabel}>Nama pelanggan</Text><TextInput testID="input-new-cust-name" value={newCustomerForm.name} onChangeText={(name) => setNewCustomerForm({ ...newCustomerForm, name })} placeholder="Nama lengkap" placeholderTextColor={colors.muted} style={styles.input} /></View>
+                <View style={{ gap: spacing.xs }}><Text style={styles.fieldLabel}>Nomor WhatsApp</Text><TextInput testID="input-new-cust-phone" value={newCustomerForm.phone} onChangeText={(phone) => setNewCustomerForm({ ...newCustomerForm, phone })} placeholder="0812 3456 7890" placeholderTextColor={colors.muted} keyboardType="phone-pad" style={styles.input} /></View>
+                <View style={{ gap: spacing.xs }}><Text style={styles.fieldLabel}>Alamat (opsional)</Text><TextInput testID="input-new-cust-address" value={newCustomerForm.address} onChangeText={(address) => setNewCustomerForm({ ...newCustomerForm, address })} placeholder="Alamat pelanggan" placeholderTextColor={colors.muted} multiline style={[styles.input, styles.addressInput]} /></View>
+                {customerError ? <Text testID="new-customer-error" style={styles.customerError}>{customerError}</Text> : null}
+                <View style={styles.newCustomerActions}>
+                  <Pressable testID="cancel-new-customer" onPress={() => { setNewCustomer(false); setCustomerError(""); }} style={styles.cancelNewCustomer}><Text style={styles.cancelNewCustomerText}>Kembali</Text></Pressable>
+                  <PrimaryButton label="Simpan Pelanggan" icon="account-plus" onPress={() => createCustomer.mutate()} loading={createCustomer.isPending} disabled={!newCustomerForm.name.trim() || !newCustomerForm.phone.trim()} testID="btn-save-new-customer" style={{ flex: 1 }} />
+                </View>
+              </ScrollView>
+            ) : <>
+              <View style={styles.searchBox}><Icon name="magnify" size={20} color={colors.muted} /><TextInput testID="customer-search" value={search} onChangeText={setSearch} placeholder="Cari nama / no HP" placeholderTextColor={colors.muted} style={styles.searchInput} /></View>
+              <Pressable testID="btn-new-customer" onPress={() => { setNewCustomer(true); setCustomerError(""); }} style={styles.newCustomerBtn}><Icon name="account-plus" size={20} color={colors.onBrandPrimary} /><Text style={styles.newCustomerBtnText}>Pelanggan Baru</Text></Pressable>
+              <ScrollView contentContainerStyle={{ gap: spacing.xs, paddingTop: spacing.sm }}>
+                {(customers || []).map((c: any) => <Pressable key={c.id} testID={`cust-opt-${c.id}`} onPress={() => { setCustomer(c); setPickerOpen(false); }} style={styles.custOpt}><View style={styles.custAvatar}><Text style={styles.custInitial}>{c.name?.[0]}</Text></View><View style={{ flex: 1 }}><Text style={styles.svcName}>{c.name}</Text><Text style={styles.svcPrice}>{c.phone}</Text></View></Pressable>)}
+                {(customers || []).length === 0 ? <EmptyState icon="account-off" title="Tidak ditemukan" /> : null}
+              </ScrollView>
+            </>}
           </View>
         </View>
       </Modal>
@@ -372,13 +416,18 @@ const useStyles = makeStyles((c) => ({
   custBox: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, padding: spacing.md },
   custName: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 15, color: c.onSurface },
   svcRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, padding: spacing.md },
-  catHeader: { fontFamily: fonts.displayBold, fontSize: 14, color: c.brand, textTransform: "uppercase", letterSpacing: 0.5, marginTop: spacing.xs },
+  catHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: c.surfaceSecondary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 13, marginTop: spacing.xs },
+  catTitleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  catTitle: { fontFamily: fonts.displayBold, fontSize: 14, color: c.brand, textTransform: "uppercase", letterSpacing: 0.5 },
+  catCount: { fontFamily: fonts.bodySemi, fontSize: 12, color: c.muted },
   speedRow: { flexDirection: "row", gap: 6, marginTop: 2 },
   speedPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface },
   speedText: { fontFamily: fonts.bodyBold, fontSize: 11, color: c.onSurfaceSecondary },
   svcIcon: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   svcName: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurface },
   svcPrice: { fontFamily: fonts.body, fontSize: 12, color: c.muted },
+  serviceSelect: { minHeight: 44, justifyContent: "center", gap: 2 },
+  minBadge: { alignSelf: "flex-start", marginTop: 2, backgroundColor: "#FEF3C7", color: "#92400E", overflow: "hidden", borderRadius: radius.pill, paddingHorizontal: 7, paddingVertical: 3, fontFamily: fonts.bodyBold, fontSize: 11 },
   addBtn: { width: 40, height: 40, borderRadius: radius.sm, borderWidth: 1.5, borderColor: c.brandPrimary, alignItems: "center", justifyContent: "center" },
   stepper: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   stepBtn: { width: 34, height: 34, borderRadius: radius.sm, backgroundColor: c.brandPrimary, alignItems: "center", justifyContent: "center" },
@@ -395,6 +444,16 @@ const useStyles = makeStyles((c) => ({
   pickerTitle: { fontFamily: fonts.displayBold, fontSize: 18, color: c.onSurface },
   searchBox: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: c.surfaceTertiary, borderRadius: radius.md, paddingHorizontal: spacing.md },
   searchInput: { flex: 1, paddingVertical: 12, fontFamily: fonts.body, fontSize: 14, color: c.onSurface },
+  newCustomerBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, minHeight: 48, marginTop: spacing.sm, backgroundColor: c.brandPrimary, borderRadius: radius.md },
+  newCustomerBtnText: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onBrandPrimary },
+  newCustomerNotice: { flexDirection: "row", gap: spacing.sm, backgroundColor: c.surfaceSecondary, borderRadius: radius.md, padding: spacing.md },
+  newCustomerNoticeText: { flex: 1, fontFamily: fonts.body, fontSize: 13, color: c.onSurfaceSecondary, lineHeight: 18 },
+  fieldLabel: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurfaceSecondary },
+  addressInput: { minHeight: 86, textAlignVertical: "top" },
+  customerError: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.error },
+  newCustomerActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+  cancelNewCustomer: { minHeight: 48, paddingHorizontal: spacing.lg, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: c.surfaceSecondary },
+  cancelNewCustomerText: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurfaceSecondary },
   custOpt: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: c.surfaceSecondary },
   custAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.brand, alignItems: "center", justifyContent: "center" },
   custInitial: { fontFamily: fonts.displayBold, fontSize: 16, color: c.onBrand },

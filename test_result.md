@@ -104,7 +104,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-## user_problem_statement: "Tambahkan struk yang dapat dikirim ke WhatsApp pelanggan dari detail pesanan, serta pencatatan kasbon pegawai yang otomatis dipotong dari gaji bulanan."
+## user_problem_statement: "Pada tampilan pegawai bagian Buat Order, pegawai memilih pelanggan atau mengisi pelanggan baru. Pelanggan baru harus tersimpan dengan nomor WhatsApp yang siap untuk nota dan—pada perangkat native setelah izin—masuk ke kontak HP. Layanan harus ringkas per kategori accordion, kartu dapat dipilih, dan minimum order otomatis diterapkan. Owner mengatur kartu layanan, harga, kategori, dan minimum order dari Setelan."
 
 ## backend:
 ##   - task: "Kasbon pegawai: pencatatan dan potongan otomatis gaji per bulan"
@@ -132,6 +132,20 @@
 ##         -working: true
 ##         -agent: "main"
 ##         -comment: "Reseed pricelist_v=3. /services?outlet_id= returns Depok 41, Jakarta 43, Bandung 43. Order create with express price verified via curl (18000x5=90000)."
+##   - task: "Pelanggan baru dari Buat Order Pegawai: nomor WhatsApp kanonis dan anti-duplikasi"
+##     implemented: true
+##     working: true
+##     file: "backend/server.py"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "POST /api/customers kini memvalidasi nama dan nomor Indonesia, menyimpan +62 canonical, memeriksa duplikasi lintas format, serta memvalidasi outlet. Curl: create 200 dengan +62 dan duplicate 409 PASS; data uji dibersihkan."
+##         -working: true
+##         -agent: "testing"
+##         -comment: "Iterasi 11: pytest 4/4 PASS untuk canonical +62, invalid 422, dan duplikasi lintas format 409. Semua pelanggan TEST_iter11 dibersihkan."
 
 ## frontend:
 ##   - task: "Struk order yang dibagikan langsung ke WhatsApp pelanggan"
@@ -176,10 +190,38 @@
 ##     stuck_count: 0
 ##     priority: "medium"
 ##     needs_retesting: true
+##   - task: "Buat Order Pegawai: pelanggan baru, kontak perangkat, kategori accordion, dan minimum order"
+##     implemented: true
+##     working: true
+##     file: "frontend/app/order-baru.tsx, frontend/src/deviceContacts.ts, frontend/app.json"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Pelanggan Baru memiliki input nama/WA/alamat dan memilih pelanggan baru setelah API sukses. Kontak perangkat disimpan setelah izin Android/iOS (fallback aman untuk web/izin ditolak). Layanan dikategorikan accordion, kartu clickable, dan layanan kiloan langsung snap ke minimum. Screenshot web PASS untuk form dan minimum 4 kg."
+##         -working: true
+##         -agent: "testing"
+##         -comment: "Iterasi 11: alur pelanggan baru, save web tanpa crash native contacts, accordion Add-on, minimum 4 kg, dan minus menghapus item semuanya PASS."
+##   - task: "Owner: kartu layanan clickable di Produk & Layanan"
+##     implemented: true
+##     working: true
+##     file: "frontend/app/manage/produk.tsx"
+##     stuck_count: 0
+##     priority: "medium"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Seluruh kartu layanan owner dapat diketuk untuk membuka Edit Layanan; form memuat harga reguler/express, kategori, durasi, dan min kg. Screenshot owner PASS."
+##         -working: true
+##         -agent: "testing"
+##         -comment: "Iterasi 11: owner membuka kartu layanan ke modal Edit Layanan dan field kategori/harga/minimum kg terverifikasi PASS."
 
 ## test_plan:
 ##   current_focus:
-##     - "Verifikasi pengguna terhadap alur kasbon dan pengiriman struk WhatsApp"
+##     - "Verifikasi pengguna pada perangkat native untuk izin penyimpanan kontak"
 ##   test_all: true
 ##   test_priority: "high_first"
 
@@ -188,5 +230,9 @@
 ##     -message: "ITERATION 10: Menambahkan GET/POST /api/kasbon dan UI Catat Kasbon per pegawai pada tab Gaji. Nominal kasbon yang dicatat bulan ini otomatis mengurangi total payroll bulan ini. Menambahkan tombol Kirim Struk WhatsApp pada detail kartu antrian owner/pegawai dan pada halaman detail order untuk sesi staf."
 ##     -agent: "main"
 ##     -message: "ITERATION 10 COMPLETE: Normalisasi WhatsApp sudah disatukan dan diuji, data kasbon/pegawai uji sudah dibersihkan, serta backend dan UI fitur baru tervalidasi."
+##     -agent: "main"
+##     -message: "ITERATION 11: Menambahkan pelanggan baru pada Buat Order Pegawai (nama/WA/alamat), simpan kontak perangkat via expo-contacts setelah API sukses, validasi backend nomor +62 & anti-duplikasi, layanan accordion dengan snap minimum order, serta kartu Produk & Layanan owner yang dapat diketuk. Semua data uji pelanggan dan layanan yang ditemukan telah dibersihkan."
+##     -agent: "main"
+##     -message: "ITERATION 11 COMPLETE: Testing agent melaporkan backend 4/4 PASS dan semua skenario UI PASS. Guard platform kontak, izin Android/iOS, dan fallback web tervalidasi; data test pelanggan serta layanan lama telah dibersihkan."
 ##     -agent: "main"
 ##     -message: "ITERATION 8: (1) TrendChart now has Y-axis rupiah labels at 0/25/50/75/100% and X-axis day ticks; dashboard title 'Trend <bulan Indonesia>'. (2) Dashboard 'X pelanggan' badge is pressable -> /hari-ini screen listing today's orders/notes (GET /orders?today=true). Owner can cancel a nota (reason) via POST /orders/{id}/cancel; employees CANNOT (OrdersPipeline canCancel=false in employee index, and /hari-ini hides cancel unless session.role==owner). (3) Dashboard adds Top 3 Pelanggan bulan ini (name, kg, spend) from GET /dashboard top_customers. (4) Setelan > Database Pelanggan (/manage/pelanggan) fully reworked: search, add/edit (name, phone, ADDRESS, email, deposit, outlet), list with per-customer stats (total_kg, tx_count, total_spend), and detail modal (GET /customers/{id}/detail) showing address, points, deposit, total kiloan, jumlah transaksi, total belanja, transaksi pertama & terakhir, riwayat 10 order. Backend: added address column to customers, aggregates in list_customers, /customers/{id}/detail, today filter, top_customers. Owner owner/owner123, produksi joko/pegawai123. Please test /hari-ini owner cancel + employee cannot cancel, customer DB CRUD+detail, dashboard top_customers, and no regressions."
