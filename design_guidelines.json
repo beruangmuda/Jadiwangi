@@ -1,82 +1,220 @@
 {
-  "theme": {
-    "default": "light",
-    "rationale": "Laundry management application (Jadiwangi) uses an energetic, fresh, tactile and trustworthy palette (Warm Sand / Lavender Tint / Pure Surface / Jadiwangi Royal Blue and Violet Accents) built for Indonesian laundry operational staff and store owners."
-  },
-  "typography": {
-    "font_family_headings": "Poppins-Bold, Poppins-SemiBold",
-    "font_family_body": "Nunito-Regular, Nunito-SemiBold, Nunito-Bold",
-    "font_family_mono": "SpaceMono-Regular",
-    "scale": {
-      "h1": "text-2xl sm:text-3xl (24px - 28px)",
-      "h2": "text-xl sm:text-2xl (20px - 22px)",
-      "h3": "text-lg (16px - 18px)",
-      "body": "text-sm sm:text-base (14px - 15px)",
-      "caption": "text-xs (11px - 12px)",
-      "badge": "text-[10px] - text-xs font-bold uppercase tracking-wider"
+  "_meta": {
+    "title": "Jadiwangi Laundry Operations & Payment Flow Design Guidelines",
+    "version": "1.0.0",
+    "updated_at": "2026-07-01",
+    "persona": "E1 - Anti-AI Designer",
+    "app_type": "hybrid_fullstack",
+    "tech_stack": {
+      "backend": "Python FastAPI + asyncpg + PostgreSQL",
+      "frontend": "React Native (Expo Router) for Web & Mobile",
+      "styling": "StyleSheet with custom design tokens (Nunito & Poppins typography)",
+      "state_management": "@tanstack/react-query"
     }
   },
-  "colors": {
+  "summary_of_changes": {
+    "whatsapp_receipts_all_methods": "Extend WhatsApp receipt modal and sharing prompt to trigger for Tunai (cash), E-Money (emoney), and QRIS (qris), not QRIS only. Display explicit payment method in receipt modal title and message.",
+    "payment_form_cancel_button": "Add an explicit, high-visibility 'Batal Transaksi' (Cancel) button inside the payment modal before an order is submitted or finalized, allowing cashiers/operators to back out safely without creating an abandoned order.",
+    "packing_workflow_timeline_navigation": "When an order in the queue reaches or is at 'Ke Packing', clicking leads to a dedicated Process Timeline screen displaying the laundry stages: Cuci (washing) -> Pengering (drying) -> Setrika (ironing) -> Packing (packing) with live timestamps, assigned worker, and an action to finalize packing.",
+    "packing_to_ready_transition": "Completing the Packing stage transitions the order to 'ready' (Siap Diambil).",
+    "clickable_ready_card_and_modal": "The 'Siap Diambil' counter stat card at the top of the Employee Home is now interactive (clickable). Clicking it displays a dedicated sheet/list showing all orders currently awaiting customer pickup, complete with customer contact, quick WhatsApp ping, and one-tap 'Selesai (Diambil)' action."
+  },
+  "image_urls": [
+    {
+      "category": "laundry_folded_packing",
+      "url": "https://images.unsplash.com/photo-1635274605638-d44babc08a4f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwyfHxjbGVhbiUyMGxhdW5kcnklMjBmb2xkZWR8ZW58MHx8fHwxNzg5OTY1NzM1fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Neatly folded and stacked clean laundry ready for packing",
+      "usage_location": "Timeline screen header banner & Packing stage completion card"
+    },
+    {
+      "category": "laundry_steaming_ironing",
+      "url": "https://images.unsplash.com/photo-1489274495757-95c7c837b101?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNTl8MHwxfHNlYXJjaHwxfHxsYXVuZHJ5JTIwaXJvbiUyMHN0ZWFtaW5nfGVufDB8fHx8MTc4OTk2NTczOHww&ixlib=rb-4.1.0&q=85",
+      "description": "Professional steam iron on board representing Setrika stage",
+      "usage_location": "Timeline Ironing stage detail illustration"
+    },
+    {
+      "category": "laundry_washing_machine",
+      "url": "https://images.unsplash.com/photo-1604335399105-a0c585fd81a1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNzl8MHwxfHNlYXJjaHwyfHxsYXVuZHJ5JTIwd2FzaGluZyUyMG1hY2hpbmUlMjBkcnVtfGVufDB8fHx8MTc4OTk2NTc0Mnww&ixlib=rb-4.1.0&q=85",
+      "description": "Clean commercial stainless steel washing machine drums representing Cuci & Pengering stages",
+      "usage_location": "Timeline Washing stage detail card"
+    }
+  ],
+  "color_palette": {
     "surface": "#FAFAFF",
     "surfaceSecondary": "#F2EFFF",
     "surfaceTertiary": "#E4E0FA",
+    "surfaceInverse": "#1E1A34",
     "onSurface": "#1E1A34",
     "onSurfaceSecondary": "#3D3664",
     "muted": "#6B648C",
     "brandPrimary": "#0096FF",
     "onBrandPrimary": "#FFFFFF",
-    "brand": "#A78BFA",
+    "brandSecondary": "#C4B5FD",
     "brandTertiary": "#E0F2FE",
-    "whatsappGreen": "#25D366",
-    "onWhatsapp": "#FFFFFF",
+    "brandLavender": "#A78BFA",
+    "success": "#0F9D6B",
+    "successSurface": "#DCFCE7",
+    "successText": "#15803D",
+    "warning": "#B45309",
+    "warningSurface": "#FEF3C7",
+    "error": "#E11D48",
+    "errorSurface": "#FFE4E6",
     "border": "#E4E0FA",
     "borderStrong": "#C4B5FD",
-    "success": "#0F9D6B",
-    "warning": "#B45309",
-    "error": "#E11D48"
+    "divider": "#F2EFFF"
   },
-  "component_path": {
-    "employee_home": "/app/frontend/app/(employee)/index.tsx",
-    "order_baru": "/app/frontend/app/order-baru.tsx",
-    "manage_produk": "/app/frontend/app/manage/produk.tsx",
-    "whatsapp_helper": "/app/frontend/src/whatsapp.ts",
-    "customer_modal": "/app/frontend/app/order-baru.tsx",
-    "setting_owner": "/app/frontend/app/(owner)/setelan.tsx"
-  },
-  "user_experience_flow": {
-    "employee_order_flow": {
-      "step_1_trigger": "Employee taps 'Terima Order' (or FAB button on employee dashboard)",
-      "step_2_customer_selection": "Modal or bottom sheet opens showing existing customer search. Includes prominent '+ Pelanggan Baru' button.",
-      "step_3_new_customer_form": "If new customer: inline or modal form to input Nama Lengkap, Nomor HP (WhatsApp ready with +62 formatting), Alamat (opsional). Provides 'Simpan & Download vCard / Hubungkan Kontak HP' action that automatically creates the customer and triggers phone contact saving (.vcf file download / link) so the contact is stored on the phone and linked to WhatsApp.",
-      "step_4_service_selection": "Services are categorized and COLLAPSED by default (Accordion format per category: Kiloan, Add-on, Bed Cover, Selimut, Bantal & Guling, Boneka, Atasan, Bawahan, Ibadah, Sepatu & Tas, Karpet & Gorden, Kasur, Lantai). Clicking a category header smoothly expands its service cards.",
-      "step_5_service_cards_and_minimum_order": "Each service card is clickable to select and increase quantity. When an item has a minimum order (e.g. min 4 kg or min 5 kg), the card clearly displays 'Min. X kg' badge. Selecting the item or typing quantity automatically initializes or adjusts quantity to satisfy minimum order requirement with informative visual badge feedback.",
-      "step_6_addons_and_owner_setting": "Add-on category (e.g., Add-on Dettol, Parfum Premium, Anti Noda) is selectable as cards and fully configurable by Owner in Setting/Kelola Produk (owner can customize price, active state, min order, duration, icons).",
-      "step_7_whatsapp_receipt": "Once order is created or confirmed, direct action button 'Kirim Nota WhatsApp' links directly to WhatsApp with pre-composed professional digital laundry receipt."
+  "typography": {
+    "font_family_headings": "Poppins-Bold, Poppins-SemiBold",
+    "font_family_subheadings": "Poppins-Medium",
+    "font_family_body": "Nunito-Regular, Nunito-SemiBold, Nunito-Bold",
+    "hierarchy": {
+      "screen_title": {
+        "fontSize": 20,
+        "fontFamily": "Poppins-Bold",
+        "lineHeight": 26
+      },
+      "section_title": {
+        "fontSize": 16,
+        "fontFamily": "Poppins-SemiBold",
+        "lineHeight": 22
+      },
+      "card_title": {
+        "fontSize": 14,
+        "fontFamily": "Nunito-Bold",
+        "lineHeight": 18
+      },
+      "body_text": {
+        "fontSize": 13,
+        "fontFamily": "Nunito-Regular",
+        "lineHeight": 18
+      },
+      "label_text": {
+        "fontSize": 12,
+        "fontFamily": "Nunito-SemiBold",
+        "letterSpacing": 0.3
+      },
+      "price_highlight": {
+        "fontSize": 22,
+        "fontFamily": "Poppins-Bold"
+      }
     }
   },
-  "instructions_to_main_agent": [
-    "1. TAMPILAN PEGAWAI - BUAT ORDER (order-baru.tsx):",
-    "   - Ensure the entry button on employee page index.tsx says 'Terima Order' clearly (data-testid='btn-terima-order' & 'fab-buat-order').",
-    "   - In order-baru.tsx: Customer Picker MUST have a '+ Pelanggan Baru' toggle/button.",
-    "   - When '+ Pelanggan Baru' is active, show input fields for Nama Pelanggan, Nomor WhatsApp / HP, and Alamat.",
-    "   - On saving new customer: call api.post('/customers', { name, phone, address, outlet_id }), automatically select this new customer.",
-    "   - Enable automatic saving to phone contact via vCard generation (data URI or blob .vcf with name and TEL) or direct tel/wa link so it integrates seamlessly with device phonebook & WhatsApp.",
-    "   - CATEGORY ACCORDION: DO NOT show all services expanded at once. Group services by category and keep them collapsed by default (or expand first active category). Clicking any category header toggles expansion with smooth animated/accordion feel.",
-    "   - MINIMUM ORDER ADJUSTMENT: Services with min_kg (e.g. min 4kg, 5kg) must have their first increment automatically snap to the minimum requirement (e.g., tapping add on Cuci Kering Setrika with min_kg=4 sets qty=4 immediately instead of 1, and decrements cannot go between 1 and 3 without resetting to 0 or warning). Provide clear badge 'Minimal X kg'.",
-    "   - ADD-ON CARDS: Add-on services (Add-on Dettol, etc.) must be selectable cards with instant feedback.",
-    "   - OWNER SETTING MANAGEMENT: Confirm and enhance owner manage produk (/app/frontend/app/manage/produk.tsx) to allow setting minimum order (min_kg), pricing, add-ons, and categories so owner has complete control.",
-    "   - WHATSAPP NOTA INTEGRATION: Ensure that after creating the order, there is a prominent 'Kirim Nota via WhatsApp' button (using buildReceiptWhatsAppUrl or Linking.openURL to wa.me/<phone>) so employee can send invoice proof immediately with one click.",
-    "   - MUST keep all data-testids intact and add testids: 'btn-new-customer', 'input-new-cust-name', 'input-new-cust-phone', 'btn-save-new-customer', 'cat-accordion-[category]', 'service-card-[id]', 'btn-send-whatsapp-receipt'."
-  ],
-  "image_urls": {
-    "laundry_worker": "https://images.unsplash.com/photo-1625093440280-42de742a496d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MTN8MHwxfHNlYXJjaHwzfHxsYXVuZHJ5JTIwc2hvcCUyMHdvcmtlcnxlbnwwfHx8fDE3ODk5NjI1OTd8MA&ixlib=rb-4.1.0&q=85",
-    "laundry_folded": "https://images.unsplash.com/photo-1635274605638-d44babc08a4f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MTN8MHwxfHNlYXJjaHwxfHxsYXVuZHJ5JTIwc2hvcCUyMHdvcmtlcnxlbnwwfHx8fDE3ODk5NjI1OTd8MA&ixlib=rb-4.1.0&q=85"
+  "ui_components_and_routes": {
+    "order_baru_payment_form": {
+      "file_path": "/app/frontend/app/order-baru.tsx",
+      "required_updates": [
+        "Add explicit 'Batal Transaksi' button (`data-testid=\"btn-cancel-payment\"`) in the payment modal before creating an order so users can safely abort without registering a new order.",
+        "Ensure payment receipt modal triggers for all payment methods: Tunai ('cash'), QRIS ('qris'), and E-Money ('emoney').",
+        "Display dynamic header in the success modal: 'Pembayaran Tunai Berhasil', 'Pembayaran QRIS Berhasil', or 'Pembayaran E-Money Berhasil'.",
+        "WhatsApp URL generator must correctly reflect 'Lunas via Tunai', 'Lunas via QRIS', or 'Lunas via E-Money' in WhatsApp receipt message."
+      ]
+    },
+    "orders_pipeline_component": {
+      "file_path": "/app/frontend/src/components/OrdersPipeline.tsx",
+      "required_updates": [
+        "For cards in antrian where next step is 'Ke Packing' (status === 'ironing' or packing transition), clicking 'Ke Packing' navigates to the dedicated timeline process page `/order-timeline/[id]` or triggers the timeline modal.",
+        "Support WhatsApp receipt popup on inline manual payments across all methods (cash, qris, emoney) with testID `queue-send-whatsapp-receipt`."
+      ]
+    },
+    "order_timeline_screen": {
+      "file_path": "/app/frontend/app/order-timeline/[id].tsx",
+      "description": "Dedicated visual workflow timeline for laundry order stages: Cuci -> Pengering -> Setrika -> Packing.",
+      "ui_specifications": {
+        "header": "Order code, Customer Name, and status badge with back button (`data-testid=\"btn-back-timeline\"`).",
+        "stepper_cards": [
+          {
+            "step_id": "washing",
+            "title": "1. Cuci (Washing)",
+            "icon": "washing-machine",
+            "desc": "Pemisahan pakaian & proses pencucian dengan deterjen pilihan"
+          },
+          {
+            "step_id": "drying",
+            "title": "2. Pengering (Drying)",
+            "icon": "tumble-dryer",
+            "desc": "Pengeringan mesin berputar suhu terkontrol"
+          },
+          {
+            "step_id": "ironing",
+            "title": "3. Setrika (Ironing)",
+            "icon": "iron",
+            "desc": "Penyetrikaan uap rapi dan pemberian parfum laundry"
+          },
+          {
+            "step_id": "packing",
+            "title": "4. Packing (Folding & Packaging)",
+            "icon": "package-variant-closed",
+            "desc": "Pelipatan rapi, QC jumlah pakaian & packaging higienis"
+          }
+        ],
+        "action_button": "Prominent primary action: 'Selesaikan Packing & Pindah ke Siap Diambil' (`data-testid=\"btn-finish-packing\"`). When clicked, updates order status to 'ready' and redirects or refreshes."
+      }
+    },
+    "employee_home_ready_card": {
+      "file_path": "/app/frontend/app/(employee)/index.tsx",
+      "required_updates": [
+        "Make the 'Siap Diambil' stat card at the top clickable with `data-testid=\"ready-orders-card\"`.",
+        "When clicked, open a dedicated modal or navigate to a filtered view showing all orders with status 'ready'.",
+        "Inside the Ready Orders view (`data-testid=\"ready-orders-modal\"`), list each card with customer name, phone, item count/kg, total payment status, one-tap WhatsApp reminder button (`data-testid=\"btn-whatsapp-ready-[code]\"`), and 'Selesai (Diambil)' action button (`data-testid=\"btn-complete-pickup-[code]\"`)."
+      ]
+    }
   },
-  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
-    "Avoid generic centered layouts, simplistic gradients, and uniform styling.",
-    "Ensure high touch usability for phone screens (React Native / Expo Web mobile layout).",
-    "Containers with borders must have internal padding (p-4 to p-6) to avoid text collision.",
-    "Never use generic raw transparent backgrounds on modals or sticky bottom bars. Use surface colors with high contrast.",
-    "Every button and interactive element MUST have testID attribute."
+  "whatsapp_message_format": {
+    "template": [
+      "*Jadiwangi Laundry*",
+      "Struk Pembayaran: {code}",
+      "",
+      "Pelanggan: {customerName}",
+      "Metode Pembayaran: {paymentMethodName} (Lunas)",
+      "Total: *{total}*",
+      "Status Laundry: {statusLabel}",
+      "",
+      "*Rincian Laundry*",
+      "{itemLines}",
+      "",
+      "Terima kasih atas kepercayaan Anda di Jadiwangi Laundry!"
+    ]
+  },
+  "data_test_id_matrix": {
+    "payment_form": {
+      "cancel_payment_button": "btn-cancel-payment",
+      "confirm_paid_button": "confirm-paid",
+      "pay_method_cash": "paymethod-cash",
+      "pay_method_qris": "paymethod-qris",
+      "pay_method_emoney": "paymethod-emoney",
+      "receipt_send_whatsapp": "btn-send-whatsapp-receipt",
+      "receipt_finish": "receipt-finish"
+    },
+    "pipeline_and_timeline": {
+      "advance_to_packing_button": "advance-to-packing-[code]",
+      "timeline_container": "order-process-timeline",
+      "step_washing": "timeline-step-washing",
+      "step_drying": "timeline-step-drying",
+      "step_ironing": "timeline-step-ironing",
+      "step_packing": "timeline-step-packing",
+      "finish_packing_button": "btn-finish-packing",
+      "back_button": "btn-back-timeline"
+    },
+    "ready_pickup_list": {
+      "ready_stat_card": "ready-orders-card",
+      "ready_orders_modal": "ready-orders-modal",
+      "ready_order_card": "ready-order-item-[code]",
+      "ready_whatsapp_ping": "btn-ready-wa-[code]",
+      "ready_complete_pickup": "btn-ready-complete-[code]",
+      "close_ready_modal": "btn-close-ready-modal"
+    }
+  },
+  "accessibility_and_contrast": {
+    "wcag_compliance": "WCAG AA (minimum 4.5:1 text to background contrast)",
+    "interactive_touch_targets": "Minimum 44px x 44px for all mobile touch targets",
+    "feedback": "Use Haptics.notificationAsync on state changes and button triggers on native platforms with safe web fallbacks"
+  },
+  "instructions_to_main_agent": [
+    "DO NOT hardcode WhatsApp URLs without encoding parameters properly with encodeURIComponent.",
+    "Ensure the 'Batal Transaksi' button closes the payment modal, resets error states, and does NOT generate any order or transaction record.",
+    "Implement the full timeline route `/order-timeline/[id]` or equivalent Expo Router path so employees navigating from 'Ke Packing' get a distinct and clear visual roadmap of the laundry stages.",
+    "Ensure when 'Packing' finishes, the status updates to 'ready' (Siap Diambil) in the database and invalidates the query client cache for orders and dashboard.",
+    "The 'Siap Diambil' counter on the employee dashboard must have `testID=\"ready-orders-card\"` and open the ready orders list.",
+    "All new interactive elements must implement the corresponding `data-testid` attributes defined in the matrix."
   ]
 }

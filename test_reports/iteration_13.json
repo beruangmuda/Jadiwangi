@@ -1,0 +1,73 @@
+{
+  "summary": "Backend regression for iter13 passed (payment methods + timeline to ready). Frontend mobile-first UI verification was partial; login and order form/payment modal reached, but end-to-end script could not complete due payment modal/action controls intermittently outside tap area on 375x667 viewport.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Modal Pembayaran (order-baru)",
+        "issue": "Pada viewport 375x667, opsi metode bayar dan/atau aksi konfirmasi tidak selalu berada dalam area tap yang dapat dijangkau (Playwright: element outside viewport / confirm tidak muncul konsisten).",
+        "testID": "paymethod-cash, confirm-paid",
+        "priority": "HIGH"
+      },
+      {
+        "component": "Order form bottom bar",
+        "issue": "Interaksi tambah layanan -> aktivasi tombol Lanjut Bayar terdeteksi flakey pada automation run; kadang item tidak terpilih walau tombol add sudah ditap.",
+        "testID": "add-*, proceed-payment",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "QRIS settlement",
+        "issue": "Alur settlement QRIS real payment tidak diuji karena integrasi ini MOCKED/manual; hanya post-confirmation flow yang ditargetkan.",
+        "affected_testIDs": [
+          "confirm-paid",
+          "btn-send-whatsapp-receipt"
+        ]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "order-baru pembayaran",
+        "issues": [
+          "Konten modal pembayaran berpotensi melebihi tinggi layar kecil tanpa scroll yang konsisten untuk semua CTA penting"
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter13_payment_timeline_ready.py",
+    "/app/test_reports/pytest/iter13_backend.xml",
+    "/app/test_reports/artifacts_iter13_t1/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter13_t1/iter13_ui_failure.jpeg",
+    "/app/test_reports/artifacts_iter13_t1/iter13_ui_failure_second.jpeg",
+    "/app/test_reports/artifacts_iter13_t1/iter13_ui_failure_third.jpeg"
+  ],
+  "action_items": [
+    "Perbaiki layout/tap reachability modal pembayaran untuk viewport 375x667 (pastikan opsi metode + konfirmasi + batal selalu bisa ditap).",
+    "Stabilkan interaksi tambah layanan agar state item/total ter-update konsisten sebelum Lanjut Bayar.",
+    "Setelah fix UI, retest penuh skenario: cancel transaction (no POST /orders), paid receipt CTA Tunai/QRIS/E-Money, unpaid->pay receipt prompt di OrdersPipeline, Ke Packing->timeline->ready->siap-diambil.",
+    "Pertahankan catatan bahwa settlement QRIS adalah MOCKED flow."
+  ],
+  "critical_code_review_comments": [
+    "frontend/src/api.ts memakai EXPO_PUBLIC_BACKEND_URL; selaraskan dengan kontrak environment yang diminta tim (EXPO_BACKEND_URL) atau dukung keduanya secara eksplisit agar tidak regress di env lain.",
+    "Banyak elemen modal pembayaran padat di layar kecil; pertimbangkan ScrollView pada sheet agar semua CTA kritikal tetap aksesibel."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter13_payment_timeline_ready.py",
+    "/app/test_reports/iteration_13.json"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "40%"
+  },
+  "seed_data_creation": "Tidak ada seed tetap. Data uji TEST_iter13_* dibuat via pytest dan dibersihkan di teardown (orders/transaksi/work_logs/pelanggan).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Auth Pegawai/Pegawai123 valid. Backend regression iter13 stabil (4/4 pass). UI automation sudah dicoba 3 kali untuk flow serupa dan dihentikan sesuai loop-prevention. Fokus retest setelah perbaikan reachability modal pembayaran dan stabilitas add-service di mobile viewport 375x667.",
+  "rca_of_issue": "RCA sementara UI: modal pembayaran memiliki konten tinggi (judul, visual QR/payment, nominal, method row, helper text, CTA) dan pada viewport kecil beberapa kontrol jatuh di luar area tap/viewport. Reproduksi: login pegawai -> Terima Order -> pilih customer -> tambah item -> Lanjut Bayar -> interaksi metode bayar/konfirmasi pada layar 375x667. Mitigasi: bungkus isi modal dalam ScrollView + pastikan tombol inti berada pada sticky footer yang selalu terlihat."
+}

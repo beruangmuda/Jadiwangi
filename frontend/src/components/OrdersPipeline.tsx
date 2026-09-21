@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, ScrollView, Pressable, RefreshControl, Modal, TextInput, Platform, Linking } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
 import { api } from "@/src/api";
@@ -25,6 +26,7 @@ const FILTERS = [
 const PAY_METHODS = [
   { key: "cash", label: "Tunai", icon: "cash" },
   { key: "qris", label: "QRIS", icon: "qrcode-scan" },
+  { key: "emoney", label: "E-Money", icon: "wallet" },
   { key: "coin", label: "JW Coin", icon: "hand-coin" },
 ];
 
@@ -34,6 +36,7 @@ export function OrdersPipeline({
   const styles = useStyles();
   const { colors } = useTheme();
   const qc = useQueryClient();
+  const router = useRouter();
   const [filter, setFilter] = useState("active");
   const [openId, setOpenId] = useState<string | null>(null);
   const [method, setMethod] = useState("cash");
@@ -58,21 +61,12 @@ export function OrdersPipeline({
     queryFn: () => api.get(buildUrl()),
   });
 
-  const advance = useMutation({
-    mutationFn: (id: string) => api.post(`/orders/${id}/advance`, employeeId ? { employee_id: employeeId, employee_name: employeeName || "" } : {}),
-    onSuccess: () => {
-      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
-    },
-  });
-
   const pay = useMutation({
     mutationFn: (id: string) => api.post(`/orders/${id}/pay`, { method }),
     onSuccess: (order: any) => {
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setPayError("");
-      if (method === "qris") setReceiptOrder(order);
+      setReceiptOrder({ ...order, receipt_method: method });
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
@@ -95,7 +89,7 @@ export function OrdersPipeline({
       customerName: item.customer_name,
       itemLines: item.items_summary ? [`• ${item.items_summary}`] : [],
       total: rupiah(item.total),
-      payment: item.payment_status === "paid" ? "Lunas" : "Belum Lunas",
+      payment: `Lunas via ${{ cash: "Tunai", qris: "QRIS", emoney: "E-Money", coin: "JW Coin", deposit: "Deposit" }[item.receipt_method || item.payment_method] || "Pembayaran"}`,
       status: item.stage_label,
     });
     if (url) await Linking.openURL(url);
@@ -117,6 +111,7 @@ export function OrdersPipeline({
       <View style={[styles.card, item.express && { borderColor: colors.brandPrimary, borderWidth: 1.5 }]} testID={`order-card-${item.code}`}>
         {/* Ringkas */}
         <Pressable
+          testID={`toggle-order-${item.code}`}
           onPress={() => { setOpenId(open ? null : item.id); setMethod("cash"); setPayError(""); }}
           style={styles.cardHead}
         >
@@ -207,7 +202,7 @@ export function OrdersPipeline({
                 {canAdvance ? (
                   <Pressable
                     testID={`advance-${item.code}`}
-                    onPress={() => advance.mutate(item.id)}
+                    onPress={() => router.push(`/proses/${item.id}`)}
                     style={[styles.smallBtn, { backgroundColor: colors.brandPrimary, flex: 1, ...shadow.soft }]}
                   >
                     <Text style={[styles.smallBtnText, { color: colors.onBrandPrimary }]}>{NEXT_LABEL[item.status]}</Text>
@@ -281,7 +276,7 @@ export function OrdersPipeline({
         <View style={styles.modalOverlay}>
           <View style={styles.receiptSheet}>
             <Icon name="check-decagram" size={34} color="#15803D" />
-            <Text style={styles.receiptTitle}>QRIS sudah lunas</Text>
+            <Text style={styles.receiptTitle}>Pembayaran berhasil</Text>
             <Text style={styles.receiptSubtitle}>Kirim struk ke WhatsApp pelanggan sekarang.</Text>
             <Pressable testID="queue-send-whatsapp-receipt" onPress={() => shareReceipt(receiptOrder)} style={styles.queueReceiptBtn}><Icon name="whatsapp" size={17} color="#15803D" /><Text style={styles.receiptText}>Kirim Struk WhatsApp</Text></Pressable>
             <Pressable testID="queue-receipt-finish" onPress={() => setReceiptOrder(null)} style={styles.doneReceiptBtn}><Text style={styles.doneReceiptText}>Selesai</Text></Pressable>

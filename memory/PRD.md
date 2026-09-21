@@ -143,6 +143,14 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] **Modal mobile web**: picker pelanggan dan QRIS distabilkan dengan area scroll/flex eksplisit, ukuran tombol pembayaran pasti, dan container non-collapsable. Uji ulang form pelanggan baru serta pilihan QRIS PASS.
 - [x] Teruji iterasi 12: backend express/customer PASS; screenshot end-to-end menunjukkan simpan pelanggan, Express → QRIS → CTA struk, dan detail Transaksi Hari Ini. Semua data uji dibersihkan.
 
+## Update (2026-09, iterasi 16) — Pembayaran Multi-Metode & Proses Laundry
+- [x] **Struk semua pembayaran**: modal pengingat **Kirim Struk via WhatsApp** sekarang muncul setelah pembayaran Tunai, QRIS, E-Money, maupun Deposit berhasil, baik dari Buat Order maupun konfirmasi di antrian.
+- [x] **Batal transaksi**: pada form pembayaran, tombol **Batal Transaksi** menutup form tanpa membuat order sehingga pegawai dapat membatalkan input sebelum nota tercipta.
+- [x] **Timeline proses**: aksi tahap pada card antrian membuka halaman proses dengan urutan Diterima → Cuci → Pengering → Setrika → Packing → Siap Diambil. Setiap langkah hanya dapat dilanjutkan berurutan.
+- [x] **Siap Diambil**: menyelesaikan packing otomatis memindahkan order ke status `ready` dan halaman daftar Siap Diambil. Card Siap Diambil di dashboard Pegawai juga membuka daftar tersebut; setiap order dapat dibuka ke detail nota.
+- [x] **Modal layar kecil**: konten pembayaran/receipt kini bergulir dengan footer aksi yang tetap terjangkau; E-Money, Konfirmasi, dan Batal Transaksi diuji pada viewport ponsel PASS.
+- [x] Teruji iterasi 13: backend 4/4 PASS untuk paid via cash/qris/emoney dan transisi ironing → packing → ready; screenshot manual timeline dan receipt E-Money PASS. Semua data uji dihapus.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).
@@ -150,6 +158,7 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - P2: Notifikasi status order untuk pelanggan.
 - P2: Sinkronisasi kontak perangkat ke akun cloud pelanggan (opsional).
 - P2: Riwayat pengiriman nota WhatsApp per order (opsional).
+- P2: Notifikasi otomatis ke pelanggan ketika order berpindah ke Siap Diambil (opsional).
 - P3: Dark mode.
 
 ## Notes

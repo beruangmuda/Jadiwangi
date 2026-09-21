@@ -21,6 +21,7 @@ const DELIVERY = [
   { key: "pickup", label: "Jemput", icon: "moped" },
   { key: "delivery", label: "Antar", icon: "truck-fast" },
 ];
+const PAYMENT_LABELS: Record<string, string> = { cash: "Tunai", qris: "QRIS", emoney: "E-Money", deposit: "Deposit" };
 
 export default function OrderBaru() {
   const styles = useStyles();
@@ -163,7 +164,7 @@ export default function OrderBaru() {
       qc.invalidateQueries({ queryKey: ["leaderboard"] });
       qc.invalidateQueries({ queryKey: ["customers"] });
       setQrisOpen(false);
-      if (variables.paid && variables.method === "qris") setReceiptOrder(createdOrder);
+      if (variables.paid) setReceiptOrder({ ...createdOrder, receipt_method: variables.method });
       else router.back();
     },
     onError: (e: any) => {
@@ -196,7 +197,7 @@ export default function OrderBaru() {
     customerName: receiptOrder.customer_name || customer?.name || "Pelanggan",
     itemLines: Object.values(cart).map((c) => `• ${c.service.name}${speeds[c.service.id] === "express" ? " (Express)" : ""} ${c.qty} ${c.service.unit}: ${rupiah(priceOf(c.service) * c.qty)}`),
     total: rupiah(receiptOrder.total),
-    payment: "Lunas via QRIS",
+    payment: `Lunas via ${PAYMENT_LABELS[receiptOrder.receipt_method || receiptOrder.payment_method] || "Pembayaran"}`,
     status: receiptOrder.stage_label || "Diterima",
   }) : null;
   const finishReceipt = () => { setReceiptOrder(null); router.back(); };
@@ -398,14 +399,12 @@ export default function OrderBaru() {
       {/* QRIS sheet */}
       <Modal visible={qrisOpen} animationType="slide" transparent onRequestClose={() => setQrisOpen(false)}>
         <View style={styles.qrisOverlay} pointerEvents="box-none">
-          <View collapsable={false} style={[styles.qrisSheet, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View collapsable={false} style={[styles.qrisSheet, { paddingBottom: insets.bottom + spacing.lg, flex: 1, maxHeight: "80%" }]}>
             <View style={styles.grabber} />
-            <Text style={styles.qrisTitle}>Pembayaran QRIS</Text>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.paymentContent} keyboardShouldPersistTaps="handled">
+            <Text style={styles.qrisTitle}>Pembayaran</Text>
             <Text style={styles.qrisSub}>{outletName}</Text>
-            <View style={styles.qrBox}>
-              <Icon name="qrcode" size={180} color={colors.onSurface} />
-              <View style={styles.qrisLogo}><Text style={styles.qrisLogoText}>QRIS</Text></View>
-            </View>
+            {payMethod === "qris" ? <View style={styles.qrBox}><Icon name="qrcode" size={180} color={colors.onSurface} /><View style={styles.qrisLogo}><Text style={styles.qrisLogoText}>QRIS</Text></View></View> : <View style={styles.paymentVisual}><Icon name={payMethod === "cash" ? "cash" : "wallet"} size={58} color={colors.brandPrimary} /><Text style={styles.paymentVisualText}>{PAYMENT_LABELS[payMethod]}</Text></View>}
             <Text style={styles.qrisAmount}>{rupiah(total)}</Text>
             <View style={[styles.payMethodRow, { width: "100%" }]}>
               {([["cash", "Tunai", "cash"], ["qris", "QRIS", "qrcode"], ["emoney", "E-Money", "wallet"]] as const).map(([key, label, icon]) => {
@@ -422,28 +421,39 @@ export default function OrderBaru() {
               {payMethod === "qris" ? "Scan QR di atas dengan e-wallet / m-banking, lalu konfirmasi." : payMethod === "cash" ? "Terima pembayaran tunai, lalu konfirmasi." : "Terima pembayaran e-money, lalu konfirmasi."}
             </BodyText>
             {payError ? <Text style={styles.payError} testID="pay-error">{payError}</Text> : null}
+            </ScrollView>
+            <View style={styles.paymentActions}>
             <PrimaryButton label="Konfirmasi Sudah Bayar" icon="check-decagram" onPress={() => { setPayError(""); create.mutate({ paid: true, method: payMethod }); }} loading={create.isPending} testID="confirm-paid" />
             {canDeposit ? (
               <PrimaryButton label={`Bayar dari Deposit (${rupiah(deposit)})`} icon="wallet" tone="lavender" onPress={() => { setPayError(""); create.mutate({ paid: true, method: "deposit" }); }} loading={create.isPending} testID="pay-deposit" />
             ) : deposit > 0 ? (
               <Text style={styles.depositNote}>Saldo deposit {rupiah(deposit)} • tidak cukup untuk order ini</Text>
             ) : null}
+            <Pressable testID="cancel-payment" onPress={() => { setPayError(""); setQrisOpen(false); }} style={styles.cancelPayment}>
+              <Icon name="close-circle-outline" size={18} color={colors.error} />
+              <Text style={styles.cancelPaymentText}>Batal Transaksi</Text>
+            </Pressable>
             <Pressable testID="pay-later" onPress={() => { setPayError(""); create.mutate({ paid: false, method: "qris" }); }} style={styles.later}>
               <Text style={styles.laterText}>Simpan, Bayar Nanti</Text>
             </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
 
       <Modal visible={!!receiptOrder} animationType="slide" transparent onRequestClose={finishReceipt}>
         <View style={styles.qrisOverlay} pointerEvents="box-none">
-          <View collapsable={false} style={[styles.qrisSheet, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View collapsable={false} style={[styles.qrisSheet, { paddingBottom: insets.bottom + spacing.lg, flex: 1, maxHeight: "80%" }]}>
             <View style={styles.grabber} />
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.receiptContent} keyboardShouldPersistTaps="handled">
             <View style={styles.receiptSuccessIcon}><Icon name="check-decagram" size={38} color="#15803D" /></View>
-            <Text style={styles.qrisTitle}>Pembayaran QRIS Berhasil</Text>
-            <Text testID="qris-payment-success" style={styles.qrisSub}>Nota {receiptOrder?.code} sudah lunas. Kirimkan struk sekarang agar pelanggan tidak lupa menerima bukti pembayaran.</Text>
+            <Text style={styles.qrisTitle}>Pembayaran Berhasil</Text>
+            <Text testID="payment-success" style={styles.qrisSub}>Nota {receiptOrder?.code} sudah lunas via {PAYMENT_LABELS[receiptOrder?.receipt_method || receiptOrder?.payment_method] || "pembayaran"}. Kirimkan struk sekarang agar pelanggan tidak lupa menerima bukti pembayaran.</Text>
+            </ScrollView>
+            <View style={styles.paymentActions}>
             <PrimaryButton label="Kirim Struk via WhatsApp" icon="whatsapp" tone="lavender" onPress={() => { if (receiptUrl) Linking.openURL(receiptUrl); }} disabled={!receiptUrl} testID="btn-send-whatsapp-receipt" />
             <Pressable testID="receipt-finish" onPress={finishReceipt} style={styles.later}><Text style={styles.laterText}>Selesai</Text></Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -508,6 +518,8 @@ const useStyles = makeStyles((c) => ({
   qrisTitle: { fontFamily: fonts.displayBold, fontSize: 20, color: c.onSurface, textAlign: "center" },
   qrisSub: { fontFamily: fonts.body, fontSize: 13, color: c.muted, textAlign: "center" },
   qrBox: { width: 220, height: 220, alignSelf: "center", borderRadius: radius.lg, backgroundColor: c.surface, borderWidth: 2, borderColor: c.border, alignItems: "center", justifyContent: "center", marginVertical: spacing.sm },
+  paymentVisual: { alignSelf: "center", width: 170, height: 170, borderRadius: 85, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center", gap: spacing.sm, marginVertical: spacing.sm },
+  paymentVisualText: { fontFamily: fonts.displayBold, fontSize: 18, color: c.brandPrimary },
   qrisLogo: { position: "absolute", backgroundColor: c.surface, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   qrisLogoText: { fontFamily: fonts.displayBold, fontSize: 16, color: c.error },
   receiptSuccessIcon: { alignSelf: "center", width: 70, height: 70, borderRadius: 35, backgroundColor: "#DCFCE7", alignItems: "center", justifyContent: "center" },
@@ -515,8 +527,13 @@ const useStyles = makeStyles((c) => ({
   payMethodRow: { flexDirection: "row", gap: spacing.sm, alignSelf: "stretch" },
   payMethodBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 10, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface },
   payMethodText: { fontFamily: fonts.bodyBold, fontSize: 12, color: c.onSurfaceSecondary },
+  paymentContent: { gap: spacing.md, paddingBottom: spacing.sm },
+  receiptContent: { flexGrow: 1, justifyContent: "center", gap: spacing.md, paddingBottom: spacing.sm },
+  paymentActions: { gap: spacing.sm, paddingTop: spacing.sm },
   later: { paddingVertical: spacing.sm },
   laterText: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.muted },
+  cancelPayment: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, borderRadius: radius.md, backgroundColor: "#FFE4E6" },
+  cancelPaymentText: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.error },
   payError: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.error, textAlign: "center" },
   depositNote: { fontFamily: fonts.body, fontSize: 12, color: c.muted, textAlign: "center" },
 }));

@@ -104,7 +104,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-## user_problem_statement: "Pada tampilan pegawai bagian Buat Order, pegawai memilih pelanggan atau mengisi pelanggan baru. Pelanggan baru harus tersimpan dengan nomor WhatsApp yang siap untuk nota dan—pada perangkat native setelah izin—masuk ke kontak HP. Layanan harus ringkas per kategori accordion, kartu dapat dipilih, dan minimum order otomatis diterapkan. Owner mengatur kartu layanan, harga, kategori, dan minimum order dari Setelan."
+## user_problem_statement: "Pesan kirim WhatsApp harus muncul untuk semua pembayaran Tunai, QRIS, dan E-Money. Form pembayaran perlu tombol Batal Transaksi sebelum order jadi. Klik Ke Packing pada antrian membuka timeline Cuci → Pengering → Setrika → Packing; setelah packing order masuk Siap Diambil. Card Siap Diambil di dashboard pegawai harus membuka daftar order siap diambil."
 
 ## backend:
 ##   - task: "Kasbon pegawai: pencatatan dan potongan otomatis gaji per bulan"
@@ -177,6 +177,43 @@
 ##         -working: true
 ##         -agent: "main"
 ##         -comment: "Modal QRIS kembali diuji setelah perbaikan layout; opsi QRIS dan Konfirmasi Sudah Bayar langsung dapat disentuh. CTA struk sesudah sukses telah diuji sebelumnya."
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Diperluas: modal kirim struk kini muncul setelah pembayaran Tunai, QRIS, E-Money, maupun Deposit. Uji E-Money PASS."
+##         -working: true
+##         -agent: "testing"
+##         -comment: "Iterasi 13 backend PASS: unpaid→paid via cash/qris/emoney."
+##         -working: true
+##         -agent: "main"
+##         -comment: "Setelah perbaikan layout modal, E-Money, Konfirmasi, dan CTA tetap terjangkau di layar ponsel."
+##   - task: "Pembatalan transaksi sebelum order dibuat"
+##     implemented: true
+##     working: true
+##     file: "frontend/app/order-baru.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Tombol Batal Transaksi pada modal pembayaran hanya menutup form dan tidak menjalankan POST /orders. Uji UI PASS."
+##         -working: true
+##         -agent: "main"
+##         -comment: "Setelah modal dibatasi/scrollable, tombol Batal Transaksi kembali diuji dan langsung mengembalikan ke form order tanpa membuat nota."
+##   - task: "Timeline proses laundry dan daftar Siap Diambil Pegawai"
+##     implemented: true
+##     working: true
+##     file: "frontend/app/proses/[id].tsx, frontend/app/siap-diambil.tsx, frontend/src/components/OrdersPipeline.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Aksi Ke Packing kini membuka timeline. Penyelesaian Packing mengubah status ke ready dan berpindah ke daftar Siap Diambil; dashboard card juga membuka daftar tersebut. Uji Setrika → Packing → Siap Diambil PASS."
+##         -working: true
+##         -agent: "testing"
+##         -comment: "Iterasi 13 backend PASS: ironing→packing→ready dan GET status=ready memuat order."
 ##   - task: "Menu catat kasbon pada Gaji Pegawai"
 ##     implemented: true
 ##     working: true
@@ -277,5 +314,9 @@
 ##     -message: "ITERATION 12: Menangani laporan pengguna. Nomor pelanggan duplikat kini otomatis memilih pelanggan lama, express benar-benar tersimpan pada order dan masuk queue Express, kartu Transaksi Hari Ini membuka daftar lalu detail nota, dan CTA struk WhatsApp hanya tampil pada modal sukses setelah QRIS lunas. Data uji express/pelanggan/order dibersihkan."
 ##     -agent: "main"
 ##     -message: "ITERATION 12 COMPLETE: Tester mengonfirmasi backend customer/express dan detail Transaksi PASS. Modal customer/QRIS lalu distabilkan berdasarkan RCA; pengujian ulang mobile web PASS untuk input pelanggan dan pilihan QRIS."
+##     -agent: "main"
+##     -message: "ITERATION 13: Struk WhatsApp diperluas ke Tunai/E-Money/Deposit, Batal Transaksi ditambahkan sebelum order dibuat, timeline proses laundry dan layar Siap Diambil ditambahkan. Uji manual E-Money receipt, cancel payment, dan Setrika→Packing→Siap Diambil PASS; data uji dibersihkan."
+##     -agent: "main"
+##     -message: "ITERATION 13 COMPLETE: Backend payment/timeline 4/4 PASS. RCA memperbaiki modal pembayaran layar kecil dengan scroll area dan footer aksi sticky; uji ulang E-Money, Konfirmasi, dan Batal Transaksi pada ponsel PASS."
 ##     -agent: "main"
 ##     -message: "ITERATION 8: (1) TrendChart now has Y-axis rupiah labels at 0/25/50/75/100% and X-axis day ticks; dashboard title 'Trend <bulan Indonesia>'. (2) Dashboard 'X pelanggan' badge is pressable -> /hari-ini screen listing today's orders/notes (GET /orders?today=true). Owner can cancel a nota (reason) via POST /orders/{id}/cancel; employees CANNOT (OrdersPipeline canCancel=false in employee index, and /hari-ini hides cancel unless session.role==owner). (3) Dashboard adds Top 3 Pelanggan bulan ini (name, kg, spend) from GET /dashboard top_customers. (4) Setelan > Database Pelanggan (/manage/pelanggan) fully reworked: search, add/edit (name, phone, ADDRESS, email, deposit, outlet), list with per-customer stats (total_kg, tx_count, total_spend), and detail modal (GET /customers/{id}/detail) showing address, points, deposit, total kiloan, jumlah transaksi, total belanja, transaksi pertama & terakhir, riwayat 10 order. Backend: added address column to customers, aggregates in list_customers, /customers/{id}/detail, today filter, top_customers. Owner owner/owner123, produksi joko/pegawai123. Please test /hari-ini owner cancel + employee cannot cancel, customer DB CRUD+detail, dashboard top_customers, and no regressions."

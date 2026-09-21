@@ -47,7 +47,7 @@ export default function EmployeeHome() {
       <View style={styles.statStrip}>
         <Stat icon="receipt-text" label="Transaksi Hari Ini" value={String(t?.orders ?? 0)} sub={kg(t?.kg)} onPress={() => router.push("/hari-ini")} testID="today-orders-card" />
         <Stat icon="progress-wrench" label="Dikerjakan" value={String(queue?.in_progress ?? 0)} />
-        <Stat icon="basket-check" label="Siap Diambil" value={String(queue?.ready ?? 0)} />
+        <Stat icon="basket-check" label="Siap Diambil" value={String(queue?.ready ?? 0)} onPress={() => router.push("/siap-diambil")} testID="ready-orders-card" />
       </View>
 
       <OrdersPipeline outletId={outletId} employeeId={session?.employee?.id} employeeName={session?.name} canCancel={false} todayOnly />
