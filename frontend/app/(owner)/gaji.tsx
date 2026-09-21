@@ -39,6 +39,11 @@ export default function GajiPegawai() {
     queryFn: () => api.get(`/payroll?period=${period}${outletId ? `&outlet_id=${outletId}` : ""}`),
     enabled: !!outletId,
   });
+  const { data: kasbonEntries = [] } = useQuery({
+    queryKey: ["kasbon", outletId, period],
+    queryFn: () => api.get(`/kasbon?period=${period}${outletId ? `&outlet_id=${outletId}` : ""}`),
+    enabled: !!outletId,
+  });
 
   const saveManual = useMutation({
     mutationFn: () => api.post("/payroll/manual", {
@@ -103,6 +108,7 @@ export default function GajiPegawai() {
 
             {emps.map((e: any) => {
               const open = expanded === e.employee_id;
+              const employeeKasbon = kasbonEntries.filter((entry: any) => entry.employee_id === e.employee_id);
               return (
                 <View key={e.employee_id} style={styles.card}>
                   <Pressable testID={`gaji-emp-${e.employee_id}`} onPress={() => setExpanded(open ? null : e.employee_id)} style={styles.cardHead}>
@@ -123,11 +129,16 @@ export default function GajiPegawai() {
                       <Row label="Tunjangan Kasir" value={rupiah(e.tunjangan_kasir)} />
                       <Row label={`Kehadiran ${e.kehadiran} hari + lembur ${e.lembur_shifts}`} value="" muted />
                       <Row label="Uang Makan" value={rupiah(e.uang_makan)} />
-                      <Row label={`Bonus Cuci (${kg(e.wash_kg)} + ${e.wash_pcs} pcs)`} value={rupiah(e.bonus_cuci)} />
-                      <Row label={`Bonus Setrika (${kg(e.iron_kg)} + ${e.iron_pcs} pcs)`} value={rupiah(e.bonus_setrika)} />
+                      <Text testID={`work-summary-title-${e.employee_id}`} style={styles.workTitle}>Rincian kerja kiloan per tahap</Text>
+                      <StageRow testID={`work-washing-${e.employee_id}`} icon="washing-machine" label="Cuci" kilograms={e.wash_kg} pieces={e.wash_pcs} value={rupiah(e.bonus_cuci)} />
+                      <StageRow testID={`work-drying-${e.employee_id}`} icon="weather-sunny" label="Pengering" kilograms={e.dry_kg} pieces={e.dry_pcs} />
+                      <StageRow testID={`work-ironing-${e.employee_id}`} icon="iron" label="Setrika" kilograms={e.iron_kg} pieces={e.iron_pcs} value={rupiah(e.bonus_setrika)} />
+                      <StageRow testID={`work-packing-${e.employee_id}`} icon="package-variant-closed" label="Lipat & Packing" kilograms={e.packing_kg} pieces={e.packing_pcs} />
+                      <Text testID={`processed-weight-${e.employee_id}`} style={styles.processedText}>Total tahap produksi: {kg(e.processed_kg)}</Text>
                       <Row label={`Antar Jemput (${e.trips} trip)`} value={rupiah(e.antar_jemput)} />
                       <Row label="Perjalanan Dinas" value={rupiah(e.perjalanan_dinas)} />
                       <Row label="Kasbon (potongan)" value={`- ${rupiah(e.kasbon)}`} tone={colors.error} />
+                      <KasbonHistory employeeId={e.employee_id} entries={employeeKasbon} />
                       <View style={styles.totalRow}>
                         <Text style={styles.totalRowLabel}>Total Diterima</Text>
                         <Text style={styles.totalRowValue}>{rupiah(e.total)}</Text>
@@ -206,6 +217,27 @@ function Row({ label, value, tone, muted }: { label: string; value: string; tone
   );
 }
 
+function StageRow({ testID, icon, label, kilograms, pieces, value }: { testID: string; icon: string; label: string; kilograms?: number; pieces?: number; value?: string }) {
+  const styles = useStyles();
+  const { colors } = useTheme();
+  return <View testID={testID} style={styles.stageRow}>
+    <View style={styles.stageLabelWrap}><Icon name={icon} size={15} color={colors.brandPrimary} /><Text style={styles.stageLabel}>{label}</Text></View>
+    <View style={{ alignItems: "flex-end" }}><Text style={styles.stageQty}>{kg(kilograms)}{pieces ? ` · ${pieces} pcs` : ""}</Text>{value ? <Text style={styles.stageValue}>{value}</Text> : null}</View>
+  </View>;
+}
+
+function KasbonHistory({ employeeId, entries }: { employeeId: string; entries: any[] }) {
+  const styles = useStyles();
+  const { colors } = useTheme();
+  return <View testID={`kasbon-history-${employeeId}`} style={styles.kasbonHistory}>
+    <View style={styles.kasbonHistoryHead}><Text style={styles.kasbonHistoryTitle}>Riwayat Kasbon</Text><Text style={styles.kasbonHistoryCount}>{entries.length} catatan</Text></View>
+    {entries.length ? entries.map((entry: any) => <View key={entry.id} testID={`kasbon-entry-${entry.id}`} style={styles.kasbonEntry}>
+      <View style={{ flex: 1 }}><Text style={styles.kasbonDate}>{dayjs(entry.kasbon_date).format("DD/MM/YYYY")}</Text><Text style={styles.kasbonNote} numberOfLines={1}>{entry.note || "Tanpa catatan"}</Text></View>
+      <Text style={[styles.kasbonEntryAmount, { color: colors.error }]}>- {rupiah(entry.amount)}</Text>
+    </View>) : <Text testID={`kasbon-empty-${employeeId}`} style={styles.kasbonEmpty}>Belum ada kasbon pada periode ini.</Text>}
+  </View>;
+}
+
 const useStyles = makeStyles((c) => ({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, backgroundColor: c.surface },
   title: { fontFamily: fonts.displayBold, fontSize: 24, color: c.onSurface },
@@ -226,6 +258,22 @@ const useStyles = makeStyles((c) => ({
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   rowLabel: { fontFamily: fonts.body, fontSize: 13, color: c.onSurfaceSecondary, flex: 1 },
   rowValue: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurface },
+  workTitle: { marginTop: spacing.xs, fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurface },
+  stageRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: c.surfaceSecondary, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 8 },
+  stageLabelWrap: { flexDirection: "row", alignItems: "center", gap: 7 },
+  stageLabel: { fontFamily: fonts.bodySemi, fontSize: 12, color: c.onSurfaceSecondary },
+  stageQty: { fontFamily: fonts.bodyBold, fontSize: 12, color: c.onSurface },
+  stageValue: { marginTop: 1, fontFamily: fonts.bodyBold, fontSize: 11, color: c.success },
+  processedText: { fontFamily: fonts.bodySemi, fontSize: 12, color: c.muted, textAlign: "right", marginTop: -2 },
+  kasbonHistory: { marginTop: spacing.xs, borderRadius: radius.md, backgroundColor: "#FFF7F7", padding: spacing.sm, gap: 7 },
+  kasbonHistoryHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  kasbonHistoryTitle: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurface },
+  kasbonHistoryCount: { fontFamily: fonts.bodySemi, fontSize: 11, color: c.muted },
+  kasbonEntry: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingTop: 6, borderTopWidth: 1, borderTopColor: "#FFE4E6" },
+  kasbonDate: { fontFamily: fonts.bodyBold, fontSize: 12, color: c.onSurfaceSecondary },
+  kasbonNote: { fontFamily: fonts.body, fontSize: 11, color: c.muted, marginTop: 1 },
+  kasbonEntryAmount: { fontFamily: fonts.bodyBold, fontSize: 12 },
+  kasbonEmpty: { fontFamily: fonts.body, fontSize: 12, color: c.muted },
   totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: c.divider, paddingTop: spacing.sm, marginTop: 2 },
   totalRowLabel: { fontFamily: fonts.displayBold, fontSize: 14, color: c.onSurface },
   totalRowValue: { fontFamily: fonts.displayBold, fontSize: 18, color: c.success },

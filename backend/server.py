@@ -173,6 +173,7 @@ create table if not exists payroll_manual (
 create unique index if not exists payroll_manual_uq on payroll_manual (employee_id, period);
 create index if not exists attendance_employee_day_idx on attendance (employee_id, day);
 create index if not exists work_logs_employee_stage_created_idx on work_logs (employee_id, stage, created_at);
+create index if not exists work_logs_order_stage_created_idx on work_logs (order_id, stage, created_at desc);
 create index if not exists kasbon_employee_created_idx on kasbon (employee_id, created_at);
 create index if not exists orders_outlet_status_created_idx on orders (outlet_id, status, created_at desc);
 alter table kasbon add column if not exists kasbon_date date not null default (now() at time zone 'Asia/Jakarta')::date;
@@ -1293,11 +1294,24 @@ async def enrich_orders(conn, rows):
         for c in await conn.fetch("select id,name,phone from customers where id = any($1::uuid[])", cust_ids):
             customers[c["id"]] = c
     summaries: dict = {}
+    workers_by_order: dict = {}
     if ids:
         for i in await conn.fetch(
                 "select order_id, service_name, qty, unit from order_items where order_id = any($1::uuid[])", ids):
             summaries.setdefault(i["order_id"], []).append(
                 f"{i['service_name']} {float(i['qty']):g} {i['unit']}")
+        stage_rows = await conn.fetch(
+            """select distinct on (order_id, stage) order_id, stage, employee_id, employee_name, created_at
+               from work_logs where order_id = any($1::uuid[])
+               and stage = any($2::text[])
+               order by order_id, stage, created_at desc""",
+            ids, ["washing", "drying", "ironing", "packing"])
+        for log in stage_rows:
+            workers_by_order.setdefault(log["order_id"], {})[log["stage"]] = {
+                "employee_id": str(log["employee_id"]) if log["employee_id"] else None,
+                "employee_name": log["employee_name"] or "Pegawai",
+                "completed_at": log["created_at"].isoformat() if log["created_at"] else None,
+            }
     result = []
     for r in rows:
         d = row_to_dict(r)
@@ -1317,6 +1331,7 @@ async def enrich_orders(conn, rows):
         due = r["due_at"]
         d["overdue"] = bool(due and due < now_utc() and r["status"] not in ("completed", "cancelled"))
         d["items_summary"] = ", ".join(summaries.get(r["id"], []))
+        d["stage_workers"] = workers_by_order.get(r["id"], {})
         result.append(d)
     return result
 
@@ -1549,6 +1564,8 @@ async def advance_status(oid: str, b: Optional[AdvanceBody] = None):
             return (await enrich_orders(conn, [row]))[0]
         if cur in ("completed", "cancelled") or cur not in PIPELINE:
             raise HTTPException(400, "Order tidak dapat dilanjutkan")
+        if cur == "ready" and row["payment_status"] != "paid":
+            raise HTTPException(400, "Order belum lunas. Selesaikan pembayaran sebelum diserahkan.")
         nxt = PIPELINE[PIPELINE.index(cur) + 1]
         if b and b.target_status and b.target_status != nxt:
             raise HTTPException(409, f"Tahap order sudah berubah ke {STAGE_LABELS.get(cur, cur)}")
@@ -1556,10 +1573,13 @@ async def advance_status(oid: str, b: Optional[AdvanceBody] = None):
         # attribute the completed stage (cur) to the employee who finished it
         if b and b.employee_id:
             if cur in ("washing", "drying", "ironing", "packing"):
-                await conn.execute(
-                    """insert into work_logs(order_id,employee_id,employee_name,outlet_id,stage,weight_kg,unit_qty)
-                       values($1,$2,$3,$4,$5,$6,$7)""",
-                    oid, b.employee_id, b.employee_name, row["outlet_id"], cur, row["weight_kg"], row["unit_qty"])
+                already_logged = await conn.fetchval(
+                    "select 1 from work_logs where order_id=$1 and stage=$2 limit 1", oid, cur)
+                if not already_logged:
+                    await conn.execute(
+                        """insert into work_logs(order_id,employee_id,employee_name,outlet_id,stage,weight_kg,unit_qty)
+                           values($1,$2,$3,$4,$5,$6,$7)""",
+                        oid, b.employee_id, b.employee_name, row["outlet_id"], cur, row["weight_kg"], row["unit_qty"])
             if row["delivery_type"] in ("pickup", "delivery"):
                 # 1 trip per order per employee (dedup on distinct order in reports)
                 exists = await conn.fetchval(
@@ -1981,8 +2001,12 @@ async def payroll(outlet_id: Optional[str] = None, period: Optional[str] = None)
             """select employee_id,
                  coalesce(sum(weight_kg) filter (where stage='washing'),0) as wash_kg,
                  coalesce(sum(unit_qty) filter (where stage='washing'),0) as wash_pcs,
+                 coalesce(sum(weight_kg) filter (where stage='drying'),0) as dry_kg,
+                 coalesce(sum(unit_qty) filter (where stage='drying'),0) as dry_pcs,
                  coalesce(sum(weight_kg) filter (where stage='ironing'),0) as iron_kg,
                  coalesce(sum(unit_qty) filter (where stage='ironing'),0) as iron_pcs,
+                 coalesce(sum(weight_kg) filter (where stage='packing'),0) as packing_kg,
+                 coalesce(sum(unit_qty) filter (where stage='packing'),0) as packing_pcs,
                  count(distinct order_id) filter (where stage='trip') as trips
                from work_logs
                where employee_id = any($1::uuid[])
@@ -2008,8 +2032,12 @@ async def payroll(outlet_id: Optional[str] = None, period: Optional[str] = None)
             work = work_by_employee.get(eid)
             wash_kg = float(work["wash_kg"]) if work else 0.0
             wash_pcs = float(work["wash_pcs"]) if work else 0.0
+            dry_kg = float(work["dry_kg"]) if work else 0.0
+            dry_pcs = float(work["dry_pcs"]) if work else 0.0
             iron_kg = float(work["iron_kg"]) if work else 0.0
             iron_pcs = float(work["iron_pcs"]) if work else 0.0
+            packing_kg = float(work["packing_kg"]) if work else 0.0
+            packing_pcs = float(work["packing_pcs"]) if work else 0.0
             trips = int(work["trips"] or 0) if work else 0
             gaji_pokok = float(e["gaji_pokok"] or 0)
             tunjangan = float(e["tunjangan_kasir"] or 0)
@@ -2024,7 +2052,9 @@ async def payroll(outlet_id: Optional[str] = None, period: Optional[str] = None)
                 "outlet_name": outlets.get(str(e["outlet_id"]), "-"), "period": period_str,
                 "gaji_pokok": gaji_pokok, "tunjangan_kasir": tunjangan,
                 "kehadiran": int(kehadiran), "lembur_shifts": lembur, "uang_makan": uang_makan,
-                "wash_kg": wash_kg, "wash_pcs": wash_pcs, "iron_kg": iron_kg, "iron_pcs": iron_pcs,
+                "wash_kg": wash_kg, "wash_pcs": wash_pcs, "dry_kg": dry_kg, "dry_pcs": dry_pcs,
+                "iron_kg": iron_kg, "iron_pcs": iron_pcs, "packing_kg": packing_kg, "packing_pcs": packing_pcs,
+                "processed_kg": wash_kg + dry_kg + iron_kg + packing_kg,
                 "bonus_cuci": round(bonus_cuci), "bonus_setrika": round(bonus_setrika),
                 "trips": int(trips), "antar_jemput": antar_jemput,
                 "perjalanan_dinas": perjalanan, "kasbon": kasbon, "total": round(total),
@@ -2059,7 +2089,7 @@ async def list_kasbon(outlet_id: Optional[str] = None, employee_id: Optional[str
             f"""select k.*, e.name as employee_name, o.name as outlet_name
                 from kasbon k join employees e on e.id=k.employee_id
                 left join outlets o on o.id=k.outlet_id
-                where {' and '.join(clauses)} order by k.created_at desc""", *args)
+                where {' and '.join(clauses)} order by k.kasbon_date desc, k.created_at desc""", *args)
         return rows_to_list(rows)
 
 

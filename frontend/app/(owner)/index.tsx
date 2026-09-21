@@ -30,6 +30,7 @@ export default function Dashboard() {
 
   const chartWidth = Math.min(width, 640) - spacing.lg * 2 - spacing.lg * 2;
   const t = data?.today;
+  const activeOutlet = (session?.outlets || []).find((outlet: any) => outlet.id === outletId);
   const BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
   const monthName = BULAN[new Date().getMonth()];
 
@@ -125,7 +126,7 @@ export default function Dashboard() {
             {/* CHART */}
             <Card delay={140}>
               <SectionHeader title={`Trend ${monthName}`} />
-              <TrendChart data={data?.trend || []} width={chartWidth} />
+              <TrendChart key={outletId || "all-outlets"} data={data?.trend || []} width={chartWidth} outletName={activeOutlet?.name} />
             </Card>
 
             {/* QUEUE */}

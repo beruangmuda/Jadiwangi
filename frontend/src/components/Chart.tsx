@@ -6,8 +6,14 @@ import { rupiahShort } from "@/src/format";
 
 type Point = { day: number; omzet: number; pendapatan: number };
 
+const outletPalette = (outletName = "") => {
+  if (outletName.includes("Pulomas")) return { omzet: "#0F766E", pendapatan: "#0EA5E9" };
+  if (outletName.includes("Ujungberung")) return { omzet: "#C2410C", pendapatan: "#D97706" };
+  return { omzet: "#7C3AED", pendapatan: "#2563EB" };
+};
+
 // Smooth area + line chart for monthly revenue trend, with X/Y axis labels.
-export function TrendChart({ data, width, height = 200 }: { data: Point[]; width: number; height?: number }) {
+export function TrendChart({ data, width, height = 200, outletName }: { data: Point[]; width: number; height?: number; outletName?: string }) {
   const { colors } = useTheme();
   const padLeft = 44;
   const padRight = 8;
@@ -30,14 +36,16 @@ export function TrendChart({ data, width, height = 200 }: { data: Point[]; width
   const step = Math.max(1, Math.ceil(pts.length / 6));
   const xTicks = pts.map((p, i) => ({ p, i })).filter(({ i }) => i % step === 0 || i === pts.length - 1);
 
-  const omzetColor = colors.error;            // merah
-  const pendapatanColor = colors.brandPrimary; // biru
+  const palette = outletPalette(outletName);
+  const omzetColor = palette.omzet;
+  const pendapatanColor = palette.pendapatan;
+  const gradientId = `omzetFill-${(outletName || "semua").replace(/[^a-z0-9]/gi, "")}`;
 
   return (
-    <View>
+    <View testID="trend-chart">
       <Svg width={w} height={h}>
         <Defs>
-          <LinearGradient id="omzetFill" x1="0" y1="0" x2="0" y2="1">
+          <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={omzetColor} stopOpacity={0.22} />
             <Stop offset="1" stopColor={omzetColor} stopOpacity={0.02} />
           </LinearGradient>
@@ -58,7 +66,7 @@ export function TrendChart({ data, width, height = 200 }: { data: Point[]; width
             {p.day}
           </SvgText>
         ))}
-        <Path d={areaPath} fill="url(#omzetFill)" />
+        <Path d={areaPath} fill={`url(#${gradientId})`} />
         <Path d={buildLine("pendapatan")} stroke={pendapatanColor} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
         <Path d={buildLine("omzet")} stroke={omzetColor} strokeWidth={3} fill="none" strokeLinejoin="round" strokeLinecap="round" />
         {pts.length <= 16 && pts.map((p, i) => (
@@ -70,7 +78,7 @@ export function TrendChart({ data, width, height = 200 }: { data: Point[]; width
       </Svg>
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8, paddingLeft: padLeft, paddingRight: padRight }}>
         <View style={{ flexDirection: "row", gap: 16 }}>
-          <Legend color={omzetColor} label="Omzet" />
+          <Legend color={omzetColor} label={`Omzet${outletName ? ` · ${outletName.replace("Jadiwangi ", "")}` : ""}`} />
           <Legend color={pendapatanColor} label="Pendapatan" />
         </View>
         <Text style={{ fontFamily: fonts.body, fontSize: 10, color: colors.muted }}>Tanggal →</Text>

@@ -53,7 +53,7 @@ export default function ProsesOrder() {
           const stage = STAGE[key]; const complete = index <= current; const available = index === current + 1 && !isDone; const pending = index > current + 1;
           return <View key={key} testID={`process-stage-${key}`} style={styles.stageRow}>
             <View style={styles.rail}><View style={[styles.stageDot, (complete || available) && { backgroundColor: available ? colors.brandPrimary : colors.success }]}>{complete ? <Icon name="check" size={15} color="#fff" /> : <Icon name={stage.icon} size={15} color={available ? "#fff" : colors.muted} />}</View>{index < 5 ? <View style={[styles.stageLine, complete && { backgroundColor: colors.success }]} /> : null}</View>
-            <Pressable disabled={!available} onPress={() => moveTo(key)} style={[styles.stageCard, available && { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary }, pending && { opacity: 0.45 }]}><Text style={styles.stageTitle}>{stage.label}</Text><Text style={styles.stageSub}>{available ? "Klik untuk lanjut ke tahap ini →" : complete ? "Selesai" : "Menunggu tahap sebelumnya"}</Text></Pressable>
+            <Pressable disabled={!available} onPress={() => moveTo(key)} style={[styles.stageCard, available && { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary }, pending && { opacity: 0.45 }]}><Text style={styles.stageTitle}>{stage.label}</Text><Text testID={`process-stage-detail-${key}`} style={styles.stageSub}>{available ? "Klik untuk lanjut ke tahap ini →" : complete && order.stage_workers?.[key]?.employee_name ? `Dikerjakan oleh ${order.stage_workers[key].employee_name}` : complete ? "Selesai" : "Menunggu tahap sebelumnya"}</Text></Pressable>
           </View>;
         })}
       </View>

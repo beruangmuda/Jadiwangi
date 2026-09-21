@@ -86,7 +86,7 @@ const useStyles = makeStyles((c) => ({
   coinBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.brandTertiary, alignItems: "center", justifyContent: "center", marginRight: spacing.sm },
   statStrip: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   stat: { flex: 1, backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, padding: spacing.md, gap: 2, ...shadow.card },
-  infoStat: { backgroundColor: "transparent", borderWidth: 0, paddingHorizontal: spacing.sm, shadowOpacity: 0 },
+  infoStat: { backgroundColor: "transparent", borderWidth: 0, paddingHorizontal: spacing.sm, shadowOpacity: 0, alignItems: "center", justifyContent: "center", gap: 4 },
   statValue: { fontFamily: fonts.displayBold, fontSize: 22, color: c.onSurface },
   statLabel: { fontFamily: fonts.bodySemi, fontSize: 11, color: c.muted },
   statSub: { fontFamily: fonts.bodyBold, fontSize: 11, color: c.brand },

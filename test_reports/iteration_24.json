@@ -1,0 +1,63 @@
+{
+  "summary": "Backend retest PASS for iter24 core API scope: stage_workers attribution, payroll stage kg aggregation fields, and ready-unpaid advance lock. Frontend owner Gaji checks passed (stage breakdown + kasbon history visible), Dikerjakan indicator stayed passive, but Siap Diambil page showed intermittent unstable loading state during repeated login/navigation runs.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Siap Diambil screen",
+        "issue": "Intermittently renders header '0 order menunggu pelanggan' with persistent loading spinner and no cards, despite seeded ready orders and backend 200 responses in logs.",
+        "testID": "complete-ready-* / ready-payment-warning-*",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Owner dashboard trend after outlet switch",
+        "issue": "Trend chart color extraction after outlet change returned empty stroke set in one run, indicating chart/not-ready render timing instability during switch.",
+        "affected_testIDs": [
+          "trend-chart",
+          "outlet-switcher"
+        ]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter24_stage_workers_payroll_ready_lock.py",
+    "/app/test_reports/pytest/iter24_stage_workers_payroll_ready_lock.xml",
+    "/app/tests/iter24_ui_seed.py",
+    "/app/tests/iter24_ui_cleanup.py",
+    "/app/test_reports/artifacts_iter24/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter24/iter24_owner_employee_checks.jpeg",
+    "/app/test_reports/artifacts_iter24/iter24_owner_employee_checks_pass.jpeg",
+    "/app/test_reports/artifacts_iter24/iter24_ready_probe.jpeg"
+  ],
+  "action_items": [
+    "Investigate Siap Diambil query lifecycle/state race causing intermittent persistent Loading state while backend /api/orders?status=ready returns 200.",
+    "Stabilize trend chart render after outlet switch (ensure post-switch data/render completion before chart paint).",
+    "Align frontend env usage with project rule: expected EXPO_BACKEND_URL; current setup/code relies on EXPO_PUBLIC_BACKEND_URL.",
+    "QRIS/payment gateway remains MOCKED (manual confirmation flow), outside this regression scope."
+  ],
+  "critical_code_review_comments": [
+    "frontend/.env and frontend API usage still center on EXPO_PUBLIC_BACKEND_URL, diverging from required EXPO_BACKEND_URL convention in project rules."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter24_stage_workers_payroll_ready_lock.py",
+    "/app/tests/iter24_ui_seed.py",
+    "/app/tests/iter24_ui_cleanup.py",
+    "/app/test_reports/iteration_24.json"
+  ],
+  "success_rate": {
+    "backend": "100% (2/2 targeted iter24 pytest tests passed)",
+    "frontend": "70% (owner Gaji + Dikerjakan checks passed; Siap Diambil stability inconsistent across reruns)"
+  },
+  "seed_data_creation": "Created temporary TEST_iter24 data via /app/tests/iter24_ui_seed.py (2 ready orders + 1 kasbon + 1 customer). Cleanup executed via /app/tests/iter24_ui_cleanup.py.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Credentials read from /app/memory/test_credentials.md before auth tests. Backend flow validated with Joko produksi: received→washing→drying→ironing→packing→ready logged stage_workers and ready-unpaid blocked 400 until paid. Owner Gaji page showed stage rows and kasbon history sections. Employee Dikerjakan tap did not navigate (passive). Stop condition reached for repeated ready-screen selector instability attempts; report focuses on observed intermittent loading behavior.",
+  "rca_of_issue": "Likely frontend state/race issue around ready orders query hydration: component shows isLoading spinner with zero count even when backend logs show successful 200 ready-orders responses. Reproduction: repeated auth transitions owner→pegawai and rapid tab navigation to Siap Diambil. Mitigation: instrument react-query status transitions for ['ready-orders', outletId], verify outletId/session reset on login/logout, and ensure loading state exits on resolved empty/non-empty responses."
+}

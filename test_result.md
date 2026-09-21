@@ -104,7 +104,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-## user_problem_statement: "Semua order lintas status harus dapat dilihat Owner di laporan. Kamera foto pada timbang harus bisa dilampirkan dan setelah timbang nota dengan foto/rincian muncul langsung di Bayar pelanggan tanpa Setujui Nota. Card Antar Jemput menampilkan tanggal dan membuka detail. Request idle 14 hari dibatalkan otomatis."
+## user_problem_statement: "Sortir antrian Diterima/Cuci/Pengering/Setrika/Antar Jemput harus cepat. Kasbon dapat dicatat beberapa kali dengan tanggal untuk perhitungan gaji. Card Dikerjakan adalah indikator pasif tanpa kotak, berbeda dari Transaksi Hari Ini dan Siap Diambil."
 
 ## backend:
 ##   - task: "Kasbon pegawai: pencatatan dan potongan otomatis gaji per bulan"
@@ -314,6 +314,39 @@
 ##         -working: true
 ##         -agent: "testing"
 ##         -comment: "Iterasi 11: owner membuka kartu layanan ke modal Edit Layanan dan field kategori/harga/minimum kg terverifikasi PASS."
+##   - task: "Pelacakan pegawai per tahap produksi dan agregasi kiloan payroll"
+##     implemented: true
+##     working: true
+##     file: "backend/server.py"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "advance sekarang mencatat satu pegawai pada tahap Cuci, Pengering, Setrika, dan Lipat & Packing. GET order mengembalikan stage_workers; payroll mengagregasi kg/pcs pada semua tahap. Uji API: empat tahap oleh Joko, payroll per tahap, dan cleanup order uji PASS."
+##   - task: "Proteksi penyerahan order belum lunas"
+##     implemented: true
+##     working: true
+##     file: "backend/server.py, frontend/app/siap-diambil.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Endpoint advance menolak ready→completed bila belum paid (400). UI daftar Siap Diambil mengunci tombol serta menampilkan peringatan pembayaran."
+##   - task: "Rincian kasbon, indikator Dikerjakan, dan warna trend per outlet"
+##     implemented: true
+##     working: true
+##     file: "frontend/app/(owner)/gaji.tsx, frontend/app/(employee)/index.tsx, frontend/src/components/Chart.tsx"
+##     stuck_count: 0
+##     priority: "medium"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Gaji menampilkan kasbon per tanggal/catatan, rincian kerja kiloan tiap tahap, Dikerjakan dipusatkan sebagai indikator pasif, dan warna grafik berbeda untuk Pulomas/Ujungberung/Kalimulya."
 
 ## test_plan:
 ##   current_focus:
@@ -348,3 +381,9 @@
 ##     -message: "ITERATION 18 COMPLETE: Laporan Owner semua status, kamera in-app, nota pelanggan langsung Bayar, tanggal/detail Kurir, dan auto-cancel request 14 hari telah diterapkan. Iterasi 15 menemukan photo-camera tidak terjangkau; tombol dipindahkan di atas daftar layanan. Retest iterasi 16 PASS untuk backend 4/4 dan seluruh alur UI terkait. Cleanup akhir: 0 order/pelanggan TEST_ tersisa."
 ##     -agent: "main"
 ##     -message: "ITERATION 8: (1) TrendChart now has Y-axis rupiah labels at 0/25/50/75/100% and X-axis day ticks; dashboard title 'Trend <bulan Indonesia>'. (2) Dashboard 'X pelanggan' badge is pressable -> /hari-ini screen listing today's orders/notes (GET /orders?today=true). Owner can cancel a nota (reason) via POST /orders/{id}/cancel; employees CANNOT (OrdersPipeline canCancel=false in employee index, and /hari-ini hides cancel unless session.role==owner). (3) Dashboard adds Top 3 Pelanggan bulan ini (name, kg, spend) from GET /dashboard top_customers. (4) Setelan > Database Pelanggan (/manage/pelanggan) fully reworked: search, add/edit (name, phone, ADDRESS, email, deposit, outlet), list with per-customer stats (total_kg, tx_count, total_spend), and detail modal (GET /customers/{id}/detail) showing address, points, deposit, total kiloan, jumlah transaksi, total belanja, transaksi pertama & terakhir, riwayat 10 order. Backend: added address column to customers, aggregates in list_customers, /customers/{id}/detail, today filter, top_customers. Owner owner/owner123, produksi joko/pegawai123. Please test /hari-ini owner cancel + employee cannot cancel, customer DB CRUD+detail, dashboard top_customers, and no regressions."
+##     -agent: "main"
+##     -message: "ITERATION 23 COMPLETE: placeholder/prefetch mempercepat filter antrian, kasbon_date mendukung pencatatan berkali-kali per tanggal, dan indikator Dikerjakan pasif tanpa border. Iterasi 22 menemukan payroll 500 karena kolom tertukar; diperbaiki. Retest iterasi 23 PASS untuk payroll, kasbon lintas periode, Gaji Owner, sortir, Antar Jemput, serta indikator dashboard."
+##     -agent: "main"
+##     -message: "ITERATION 24: Menambahkan stage_workers pada order untuk Cuci/Pengering/Setrika/Packing, agregasi semua tahap pada payroll, UI payroll per tahap dan riwayat kasbon per tanggal. Order ready belum lunas terkunci UI dan divalidasi API (400). Trend memakai palet unik per outlet; indikator Dikerjakan dipusatkan. Perlu retest backend dan frontend."
+##     -agent: "main"
+##     -message: "ITERATION 24 FIX VERIFIED: Retest backend 2/2 PASS. Stabilitas Siap Diambil diperbaiki dengan menunggu outlet aktif sebelum query dan refetch saat halaman dipasang; screenshot login Pegawai→Siap Diambil PASS. Grafik trend memakai key per outlet dan gradient unik; screenshot membuktikan warna Kalimulya (#7C3AED/#2563EB) berubah ke Pulomas (#0F766E/#0EA5E9)."

@@ -187,6 +187,14 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] Card **Dikerjakan** kini indikator pasif tanpa kotak/border dan tidak dapat diketuk; Transaksi Hari Ini serta Siap Diambil tetap card interaktif.
 - [x] Perbaikan SQL payroll: work log memakai timestamp proses Asia/Jakarta, sementara kasbon memakai tanggal kasbon. Retest iterasi 23 PASS untuk payroll 200, multi-entry kasbon lintas periode, Gaji Owner, sortir, Antar Jemput, dan card dashboard.
 
+## Update (2026-09, iterasi 24) — Akuntabilitas Tahap Produksi & Penyerahan Aman
+- [x] **Petugas per tahap**: ketika pegawai menyelesaikan Cuci, Pengering, Setrika, atau Lipat & Packing, nama petugas dan waktu proses tersimpan pada `work_logs`. Detail timeline menampilkan **“Dikerjakan oleh [nama pegawai]”** pada tahap yang selesai.
+- [x] **Payroll tahap produksi**: endpoint payroll kini mengagregasi `wash_kg`, `dry_kg`, `iron_kg`, `packing_kg`, dan `processed_kg` per pegawai. Layar Gaji Owner menampilkan rincian kiloan/pcs untuk tiap tahap; komponen bonus Cuci dan Setrika mempertahankan rumus upah yang berlaku.
+- [x] **Penyerahan wajib lunas**: order siap ambil yang belum lunas menampilkan peringatan dan tombol terkunci. Backend juga menolak status `ready → completed` bila pembayaran belum `paid`, sehingga aturan aman walau ada retry/offline request.
+- [x] **Riwayat kasbon**: kartu gaji menampilkan daftar kasbon bulan aktif dengan tanggal, catatan, dan nominal setiap entri.
+- [x] **Penyempurnaan dashboard**: indikator Dikerjakan pasif dipusatkan; grafik trend menggunakan palet berbeda per outlet (Kalimulya ungu/biru, Pulomas teal/biru muda, Ujungberung oranye/emas) dan dimuat ulang stabil saat cabang berubah.
+- [x] Teruji iterasi 24: backend 2/2 PASS untuk pelacakan tahap/payroll/kunci unpaid; screenshot Owner memverifikasi Gaji dan Pegawai memverifikasi Siap Diambil. Warna trend berubah terverifikasi saat Kalimulya → Pulomas.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).
