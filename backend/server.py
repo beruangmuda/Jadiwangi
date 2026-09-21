@@ -132,6 +132,7 @@ async def startup():
         await conn.execute(SCHEMA)
         await conn.execute(MIGRATIONS)
         await expire_stale_requests(conn)
+        await expire_order_photos(conn)
     await seed_data()
     await reseed_pricelist()
     await ensure_credentials()
@@ -179,6 +180,8 @@ alter table orders add column if not exists picked_up_at timestamptz;
 alter table orders add column if not exists delivered_at timestamptz;
 alter table orders add column if not exists customer_confirmed_at timestamptz;
 alter table orders add column if not exists photos jsonb not null default '[]'::jsonb;
+alter table orders add column if not exists photos_uploaded_at timestamptz;
+alter table orders add column if not exists photos_purged_at timestamptz;
 alter table orders add column if not exists request_items jsonb not null default '[]';
 alter table orders add column if not exists address text default '';
 alter table orders add column if not exists express boolean not null default false;
@@ -903,6 +906,7 @@ class OrderRequestBody(BaseModel):
 class AdvanceBody(BaseModel):
     employee_id: Optional[str] = None
     employee_name: str = ""
+    target_status: Optional[str] = None
 
 
 class WeighBody(BaseModel):
@@ -1318,6 +1322,7 @@ async def enrich_orders(conn, rows):
 async def list_orders(outlet_id: Optional[str] = None, customer_id: Optional[str] = None, status: Optional[str] = None, active: bool = False, today: bool = False, queue: bool = False, unpaid: bool = False, speed: Optional[str] = None, sort: Optional[str] = None, limit: int = 100):
     async with pool.acquire() as conn:
         await expire_stale_requests(conn)
+        await expire_order_photos(conn)
         clauses, args = [], []
         if unpaid:
             clauses.append("payment_status='unpaid' and status<>'cancelled' and total > 0")
@@ -1490,7 +1495,7 @@ async def weigh_order(oid: str, b: WeighBody):
             await conn.execute(
                 """update orders set total=$1, weight_kg=$2, unit_qty=$3, express=$4,
                    is_request=false, status='quoted', notes=coalesce($5, notes),
-                   photos=$6::jsonb, updated_at=now()
+                   photos=$6::jsonb, photos_uploaded_at=case when jsonb_array_length($6::jsonb)>0 then now() else photos_uploaded_at end, updated_at=now()
                    where id=$7""",
                 total, weight, unit_qty, b.express, b.notes, json.dumps(b.photos), oid)
         row = await conn.fetchrow("select * from orders where id=$1", oid)
@@ -1537,9 +1542,13 @@ async def advance_status(oid: str, b: Optional[AdvanceBody] = None):
         if not row:
             raise HTTPException(404, "Order tidak ditemukan")
         cur = row["status"]
+        if b and b.target_status == cur:
+            return (await enrich_orders(conn, [row]))[0]
         if cur in ("completed", "cancelled") or cur not in PIPELINE:
             raise HTTPException(400, "Order tidak dapat dilanjutkan")
         nxt = PIPELINE[PIPELINE.index(cur) + 1]
+        if b and b.target_status and b.target_status != nxt:
+            raise HTTPException(409, f"Tahap order sudah berubah ke {STAGE_LABELS.get(cur, cur)}")
         completed_at = now_utc() if nxt == "completed" else None
         # attribute the completed stage (cur) to the employee who finished it
         if b and b.employee_id:
@@ -2187,6 +2196,12 @@ async def expire_stale_requests(conn):
         """update orders set status='cancelled', cancelled_at=now(), updated_at=now(),
                cancel_reason='Permintaan otomatis dibatalkan: tidak ada konfirmasi selama 14 hari'
            where status='requested' and created_at < now() - interval '14 days'""")
+
+
+async def expire_order_photos(conn):
+    await conn.execute("""update orders set photos='[]'::jsonb, photos_purged_at=now(), updated_at=now()
+        where photos_purged_at is null and photos_uploaded_at is not null
+          and photos_uploaded_at < now() - interval '3 days' and jsonb_array_length(photos) > 0""")
 
 
 @api.get("/topup/packages")

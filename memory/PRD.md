@@ -167,6 +167,14 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] **Request idle**: request berstatus `requested` yang tidak ditimbang/terkonfirmasi selama lebih dari 14 hari otomatis dibatalkan dan hilang dari antrian aktif, dengan alasan pembatalan tersimpan untuk audit Owner.
 - [x] Teruji iterasi 16: backend 4/4 PASS serta retest frontend PASS untuk tombol Kamera → modal izin/capture, detail kurir/tanggal, nota pelanggan bergambar tanpa persetujuan, dan laporan Owner. Semua order/pelanggan TEST_ dibersihkan.
 
+## Update (2026-09, iterasi 19) — Optimistic Pegawai & Retensi Foto
+- [x] Tahap laundry kini memakai optimistic UI + antrean AsyncStorage; sinkronisasi berjalan segera di belakang layar dan retry tiap 30 detik saat koneksi kembali.
+- [x] Backend target tahap idempoten mencegah retry melompati status order.
+- [x] Foto dicabut dari nota aplikasi tiga hari setelah unggah; penyimpanan managed object storage mempertahankan soft-retention internal karena delete fisik tidak tersedia.
+- [x] Timeline memakai klik tahap berikutnya berurutan tanpa tombol bawah; tahap belum tersedia abu-abu dan arahan klik terlihat.
+- [x] Express diberi card/badge **EXPRESS** merah. Card Dikerjakan menjadi informasi pasif.
+- [x] Retest iterasi 17 PASS untuk queue retry, Express, timeline, idempotensi, dan retensi foto.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).

@@ -11,6 +11,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { ErrorBoundary } from "@/src/components/error-boundary";
 import { queryClient } from "@/src/query-client";
 import { AuthProvider } from "@/src/auth";
+import { flushOrderSync } from "@/src/orderSync";
 
 LogBox.ignoreAllLogs(true);
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -30,6 +31,12 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded) SplashScreen.hideAsync().catch(() => {});
   }, [loaded]);
+
+  useEffect(() => {
+    void flushOrderSync();
+    const timer = setInterval(() => void flushOrderSync(), 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   if (!loaded) return <View style={{ flex: 1, backgroundColor: "#FAFAFF" }} />;
 

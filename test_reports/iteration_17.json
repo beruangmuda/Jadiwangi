@@ -1,0 +1,58 @@
+{
+  "summary": "Validated requested backend and mobile-web frontend scope for optimistic stage update, photo auto-purge >3 days, timeline click-only progression, orderSync queue persistence, and employee dashboard visual behavior.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "OrdersPipeline Express section",
+        "issue": "Express marker is not red and does not render explicit uppercase 'EXPRESS' label. Observed section text '⚡ Express' with color rgb(30, 26, 52).",
+        "testID": "N/A",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Local queue retry in frontend/src/orderSync.ts",
+        "issue": "flushOrderSync() breaks on first failed POST and only keeps that failed job, dropping subsequent queued jobs. This violates background retry reliability after connectivity recovery.",
+        "affected_testIDs": []
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter17_order_advance_and_photo_purge.py",
+    "/app/test_reports/pytest/iter17_order_advance_and_photo_purge.xml",
+    "/app/test_reports/artifacts_iter17/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter17/process_timeline_after_click.jpeg"
+  ],
+  "action_items": [
+    "Frontend: update Express visual treatment to red accent + explicit EXPRESS label when order.express=true.",
+    "Frontend: fix orderSync flush logic to preserve all remaining jobs after first failure and retry full queue on next flush.",
+    "Optional hardening: support EXPO_BACKEND_URL fallback in frontend/src/api.ts to match environment contract.",
+    "Keep QRIS settlement out-of-scope in this task because it is MOCKED."
+  ],
+  "critical_code_review_comments": [
+    "frontend/src/orderSync.ts line 12-13 causes queue truncation after first failed request (data-loss risk for later pending stage updates).",
+    "frontend/src/api.ts uses EXPO_PUBLIC_BACKEND_URL only; deployment contract requests EXPO_BACKEND_URL usage/fallback.",
+    "frontend/app/proses/[id].tsx has next-stage click behavior aligned with optimistic update pattern; non-next stage remained blocked in test."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter17_order_advance_and_photo_purge.py",
+    "/app/tests/iter17_ui_seed.py",
+    "/app/tests/iter17_ui_cleanup.py",
+    "/app/test_reports/iteration_17.json"
+  ],
+  "success_rate": {
+    "backend": "100% (2/2)",
+    "frontend": "83% (core timeline/orderSync load checks passed; Express visual requirement failed)"
+  },
+  "seed_data_creation": "Created temporary TEST_iter17_ui_* customer + TEST_iter17_ui_seed order via /app/tests/iter17_ui_seed.py and cleaned using /app/tests/iter17_ui_cleanup.py.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Timeline validations passed on /proses/[id]: no footer advance button, only next stage was actionable, and optimistic UI shifted next prompt from washing->drying within ~220ms. Local storage key jadiwangi-pending-order-stages was populated on stage click.",
+  "rca_of_issue": "Express visual mismatch RCA: OrdersPipeline renders section title as '⚡ Express' with default dark text and card express border uses brandPrimary (blue), but requirement asks red EXPRESS emphasis. Queue reliability RCA: flushOrderSync() catches first request failure then break; pending array stores only failed job and discards unprocessed tail, so offline bursts can lose queued updates."
+}

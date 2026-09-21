@@ -107,21 +107,22 @@ export function OrdersPipeline({
     const coinCharge = Math.round(total * 0.9);
 
     return (
-      <View style={[styles.card, item.express && { borderColor: colors.brandPrimary, borderWidth: 1.5 }]} testID={`order-card-${item.code}`}>
+      <View style={[styles.card, item.express && { borderColor: "#DC2626", borderWidth: 1.5, backgroundColor: "#FFF7F7" }]} testID={`order-card-${item.code}`}>
         {/* Ringkas */}
         <Pressable
           testID={`toggle-order-${item.code}`}
           onPress={() => { setOpenId(open ? null : item.id); setMethod("cash"); setPayError(""); }}
           style={styles.cardHead}
         >
-          <View style={[styles.queueNo, item.express && { backgroundColor: colors.brandPrimary }]}>
+          <View style={[styles.queueNo, item.express && { backgroundColor: "#DC2626" }]}>
             <Text style={[styles.queueNoText, item.express && { color: colors.onBrandPrimary }]}>{index + 1}</Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.customer} numberOfLines={1}>{item.customer_name}</Text>
-            <Text style={styles.code}>
+            <Text style={[styles.code, item.express && { color: "#B91C1C" }]}>
               {item.code} • {new Date(item.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
             </Text>
+            {item.express ? <View testID={`express-badge-${item.code}`} style={styles.expressBadge}><Icon name="lightning-bolt" size={13} color="#B91C1C" /><Text style={styles.expressBadgeText}>EXPRESS</Text></View> : null}
           </View>
           <View style={{ alignItems: "flex-end", gap: 4 }}>
             <Pill label={item.stage_label || stage.label} tone={stage.tone as any} />
@@ -313,6 +314,8 @@ const useStyles = makeStyles((c) => ({
   queueNoText: { fontFamily: fonts.displayBold, fontSize: 14, color: c.onSurfaceSecondary },
   customer: { fontFamily: fonts.bodyBold, fontSize: 15, color: c.onSurface },
   code: { fontFamily: fonts.body, fontSize: 12, color: c.muted },
+  expressBadge: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 3, marginTop: 3, backgroundColor: "#FEE2E2", borderRadius: radius.pill, paddingHorizontal: 7, paddingVertical: 3 },
+  expressBadgeText: { fontFamily: fonts.bodyBold, fontSize: 10, color: "#B91C1C" },
   total: { fontFamily: fonts.displayBold, fontSize: 14, color: c.onSurface },
   divider: { height: 1, backgroundColor: c.divider },
   itemsRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
