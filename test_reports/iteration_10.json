@@ -1,0 +1,58 @@
+{
+  "summary": "Iterasi 10 menguji fitur kasbon + payroll deduction di backend dan alur UI owner pada halaman Gaji/Order. Backend semua skenario inti lulus (2/2): POST /api/kasbon menolak amount<=0 (422), create kasbon mengurangi total payroll tepat sebesar nominal, GET /api/kasbon per period+outlet memuat record, lalu DELETE /api/kasbon/{id} mengembalikan total payroll ke nilai semula. Frontend: login owner berhasil, halaman Gaji terbuka normal, modal 'Catat Kasbon' tampil lengkap (nominal, catatan, simpan). Halaman Order terbuka normal, kartu order tampil, tombol 'Kirim Struk WhatsApp' muncul saat nomor pelanggan ada. Validasi URL wa.me secara runtime belum bisa dibuktikan di web preview karena Linking.openURL tidak menavigasi/mengekspos URL target di automation run.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Owner > Order > Kirim Struk WhatsApp",
+        "issue": "Di Expo web preview automation, klik tombol WhatsApp tidak memunculkan navigasi ke wa.me maupun URL yang bisa di-capture, sehingga verifikasi runtime isi query text tidak dapat dibuktikan end-to-end meski tombol tampil dan bisa diklik.",
+        "affected_testIDs": [
+          "share-receipt-<orderCode>"
+        ]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "OrdersPipeline.tsx & order-detail/[id].tsx",
+        "issue": "Normalisasi nomor WhatsApp berpotensi salah untuk format Indonesia tanpa awalan 0 (contoh: 8123...), karena saat ini hanya replace(/^0/, '62'). Nomor yang tidak diawali 0 bisa tetap tanpa prefix 62 saat membentuk wa.me."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter10_kasbon.py",
+    "/app/test_reports/pytest/iter10_kasbon.xml",
+    "/app/test_reports/artifacts_iter10/frontend_load.png",
+    "/app/test_reports/artifacts_iter10/gaji_kasbon_modal.png",
+    "/app/test_reports/artifacts_iter10/order_whatsapp_validation.png"
+  ],
+  "action_items": [
+    "Perbaiki normalisasi nomor WA di frontend (handle 08..., 8..., +62..., 62...) sebelum membentuk URL wa.me.",
+    "Tambahkan abstraction/helper pembentuk URL WhatsApp yang bisa diuji unit test, agar validasi isi pesan tidak bergantung pada perilaku Linking.openURL di web preview.",
+    "Retest owner Order flow setelah perbaikan: verifikasi URL wa.me dan isi pesan mencakup kode nota, pelanggan, rincian, total, pembayaran, status."
+  ],
+  "critical_code_review_comments": [
+    "Backend /api/payroll (L1888+) sudah memakai agregasi batch per employee (attendance/work_logs/kasbon/manual) dan respons tetap normal pada pengujian.",
+    "Backend /api/kasbon create/delete/list dan validasi nominal <=0 berjalan sesuai requirement; cleanup data uji sudah dilakukan via DELETE.",
+    "Frontend gaji.tsx sudah menyediakan testID penting untuk modal kasbon: kasbon-amount, kasbon-note, save-kasbon, cancel-kasbon.",
+    "Frontend tombol WhatsApp hanya muncul jika item.customer_phone ada (OrdersPipeline L158+), sesuai requirement visibilitas tombol.",
+    "Potensi bug format WA: replace(/^0/, '62') belum menangani nomor yang diawali '8' (tanpa 0)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter10_kasbon.py",
+    "/app/test_reports/iteration_10.json"
+  ],
+  "success_rate": {
+    "backend": "100% (2/2 test lulus)",
+    "frontend": "Sebagian besar flow lulus (Gaji & Order render + CTA WhatsApp visibility), 1 validasi runtime URL wa.me belum terverifikasi end-to-end di web automation"
+  },
+  "seed_data_creation": "Kasbon uji dibuat saat backend test (amount 100000) lalu dihapus dengan DELETE /api/kasbon/{id}; total payroll diverifikasi kembali ke nilai awal.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Jangan buat kasbon permanen: selalu cleanup via DELETE setelah verifikasi payroll delta. Untuk UI WA, automation saat ini tidak menangkap URL target dari Linking.openURL di web preview; gunakan helper murni (pure function) atau mocking Linking untuk pembuktian message URL.",
+  "rca_of_issue": "RCA utama temuan frontend: runtime web preview tidak mengekspos hasil Linking.openURL sebagai perubahan URL/popup yang dapat ditangkap oleh automation. Selain itu, format nomor WA saat ini rawan pada input yang tidak diawali 0. Mitigasi: sentralisasi fungsi normalisasi nomor + builder URL lalu unit test deterministik. Catatan: flow QRIS adalah MOCKED (di luar cakupan fitur ini)."
+}

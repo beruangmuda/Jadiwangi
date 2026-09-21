@@ -57,6 +57,8 @@
 ##   test_priority: "high_first"  # or "sequential" or "stuck_first"
 ##
 ## agent_communication:
+##     -agent: "main"
+##     -message: "ITERATION 10 FIX: Mengganti normalisasi WhatsApp duplikat dengan helper murni src/whatsapp.ts. Helper menangani 08..., 8..., +62..., dan 62... serta selalu membangun pesan struk yang berisi kode, pelanggan, rincian, total, pembayaran, dan status."
 ##     -agent: "main"  # or "testing" or "user"
 ##     -message: "Communication message between agents"
 
@@ -102,9 +104,23 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-## user_problem_statement: "Masukkan pricelist 3 outlet (Depok/Kalimulya, Jakarta/Pulomas, Bandung/Ujungberung) ke database. Model 1 item = 2 harga (Reguler & Express) dengan toggle saat order. Reset data contoh."
+## user_problem_statement: "Tambahkan struk yang dapat dikirim ke WhatsApp pelanggan dari detail pesanan, serta pencatatan kasbon pegawai yang otomatis dipotong dari gaji bulanan."
 
 ## backend:
+##   - task: "Kasbon pegawai: pencatatan dan potongan otomatis gaji per bulan"
+##     implemented: true
+##     working: true
+##     file: "backend/server.py"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Endpoint GET/POST /api/kasbon ditambahkan. Kasbon tervalidasi > Rp0 dan langsung terbaca oleh GET /api/payroll pada bulan pencatatan."
+##         -working: true
+##         -agent: "testing"
+##         -comment: "Kasbon invalid 422, pengurangan payroll tepat nominal, list period/outlet, dan cleanup DELETE semuanya PASS (iterasi 10)."
 ##   - task: "Pricelist per outlet + services schema (outlet_id, price_express, duration, duration_express, min_kg)"
 ##     implemented: true
 ##     working: true
@@ -118,6 +134,34 @@
 ##         -comment: "Reseed pricelist_v=3. /services?outlet_id= returns Depok 41, Jakarta 43, Bandung 43. Order create with express price verified via curl (18000x5=90000)."
 
 ## frontend:
+##   - task: "Struk order yang dibagikan langsung ke WhatsApp pelanggan"
+##     implemented: true
+##     working: true
+##     file: "frontend/app/order-detail/[id].tsx, frontend/src/components/OrdersPipeline.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Tombol Kirim Struk WhatsApp tersedia pada detail kartu order owner/pegawai dan detail order; pesan berisi nota, pelanggan, rincian, total, pembayaran, dan status."
+##         -working: true
+##         -agent: "main"
+##         -comment: "Helper diuji untuk 08..., 8..., +62..., dan 62...; URL wa.me serta seluruh isi struk wajib valid."
+##   - task: "Menu catat kasbon pada Gaji Pegawai"
+##     implemented: true
+##     working: true
+##     file: "frontend/app/(owner)/gaji.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Tombol Catat Kasbon dan form nominal/catatan ditambahkan ke rincian setiap pegawai pada tab Gaji."
+##         -working: true
+##         -agent: "testing"
+##         -comment: "Login owner, halaman Gaji, modal Catat Kasbon, dan semua field/CTA terverifikasi PASS (iterasi 10)."
 ##   - task: "Buat Order: services per outlet, grouped by category, Reguler/Express toggle"
 ##     implemented: true
 ##     working: "NA"
@@ -135,11 +179,14 @@
 
 ## test_plan:
 ##   current_focus:
-##     - "Buat Order flow with express toggle and outlet switching"
-##     - "Manage Produk per outlet"
-##   test_all: false
+##     - "Verifikasi pengguna terhadap alur kasbon dan pengiriman struk WhatsApp"
+##   test_all: true
 ##   test_priority: "high_first"
 
 ## agent_communication:
+##     -agent: "main"
+##     -message: "ITERATION 10: Menambahkan GET/POST /api/kasbon dan UI Catat Kasbon per pegawai pada tab Gaji. Nominal kasbon yang dicatat bulan ini otomatis mengurangi total payroll bulan ini. Menambahkan tombol Kirim Struk WhatsApp pada detail kartu antrian owner/pegawai dan pada halaman detail order untuk sesi staf."
+##     -agent: "main"
+##     -message: "ITERATION 10 COMPLETE: Normalisasi WhatsApp sudah disatukan dan diuji, data kasbon/pegawai uji sudah dibersihkan, serta backend dan UI fitur baru tervalidasi."
 ##     -agent: "main"
 ##     -message: "ITERATION 8: (1) TrendChart now has Y-axis rupiah labels at 0/25/50/75/100% and X-axis day ticks; dashboard title 'Trend <bulan Indonesia>'. (2) Dashboard 'X pelanggan' badge is pressable -> /hari-ini screen listing today's orders/notes (GET /orders?today=true). Owner can cancel a nota (reason) via POST /orders/{id}/cancel; employees CANNOT (OrdersPipeline canCancel=false in employee index, and /hari-ini hides cancel unless session.role==owner). (3) Dashboard adds Top 3 Pelanggan bulan ini (name, kg, spend) from GET /dashboard top_customers. (4) Setelan > Database Pelanggan (/manage/pelanggan) fully reworked: search, add/edit (name, phone, ADDRESS, email, deposit, outlet), list with per-customer stats (total_kg, tx_count, total_spend), and detail modal (GET /customers/{id}/detail) showing address, points, deposit, total kiloan, jumlah transaksi, total belanja, transaksi pertama & terakhir, riwayat 10 order. Backend: added address column to customers, aggregates in list_customers, /customers/{id}/detail, today filter, top_customers. Owner owner/owner123, produksi joko/pegawai123. Please test /hari-ini owner cancel + employee cannot cancel, customer DB CRUD+detail, dashboard top_customers, and no regressions."

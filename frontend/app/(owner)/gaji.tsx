@@ -21,11 +21,12 @@ export default function GajiPegawai() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const { session } = useAuth();
-  const outlets = session?.outlets || [];
+  const outlets = useMemo(() => session?.outlets || [], [session?.outlets]);
   const [outletId, setOutletId] = useState<string>(session?.currentOutletId || outlets[0]?.id || "");
   const [period, setPeriod] = useState<string>(dayjs().format("YYYY-MM"));
   const [expanded, setExpanded] = useState<string | null>(null);
   const [edit, setEdit] = useState<any>(null);
+  const [kasbon, setKasbon] = useState<any>(null);
 
   useEffect(() => {
     if (!outletId && outlets.length > 0) setOutletId(session?.currentOutletId || outlets[0].id);
@@ -49,6 +50,21 @@ export default function GajiPegawai() {
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setEdit(null);
       qc.invalidateQueries({ queryKey: ["payroll"] });
+    },
+  });
+
+  const saveKasbon = useMutation({
+    mutationFn: () => api.post("/kasbon", {
+      employee_id: kasbon.employee_id,
+      outlet_id: outletId,
+      amount: Number(kasbon.amount) || 0,
+      note: kasbon.note || "",
+    }),
+    onSuccess: () => {
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setKasbon(null);
+      qc.invalidateQueries({ queryKey: ["payroll"] });
+      qc.invalidateQueries({ queryKey: ["kasbon"] });
     },
   });
 
@@ -115,10 +131,16 @@ export default function GajiPegawai() {
                         <Text style={styles.totalRowLabel}>Total Diterima</Text>
                         <Text style={styles.totalRowValue}>{rupiah(e.total)}</Text>
                       </View>
-                      <Pressable testID={`gaji-edit-${e.employee_id}`} onPress={() => setEdit({ ...e, lembur_shifts: String(e.lembur_shifts), perjalanan_dinas: String(e.perjalanan_dinas) })} style={styles.editBtn}>
-                        <Icon name="pencil" size={16} color={colors.brandPrimary} />
-                        <Text style={styles.editText}>Ubah Lembur / Perjalanan Dinas</Text>
-                      </Pressable>
+                      <View style={styles.actionRow}>
+                        <Pressable testID={`gaji-edit-${e.employee_id}`} onPress={() => setEdit({ ...e, lembur_shifts: String(e.lembur_shifts), perjalanan_dinas: String(e.perjalanan_dinas) })} style={[styles.editBtn, { flex: 1 }]}>
+                          <Icon name="pencil" size={16} color={colors.brandPrimary} />
+                          <Text style={styles.editText}>Ubah Manual</Text>
+                        </Pressable>
+                        <Pressable testID={`gaji-kasbon-${e.employee_id}`} onPress={() => setKasbon({ ...e, amount: "", note: "" })} style={[styles.kasbonBtn, { flex: 1 }]}>
+                          <Icon name="cash-minus" size={16} color={colors.error} />
+                          <Text style={styles.kasbonText}>Catat Kasbon</Text>
+                        </Pressable>
+                      </View>
                     </View>
                   ) : null}
                 </View>
@@ -141,6 +163,26 @@ export default function GajiPegawai() {
                 <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm }}>
                   <Pressable style={styles.cancel} onPress={() => setEdit(null)}><Text style={styles.cancelText}>Batal</Text></Pressable>
                   <PrimaryButton label="Simpan" onPress={() => saveManual.mutate()} loading={saveManual.isPending} testID="save-manual" style={{ flex: 1 }} />
+                </View>
+              </View>
+            ) : <View />}
+          </KeyboardAwareScrollView>
+        </View>
+      </Modal>
+
+      <Modal visible={!!kasbon} transparent animationType="slide" onRequestClose={() => setKasbon(null)}>
+        <View style={styles.overlay}>
+          <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }} bottomOffset={20}>
+            {kasbon ? (
+              <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
+                <View style={styles.grabber} />
+                <Text style={styles.sheetTitle}>Catat Kasbon</Text>
+                <Text style={styles.sheetSub}>{kasbon.name} · otomatis dipotong pada gaji {dayjs(period + "-01").format("MMMM YYYY")}</Text>
+                <Field label="Nominal Kasbon (Rp)" value={kasbon.amount} onChangeText={(t) => setKasbon({ ...kasbon, amount: t })} placeholder="Contoh: 100000" keyboardType="number-pad" testID="kasbon-amount" />
+                <Field label="Catatan (opsional)" value={kasbon.note} onChangeText={(t) => setKasbon({ ...kasbon, note: t })} placeholder="Contoh: Kasbon kebutuhan pribadi" testID="kasbon-note" />
+                <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm }}>
+                  <Pressable testID="cancel-kasbon" style={styles.cancel} onPress={() => setKasbon(null)}><Text style={styles.cancelText}>Batal</Text></Pressable>
+                  <PrimaryButton label="Simpan Kasbon" onPress={() => saveKasbon.mutate()} loading={saveKasbon.isPending} disabled={!Number(kasbon.amount)} testID="save-kasbon" style={{ flex: 1 }} />
                 </View>
               </View>
             ) : <View />}
@@ -187,6 +229,9 @@ const useStyles = makeStyles((c) => ({
   totalRowValue: { fontFamily: fonts.displayBold, fontSize: 18, color: c.success },
   editBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: c.brandTertiary, borderRadius: radius.md, paddingVertical: 10, marginTop: spacing.xs },
   editText: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onBrandTertiary },
+  actionRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs },
+  kasbonBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#FFE4E6", borderRadius: radius.md, paddingVertical: 10 },
+  kasbonText: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.error },
   overlay: { flex: 1, backgroundColor: "rgba(30,26,52,0.45)" },
   sheet: { backgroundColor: c.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.xl, gap: spacing.md },
   grabber: { width: 44, height: 5, borderRadius: 3, backgroundColor: c.border, alignSelf: "center", marginBottom: spacing.xs },

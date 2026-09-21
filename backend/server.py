@@ -169,6 +169,9 @@ create table if not exists payroll_manual (
   period text not null, lembur_shifts int not null default 0, perjalanan_dinas numeric(12,2) not null default 0,
   note text default '');
 create unique index if not exists payroll_manual_uq on payroll_manual (employee_id, period);
+create index if not exists attendance_employee_day_idx on attendance (employee_id, day);
+create index if not exists work_logs_employee_stage_created_idx on work_logs (employee_id, stage, created_at);
+create index if not exists kasbon_employee_created_idx on kasbon (employee_id, created_at);
 alter table customers add column if not exists address text default '';
 alter table orders add column if not exists is_request boolean not null default false;
 alter table orders add column if not exists picked_up_at timestamptz;
@@ -842,6 +845,13 @@ class PayrollManualBody(BaseModel):
     period: str
     lembur_shifts: int = 0
     perjalanan_dinas: float = 0
+
+
+class KasbonBody(BaseModel):
+    employee_id: str
+    outlet_id: Optional[str] = None
+    amount: float
+    note: str = ""
 
 
 class OrderItemIn(BaseModel):
@@ -1884,42 +1894,60 @@ async def payroll(outlet_id: Optional[str] = None, period: Optional[str] = None)
             emps = await conn.fetch("select * from employees where outlet_id=$1 order by role_type,name", outlet_id)
         else:
             emps = await conn.fetch("select * from employees order by role_type,name")
+        if not emps:
+            return {"period": period_str, "employees": []}
+        employee_ids = [e["id"] for e in emps]
         outlets = {str(o["id"]): o["name"] for o in await conn.fetch("select id,name from outlets")}
         role_labels = {"admin": "Admin", "produksi": "Produksi", "kurir": "Kurir"}
+        attendance_rows = await conn.fetch(
+            """select employee_id, count(*) as count from attendance
+               where employee_id = any($1::uuid[]) and day >= $2 and day <= $3 group by employee_id""",
+            employee_ids, frm, to)
+        manual_rows = await conn.fetch(
+            """select employee_id, lembur_shifts, perjalanan_dinas from payroll_manual
+               where employee_id = any($1::uuid[]) and period=$2""", employee_ids, period_str)
+        work_rows = await conn.fetch(
+            """select employee_id,
+                 coalesce(sum(weight_kg) filter (where stage='washing'),0) as wash_kg,
+                 coalesce(sum(unit_qty) filter (where stage='washing'),0) as wash_pcs,
+                 coalesce(sum(weight_kg) filter (where stage='ironing'),0) as iron_kg,
+                 coalesce(sum(unit_qty) filter (where stage='ironing'),0) as iron_pcs,
+                 count(distinct order_id) filter (where stage='trip') as trips
+               from work_logs
+               where employee_id = any($1::uuid[])
+                 and (created_at at time zone 'Asia/Jakarta')::date >= $2
+                 and (created_at at time zone 'Asia/Jakarta')::date <= $3
+               group by employee_id""", employee_ids, frm, to)
+        kasbon_rows = await conn.fetch(
+            """select employee_id, coalesce(sum(amount),0) as amount from kasbon
+               where employee_id = any($1::uuid[])
+                 and (created_at at time zone 'Asia/Jakarta')::date >= $2
+                 and (created_at at time zone 'Asia/Jakarta')::date <= $3
+               group by employee_id""", employee_ids, frm, to)
+        attendance_by_employee = {r["employee_id"]: int(r["count"]) for r in attendance_rows}
+        manual_by_employee = {r["employee_id"]: r for r in manual_rows}
+        work_by_employee = {r["employee_id"]: r for r in work_rows}
+        kasbon_by_employee = {r["employee_id"]: float(r["amount"]) for r in kasbon_rows}
         result = []
         for e in emps:
             eid = e["id"]
-            kehadiran = await conn.fetchval(
-                "select count(*) from attendance where employee_id=$1 and day>=$2 and day<=$3", eid, frm, to) or 0
-            man = await conn.fetchrow(
-                "select * from payroll_manual where employee_id=$1 and period=$2", eid, period_str)
+            kehadiran = attendance_by_employee.get(eid, 0)
+            man = manual_by_employee.get(eid)
             lembur = int(man["lembur_shifts"]) if man else 0
             perjalanan = float(man["perjalanan_dinas"]) if man else 0.0
-            wash = await conn.fetchrow(
-                """select coalesce(sum(weight_kg),0) as kg, coalesce(sum(unit_qty),0) as pcs
-                   from work_logs where employee_id=$1 and stage='washing' and created_at::date>=$2 and created_at::date<=$3""",
-                eid, frm, to)
-            iron = await conn.fetchrow(
-                """select coalesce(sum(weight_kg),0) as kg, coalesce(sum(unit_qty),0) as pcs
-                   from work_logs where employee_id=$1 and stage='ironing' and created_at::date>=$2 and created_at::date<=$3""",
-                eid, frm, to)
-            trips = await conn.fetchval(
-                """select count(distinct order_id) from work_logs
-                   where employee_id=$1 and stage='trip' and created_at::date>=$2 and created_at::date<=$3""",
-                eid, frm, to) or 0
-            kasbon = await conn.fetchval(
-                "select coalesce(sum(amount),0) from kasbon where employee_id=$1 and created_at::date>=$2 and created_at::date<=$3",
-                eid, frm, to) or 0
-
-            wash_kg = float(wash["kg"]); wash_pcs = float(wash["pcs"])
-            iron_kg = float(iron["kg"]); iron_pcs = float(iron["pcs"])
+            work = work_by_employee.get(eid)
+            wash_kg = float(work["wash_kg"]) if work else 0.0
+            wash_pcs = float(work["wash_pcs"]) if work else 0.0
+            iron_kg = float(work["iron_kg"]) if work else 0.0
+            iron_pcs = float(work["iron_pcs"]) if work else 0.0
+            trips = int(work["trips"] or 0) if work else 0
             gaji_pokok = float(e["gaji_pokok"] or 0)
             tunjangan = float(e["tunjangan_kasir"] or 0)
             uang_makan = 15000 * (int(kehadiran) + lembur)
             bonus_cuci = ((wash_kg) + (wash_pcs * 5)) / 10 * 3000
             bonus_setrika = (iron_kg + iron_pcs) * 1000
             antar_jemput = 5000 * int(trips)
-            kasbon = float(kasbon)
+            kasbon = kasbon_by_employee.get(eid, 0.0)
             total = gaji_pokok + tunjangan + uang_makan + bonus_cuci + bonus_setrika + antar_jemput + perjalanan - kasbon
             result.append({
                 "employee_id": str(eid), "name": e["name"], "role": role_labels.get(e["role_type"], e["role_type"]),
@@ -1944,6 +1972,50 @@ async def payroll_manual(b: PayrollManualBody):
                returning *""",
             b.employee_id, b.period, b.lembur_shifts, b.perjalanan_dinas)
         return row_to_dict(row)
+
+
+@api.get("/kasbon")
+async def list_kasbon(outlet_id: Optional[str] = None, employee_id: Optional[str] = None, period: Optional[str] = None):
+    frm, to = _period_range(period)
+    async with pool.acquire() as conn:
+        args, clauses = [frm, to], ["(k.created_at at time zone 'Asia/Jakarta')::date >= $1", "(k.created_at at time zone 'Asia/Jakarta')::date <= $2"]
+        if outlet_id:
+            args.append(outlet_id)
+            clauses.append(f"k.outlet_id=${len(args)}")
+        if employee_id:
+            args.append(employee_id)
+            clauses.append(f"k.employee_id=${len(args)}")
+        rows = await conn.fetch(
+            f"""select k.*, e.name as employee_name, o.name as outlet_name
+                from kasbon k join employees e on e.id=k.employee_id
+                left join outlets o on o.id=k.outlet_id
+                where {' and '.join(clauses)} order by k.created_at desc""", *args)
+        return rows_to_list(rows)
+
+
+@api.post("/kasbon")
+async def create_kasbon(b: KasbonBody):
+    if b.amount <= 0:
+        raise HTTPException(422, "Nominal kasbon harus lebih dari Rp0")
+    async with pool.acquire() as conn:
+        emp = await conn.fetchrow("select id,name,outlet_id from employees where id=$1 and active=true", b.employee_id)
+        if not emp:
+            raise HTTPException(404, "Pegawai tidak ditemukan atau tidak aktif")
+        outlet_id = b.outlet_id or emp["outlet_id"]
+        row = await conn.fetchrow(
+            """insert into kasbon(employee_id,employee_name,outlet_id,amount,note)
+               values($1,$2,$3,$4,$5) returning *""",
+            emp["id"], emp["name"], outlet_id, b.amount, b.note.strip())
+        return row_to_dict(row)
+
+
+@api.delete("/kasbon/{kid}")
+async def delete_kasbon(kid: str):
+    async with pool.acquire() as conn:
+        deleted = await conn.fetchval("delete from kasbon where id=$1 returning id", kid)
+        if not deleted:
+            raise HTTPException(404, "Catatan kasbon tidak ditemukan")
+        return {"ok": True}
 
 
 @api.get("/expenses")

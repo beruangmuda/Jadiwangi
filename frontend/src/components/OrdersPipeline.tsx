@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, Pressable, RefreshControl, Modal, TextInput, Platform } from "react-native";
+import { View, Text, ScrollView, Pressable, RefreshControl, Modal, TextInput, Platform, Linking } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 
@@ -9,6 +9,7 @@ import { Icon } from "@/src/components/Icon";
 import { Pill, ChipRow, PrimaryButton, Loading, EmptyState, BodyText } from "@/src/components/ui";
 import { STAGE, NEXT_LABEL, nextStage } from "@/src/status";
 import { rupiah, kg, timeLeft } from "@/src/format";
+import { buildReceiptWhatsAppUrl } from "@/src/whatsapp";
 
 const FILTERS = [
   { key: "active", label: "Aktif" },
@@ -85,6 +86,19 @@ export function OrdersPipeline({
     },
   });
 
+  const shareReceipt = async (item: any) => {
+    const url = buildReceiptWhatsAppUrl({
+      phone: item.customer_phone,
+      code: item.code,
+      customerName: item.customer_name,
+      itemLines: item.items_summary ? [`• ${item.items_summary}`] : [],
+      total: rupiah(item.total),
+      payment: item.payment_status === "paid" ? "Lunas" : "Belum Lunas",
+      status: item.stage_label,
+    });
+    if (url) await Linking.openURL(url);
+  };
+
   const list = data || [];
   const express = list.filter((o: any) => o.express);
   const regular = list.filter((o: any) => !o.express);
@@ -143,6 +157,12 @@ export function OrdersPipeline({
             </View>
             {item.customer_phone ? <Meta icon="phone" text={item.customer_phone} /> : null}
             {item.notes ? <Text style={styles.notes}>Catatan: {item.notes}</Text> : null}
+            {buildReceiptWhatsAppUrl({ phone: item.customer_phone, code: item.code, customerName: item.customer_name, itemLines: [], total: "", payment: "", status: "" }) ? (
+              <Pressable testID={`share-receipt-${item.code}`} onPress={() => shareReceipt(item)} style={styles.receiptBtn}>
+                <Icon name="whatsapp" size={16} color="#15803D" />
+                <Text style={styles.receiptText}>Kirim Struk WhatsApp</Text>
+              </Pressable>
+            ) : null}
 
             {/* Konfirmasi pembayaran */}
             {item.payment_status !== "paid" && item.status !== "cancelled" && total > 0 ? (
@@ -305,6 +325,8 @@ const useStyles = makeStyles((c) => ({
   methodCard: { flex: 1, alignItems: "center", gap: 4, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface },
   methodLabel: { fontFamily: fonts.bodyBold, fontSize: 11, color: c.onSurfaceSecondary },
   payBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: radius.md },
+  receiptBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: radius.md, paddingVertical: 10, backgroundColor: "#DCFCE7" },
+  receiptText: { fontFamily: fonts.bodyBold, fontSize: 13, color: "#15803D" },
   paidRow: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#DCFCE7", borderRadius: radius.md, padding: spacing.sm },
   paidText: { fontFamily: fonts.bodyBold, fontSize: 12, color: "#15803D" },
   smallBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 11, paddingHorizontal: 14, borderRadius: radius.md },

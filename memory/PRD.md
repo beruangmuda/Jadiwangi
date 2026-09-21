@@ -119,11 +119,17 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - Teruji: backend 20/20 PASS + regresi (iteration_9.json), frontend runtime PASS (bug klik order terverifikasi), konfirmasi pembayaran dari kartu antrian diverifikasi manual.
 - Google review links: Depok/Kalimulya https://g.page/r/CUv3jO9Cz4aAEBM/review ; Jakarta/Pulomas https://g.page/r/CT1ETVEE3zn5EBM/review ; Bandung/Ujungberung https://g.page/r/CQUtr3hTOpEbEBM/review
 
+## Update (2026-09, iterasi 13) — Struk WhatsApp & Kasbon Pegawai
+- [x] **Struk WhatsApp**: dari detail kartu pesanan Owner/Pegawai dapat membuka WhatsApp pelanggan dengan struk siap kirim berisi kode nota, nama pelanggan, rincian layanan, total, pembayaran, dan status.
+- [x] **Format nomor WA aman**: helper tunggal `src/whatsapp.ts` menormalkan format `08…`, `8…`, `+62…`, dan `62…` menjadi tautan `wa.me` yang valid.
+- [x] **Kasbon Pegawai**: di tab Gaji Owner, setiap rincian pegawai memiliki tombol **Catat Kasbon** (nominal + catatan). Kasbon otomatis mengurangi **Total Diterima** pada periode gaji saat dicatat.
+- [x] Backend: `GET/POST/DELETE /api/kasbon`, validasi nominal positif, filter outlet/periode, dan indeks query. `GET /api/payroll` dioptimalkan dari query per-pegawai menjadi agregasi batch agar tetap responsif saat jumlah pegawai bertambah.
+- [x] Teruji: kasbon invalid (422), pengurangan payroll tepat nominal, cleanup data uji, UI modal kasbon dan CTA WhatsApp owner, serta isi/normalisasi tautan WhatsApp secara deterministik.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
-- P1: Kasbon pegawai (tabel sudah ada, UI belum) & saldo deposit pelanggan (pakai untuk bayar).
+- P1: Saldo deposit pelanggan (pakai untuk bayar).
 - P2: QRIS dinamis via gateway (Midtrans) menggantikan statis.
-- P2: Detail order (rincian item) & struk.
 - P2: Notifikasi status order untuk pelanggan.
 - P3: Dark mode.
 
