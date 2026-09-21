@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, Pressable, ScrollView, Modal, Platform, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import dayjs from "dayjs";
@@ -23,6 +24,7 @@ export default function HariIni() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const router = useRouter();
   const { session } = useAuth();
   const isOwner = session?.role === "owner";
   const outletId = session?.currentOutletId ?? null;
@@ -75,6 +77,7 @@ export default function HariIni() {
                 const sc = colors[toneKey] as string;
                 return (
                   <View key={o.id} style={[styles.card, cancelled && { opacity: 0.6 }]}>
+                    <Pressable testID={`today-order-card-${o.code}`} onPress={() => router.push(`/order-detail/${o.id}`)} style={styles.orderDetailPress}>
                     <View style={styles.cardTop}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.code}>{o.code}</Text>
@@ -88,6 +91,7 @@ export default function HariIni() {
                       <Text style={styles.meta}>{kg(o.weight_kg)} • {o.unit_qty} pcs</Text>
                       <Text style={styles.total}>{rupiah(o.total)}</Text>
                     </View>
+                    </Pressable>
                     {isOwner && !cancelled ? (
                       <Pressable testID={`cancel-${o.id}`} onPress={() => setCancelId(o.id)} style={styles.cancelBtn}>
                         <Icon name="close-circle-outline" size={16} color={colors.error} />
@@ -127,6 +131,7 @@ const useStyles = makeStyles((c) => ({
   sumValue: { fontFamily: fonts.displayBold, fontSize: 22, color: c.onSurface, marginTop: 2 },
   sumDivider: { width: 1, height: 36, backgroundColor: c.divider, marginHorizontal: spacing.md },
   card: { backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, padding: spacing.md, gap: spacing.sm },
+  orderDetailPress: { minHeight: 44, gap: spacing.sm },
   cardTop: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   code: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurface },
   cust: { fontFamily: fonts.body, fontSize: 12, color: c.muted, marginTop: 1 },

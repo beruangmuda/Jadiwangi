@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, ScrollView, Pressable, Modal, TextInput, Platform, Alert, LayoutAnimation, UIManager } from "react-native";
+import { View, Text, ScrollView, Pressable, Modal, TextInput, Platform, Alert, LayoutAnimation, UIManager, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import { Icon } from "@/src/components/Icon";
 import { PrimaryButton, Loading, EmptyState, BodyText } from "@/src/components/ui";
 import { rupiah, kg } from "@/src/format";
 import { saveCustomerDeviceContact } from "@/src/deviceContacts";
+import { buildReceiptWhatsAppUrl } from "@/src/whatsapp";
 
 type Cart = Record<string, { service: any; qty: number }>;
 
@@ -46,6 +47,7 @@ export default function OrderBaru() {
   const [customerError, setCustomerError] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({ Kiloan: true });
   const [qrisOpen, setQrisOpen] = useState(false);
+  const [receiptOrder, setReceiptOrder] = useState<any>(null);
   const [payError, setPayError] = useState("");
   const [payMethod, setPayMethod] = useState<"cash" | "qris" | "emoney">("qris");
   const [speeds, setSpeeds] = useState<Record<string, "regular" | "express">>({});
@@ -78,7 +80,23 @@ export default function OrderBaru() {
       qc.invalidateQueries({ queryKey: ["customers"] });
       Alert.alert("Pelanggan tersimpan", notice);
     },
-    onError: (e: any) => setCustomerError(e?.message || "Pelanggan belum dapat disimpan"),
+    onError: async (e: any) => {
+      const message = e?.message || "Pelanggan belum dapat disimpan";
+      if (message.includes("sudah terdaftar")) {
+        try {
+          const existing = await api.get(`/customers?outlet_id=${outletId}&q=${encodeURIComponent(newCustomerForm.phone)}`);
+          if (existing?.[0]) {
+            setCustomer(existing[0]);
+            setNewCustomer(false);
+            setPickerOpen(false);
+            setCustomerError("");
+            Alert.alert("Pelanggan sudah ada", "Data pelanggan lama dipilih agar tidak terjadi nomor WhatsApp ganda.");
+            return;
+          }
+        } catch { /* tampilkan pesan awal bila pencarian fallback gagal */ }
+      }
+      setCustomerError(message);
+    },
   });
 
   const priceOf = useCallback((svc: any) =>
@@ -129,6 +147,7 @@ export default function OrderBaru() {
         payment_status: paid ? "paid" : "unpaid",
         payment_method: method,
         created_by: session?.role || "owner",
+        express: Object.values(cart).some((c) => speeds[c.service.id] === "express"),
         items: Object.values(cart).map((c) => ({
           service_id: c.service.id,
           service_name: speeds[c.service.id] === "express" ? `${c.service.name} (Express)` : c.service.name,
@@ -137,14 +156,15 @@ export default function OrderBaru() {
           price: priceOf(c.service),
         })),
       }),
-    onSuccess: () => {
+    onSuccess: (createdOrder: any, variables) => {
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["leaderboard"] });
       qc.invalidateQueries({ queryKey: ["customers"] });
       setQrisOpen(false);
-      router.back();
+      if (variables.paid && variables.method === "qris") setReceiptOrder(createdOrder);
+      else router.back();
     },
     onError: (e: any) => {
       setPayError(e?.message || "Pembayaran gagal");
@@ -170,6 +190,16 @@ export default function OrderBaru() {
 
   const canProceed = !!customer && !!outletId && Object.keys(cart).length > 0;
   const outletName = outlets.find((o) => o.id === outletId)?.name || session?.customer?.name || "Outlet";
+  const receiptUrl = receiptOrder ? buildReceiptWhatsAppUrl({
+    phone: receiptOrder.customer_phone || customer?.phone,
+    code: receiptOrder.code,
+    customerName: receiptOrder.customer_name || customer?.name || "Pelanggan",
+    itemLines: Object.values(cart).map((c) => `• ${c.service.name}${speeds[c.service.id] === "express" ? " (Express)" : ""} ${c.qty} ${c.service.unit}: ${rupiah(priceOf(c.service) * c.qty)}`),
+    total: rupiah(receiptOrder.total),
+    payment: "Lunas via QRIS",
+    status: receiptOrder.stage_label || "Diterima",
+  }) : null;
+  const finishReceipt = () => { setReceiptOrder(null); router.back(); };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
@@ -333,14 +363,15 @@ export default function OrderBaru() {
 
       {/* Customer picker */}
       <Modal visible={pickerOpen} animationType="slide" transparent onRequestClose={() => setPickerOpen(false)}>
-        <View style={styles.pickerOverlay}>
-          <View style={[styles.pickerSheet, { paddingBottom: insets.bottom + spacing.md, maxHeight: "80%" }]}>
+        <View style={styles.pickerOverlay} pointerEvents="box-none">
+          <View collapsable={false} style={[styles.pickerSheet, { paddingBottom: insets.bottom + spacing.md, flex: 1, maxHeight: "80%" }]}>
             <View style={styles.pickerHead}>
               <Text style={styles.pickerTitle}>Pilih Pelanggan</Text>
               <Pressable testID="close-customer-picker" onPress={() => setPickerOpen(false)} hitSlop={10}><Icon name="close" size={22} color={colors.onSurface} /></Pressable>
             </View>
+            <View style={{ flex: 1 }}>
             {newCustomer ? (
-              <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.md, paddingTop: spacing.sm }}>
+              <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.md, paddingTop: spacing.sm }}>
                 <View style={styles.newCustomerNotice}><Icon name="contacts" size={20} color={colors.brand} /><Text style={styles.newCustomerNoticeText}>Simpan nomor WhatsApp agar bukti nota mudah dikirim. Kontak ponsel dibuat setelah izin diberikan.</Text></View>
                 <View style={{ gap: spacing.xs }}><Text style={styles.fieldLabel}>Nama pelanggan</Text><TextInput testID="input-new-cust-name" value={newCustomerForm.name} onChangeText={(name) => setNewCustomerForm({ ...newCustomerForm, name })} placeholder="Nama lengkap" placeholderTextColor={colors.muted} style={styles.input} /></View>
                 <View style={{ gap: spacing.xs }}><Text style={styles.fieldLabel}>Nomor WhatsApp</Text><TextInput testID="input-new-cust-phone" value={newCustomerForm.phone} onChangeText={(phone) => setNewCustomerForm({ ...newCustomerForm, phone })} placeholder="0812 3456 7890" placeholderTextColor={colors.muted} keyboardType="phone-pad" style={styles.input} /></View>
@@ -351,22 +382,23 @@ export default function OrderBaru() {
                   <PrimaryButton label="Simpan Pelanggan" icon="account-plus" onPress={() => createCustomer.mutate()} loading={createCustomer.isPending} disabled={!newCustomerForm.name.trim() || !newCustomerForm.phone.trim()} testID="btn-save-new-customer" style={{ flex: 1 }} />
                 </View>
               </ScrollView>
-            ) : <>
+            ) : <View style={{ flex: 1 }}>
               <View style={styles.searchBox}><Icon name="magnify" size={20} color={colors.muted} /><TextInput testID="customer-search" value={search} onChangeText={setSearch} placeholder="Cari nama / no HP" placeholderTextColor={colors.muted} style={styles.searchInput} /></View>
               <Pressable testID="btn-new-customer" onPress={() => { setNewCustomer(true); setCustomerError(""); }} style={styles.newCustomerBtn}><Icon name="account-plus" size={20} color={colors.onBrandPrimary} /><Text style={styles.newCustomerBtnText}>Pelanggan Baru</Text></Pressable>
-              <ScrollView contentContainerStyle={{ gap: spacing.xs, paddingTop: spacing.sm }}>
+              <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.xs, paddingTop: spacing.sm }}>
                 {(customers || []).map((c: any) => <Pressable key={c.id} testID={`cust-opt-${c.id}`} onPress={() => { setCustomer(c); setPickerOpen(false); }} style={styles.custOpt}><View style={styles.custAvatar}><Text style={styles.custInitial}>{c.name?.[0]}</Text></View><View style={{ flex: 1 }}><Text style={styles.svcName}>{c.name}</Text><Text style={styles.svcPrice}>{c.phone}</Text></View></Pressable>)}
                 {(customers || []).length === 0 ? <EmptyState icon="account-off" title="Tidak ditemukan" /> : null}
               </ScrollView>
-            </>}
+            </View>}
+            </View>
           </View>
         </View>
       </Modal>
 
       {/* QRIS sheet */}
       <Modal visible={qrisOpen} animationType="slide" transparent onRequestClose={() => setQrisOpen(false)}>
-        <View style={styles.qrisOverlay}>
-          <View style={[styles.qrisSheet, { paddingBottom: insets.bottom + spacing.lg }]}>
+        <View style={styles.qrisOverlay} pointerEvents="box-none">
+          <View collapsable={false} style={[styles.qrisSheet, { paddingBottom: insets.bottom + spacing.lg }]}>
             <View style={styles.grabber} />
             <Text style={styles.qrisTitle}>Pembayaran QRIS</Text>
             <Text style={styles.qrisSub}>{outletName}</Text>
@@ -375,7 +407,7 @@ export default function OrderBaru() {
               <View style={styles.qrisLogo}><Text style={styles.qrisLogoText}>QRIS</Text></View>
             </View>
             <Text style={styles.qrisAmount}>{rupiah(total)}</Text>
-            <View style={styles.payMethodRow}>
+            <View style={[styles.payMethodRow, { width: "100%" }]}>
               {([["cash", "Tunai", "cash"], ["qris", "QRIS", "qrcode"], ["emoney", "E-Money", "wallet"]] as const).map(([key, label, icon]) => {
                 const on = payMethod === key;
                 return (
@@ -399,6 +431,19 @@ export default function OrderBaru() {
             <Pressable testID="pay-later" onPress={() => { setPayError(""); create.mutate({ paid: false, method: "qris" }); }} style={styles.later}>
               <Text style={styles.laterText}>Simpan, Bayar Nanti</Text>
             </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={!!receiptOrder} animationType="slide" transparent onRequestClose={finishReceipt}>
+        <View style={styles.qrisOverlay} pointerEvents="box-none">
+          <View collapsable={false} style={[styles.qrisSheet, { paddingBottom: insets.bottom + spacing.lg }]}>
+            <View style={styles.grabber} />
+            <View style={styles.receiptSuccessIcon}><Icon name="check-decagram" size={38} color="#15803D" /></View>
+            <Text style={styles.qrisTitle}>Pembayaran QRIS Berhasil</Text>
+            <Text testID="qris-payment-success" style={styles.qrisSub}>Nota {receiptOrder?.code} sudah lunas. Kirimkan struk sekarang agar pelanggan tidak lupa menerima bukti pembayaran.</Text>
+            <PrimaryButton label="Kirim Struk via WhatsApp" icon="whatsapp" tone="lavender" onPress={() => { if (receiptUrl) Linking.openURL(receiptUrl); }} disabled={!receiptUrl} testID="btn-send-whatsapp-receipt" />
+            <Pressable testID="receipt-finish" onPress={finishReceipt} style={styles.later}><Text style={styles.laterText}>Selesai</Text></Pressable>
           </View>
         </View>
       </Modal>
@@ -458,13 +503,14 @@ const useStyles = makeStyles((c) => ({
   custAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.brand, alignItems: "center", justifyContent: "center" },
   custInitial: { fontFamily: fonts.displayBold, fontSize: 16, color: c.onBrand },
   qrisOverlay: { flex: 1, backgroundColor: "rgba(30,26,52,0.55)", justifyContent: "flex-end" },
-  qrisSheet: { backgroundColor: c.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.xl, alignItems: "center", gap: spacing.md },
+  qrisSheet: { backgroundColor: c.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.xl, alignItems: "stretch", gap: spacing.md },
   grabber: { width: 44, height: 5, borderRadius: 3, backgroundColor: c.border, marginBottom: spacing.sm },
-  qrisTitle: { fontFamily: fonts.displayBold, fontSize: 20, color: c.onSurface },
-  qrisSub: { fontFamily: fonts.body, fontSize: 13, color: c.muted },
-  qrBox: { width: 220, height: 220, borderRadius: radius.lg, backgroundColor: c.surface, borderWidth: 2, borderColor: c.border, alignItems: "center", justifyContent: "center", marginVertical: spacing.sm },
+  qrisTitle: { fontFamily: fonts.displayBold, fontSize: 20, color: c.onSurface, textAlign: "center" },
+  qrisSub: { fontFamily: fonts.body, fontSize: 13, color: c.muted, textAlign: "center" },
+  qrBox: { width: 220, height: 220, alignSelf: "center", borderRadius: radius.lg, backgroundColor: c.surface, borderWidth: 2, borderColor: c.border, alignItems: "center", justifyContent: "center", marginVertical: spacing.sm },
   qrisLogo: { position: "absolute", backgroundColor: c.surface, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   qrisLogoText: { fontFamily: fonts.displayBold, fontSize: 16, color: c.error },
+  receiptSuccessIcon: { alignSelf: "center", width: 70, height: 70, borderRadius: 35, backgroundColor: "#DCFCE7", alignItems: "center", justifyContent: "center" },
   qrisAmount: { fontFamily: fonts.displayBold, fontSize: 28, color: c.brandPrimary },
   payMethodRow: { flexDirection: "row", gap: spacing.sm, alignSelf: "stretch" },
   payMethodBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 10, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface },

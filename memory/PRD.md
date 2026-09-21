@@ -135,12 +135,21 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] **Pengaturan owner**: setiap kartu pada Produk & Layanan dapat diketuk untuk mengubah kategori, harga reguler/express, durasi, dan minimum order; status aktif tetap bisa diubah langsung.
 - [x] Teruji iterasi 11: backend 4/4 PASS, alur web Pegawai/Owner PASS, konfigurasi izin kontak serta fallback web PASS; seluruh data uji dibersihkan.
 
+## Update (2026-09, iterasi 15) — Perbaikan Order Pegawai & Struk QRIS
+- [x] **Simpan pelanggan baru**: nomor WhatsApp yang sudah terdaftar tidak lagi menghentikan proses; aplikasi mencari lintas format (`08…` / `+62…`) lalu otomatis memilih pelanggan lama. Pelanggan dengan nomor baru tetap tersimpan normal.
+- [x] **Antrian Express**: pilihan Express kini dikirim dan disimpan sebagai `orders.express=true`, sehingga langsung muncul di queue **Express** hari ini. Order lama dengan label `(Express)` juga diperbaiki melalui migrasi aman.
+- [x] **Transaksi Hari Ini**: kartu ringkasan pada dashboard Pegawai dapat diketuk untuk membuka daftar transaksi hari ini; setiap kartu dapat diketuk lagi menuju detail nota.
+- [x] **Struk setelah QRIS**: tombol WhatsApp dihapus dari detail/antrian dan dipindahkan ke modal **Pembayaran QRIS Berhasil**, tepat setelah konfirmasi bayar, agar pegawai tidak lupa mengirim nota.
+- [x] **Modal mobile web**: picker pelanggan dan QRIS distabilkan dengan area scroll/flex eksplisit, ukuran tombol pembayaran pasti, dan container non-collapsable. Uji ulang form pelanggan baru serta pilihan QRIS PASS.
+- [x] Teruji iterasi 12: backend express/customer PASS; screenshot end-to-end menunjukkan simpan pelanggan, Express → QRIS → CTA struk, dan detail Transaksi Hari Ini. Semua data uji dibersihkan.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).
 - P2: QRIS dinamis via gateway (Midtrans) menggantikan statis.
 - P2: Notifikasi status order untuk pelanggan.
 - P2: Sinkronisasi kontak perangkat ke akun cloud pelanggan (opsional).
+- P2: Riwayat pengiriman nota WhatsApp per order (opsional).
 - P3: Dark mode.
 
 ## Notes

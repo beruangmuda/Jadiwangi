@@ -45,7 +45,7 @@ export default function EmployeeHome() {
       </View>
 
       <View style={styles.statStrip}>
-        <Stat icon="receipt-text" label="Transaksi Hari Ini" value={String(t?.orders ?? 0)} sub={kg(t?.kg)} />
+        <Stat icon="receipt-text" label="Transaksi Hari Ini" value={String(t?.orders ?? 0)} sub={kg(t?.kg)} onPress={() => router.push("/hari-ini")} testID="today-orders-card" />
         <Stat icon="progress-wrench" label="Dikerjakan" value={String(queue?.in_progress ?? 0)} />
         <Stat icon="basket-check" label="Siap Diambil" value={String(queue?.ready ?? 0)} />
       </View>
@@ -64,16 +64,16 @@ export default function EmployeeHome() {
   );
 }
 
-function Stat({ icon, label, value, sub }: { icon: string; label: string; value: string; sub?: string }) {
+function Stat({ icon, label, value, sub, onPress, testID }: { icon: string; label: string; value: string; sub?: string; onPress?: () => void; testID?: string }) {
   const styles = useStyles();
   const { colors } = useTheme();
   return (
-    <View style={styles.stat}>
+    <Pressable testID={testID} onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.stat, pressed && onPress && { opacity: 0.75 }]}>
       <Icon name={icon} size={18} color={colors.brand} />
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
       {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
-    </View>
+    </Pressable>
   );
 }
 

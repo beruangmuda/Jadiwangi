@@ -183,6 +183,9 @@ alter table orders add column if not exists address text default '';
 alter table orders add column if not exists express boolean not null default false;
 alter table orders add column if not exists discount numeric(12,2) not null default 0;
 alter table orders add column if not exists paid_amount numeric(12,2) not null default 0;
+update orders set express=true where express=false and exists (
+  select 1 from order_items oi where oi.order_id=orders.id and oi.service_name ilike '%(Express)%'
+);
 create table if not exists promos (
   id uuid primary key default gen_random_uuid(), outlet_id uuid references outlets(id),
   title text not null, description text default '', discount_pct numeric(5,2) not null default 0,
@@ -871,6 +874,7 @@ class OrderBody(BaseModel):
     payment_status: str = "unpaid"
     payment_method: str = "qris"
     created_by: str = "owner"
+    express: bool = False
 
 
 class StatusBody(BaseModel):
@@ -1130,7 +1134,18 @@ async def list_customers(outlet_id: Optional[str] = None, q: Optional[str] = Non
         if outlet_id:
             args.append(outlet_id); clauses.append(f"c.outlet_id=${len(args)}")
         if q:
-            args.append(f"%{q}%"); clauses.append(f"(c.name ilike ${len(args)} or c.phone ilike ${len(args)})")
+            args.append(f"%{q}%")
+            text_idx = len(args)
+            digits = "".join(ch for ch in q if ch.isdigit())
+            if digits.startswith("0"):
+                digits = "62" + digits[1:]
+            elif digits.startswith("8"):
+                digits = "62" + digits
+            if digits:
+                args.append(digits)
+                clauses.append(f"(c.name ilike ${text_idx} or c.phone ilike ${text_idx} or regexp_replace(c.phone, '[^0-9]', '', 'g')=${len(args)})")
+            else:
+                clauses.append(f"(c.name ilike ${text_idx} or c.phone ilike ${text_idx})")
         where = (" where " + " and ".join(clauses)) if clauses else ""
         rows = await conn.fetch(
             f"""select c.*, o.name as outlet_name,
@@ -1387,10 +1402,10 @@ async def create_order(b: OrderBody):
         async with conn.transaction():
             oid = await conn.fetchval(
                 """insert into orders(code,customer_id,outlet_id,status,total,weight_kg,unit_qty,
-                   payment_status,payment_method,delivery_type,notes,created_by,created_at,updated_at,due_at)
-                   values($1,$2,$3,'received',$4,$5,$6,$7,$8,$9,$10,$11,$12,$12,$13) returning id""",
+                   payment_status,payment_method,delivery_type,notes,created_by,express,created_at,updated_at,due_at)
+                   values($1,$2,$3,'received',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$13,$14) returning id""",
                 code, b.customer_id, b.outlet_id, total, weight, unit_qty, b.payment_status, b.payment_method,
-                b.delivery_type, b.notes, b.created_by, created, due)
+                b.delivery_type, b.notes, b.created_by, b.express, created, due)
             for it in b.items:
                 sub = Decimal(str(it.price)) * Decimal(str(it.qty))
                 await conn.execute(

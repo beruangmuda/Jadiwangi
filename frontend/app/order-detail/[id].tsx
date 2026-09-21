@@ -14,7 +14,6 @@ import { StackHeader, Field } from "@/src/components/form";
 import { rupiah, formatDateTime, kg } from "@/src/format";
 import { PIPELINE, STAGE } from "@/src/status";
 import { photoUrl } from "@/src/photos";
-import { buildReceiptWhatsAppUrl } from "@/src/whatsapp";
 import { Image } from "expo-image";
 
 export default function OrderDetail() {
@@ -74,20 +73,6 @@ export default function OrderDetail() {
 
   const idx = (PIPELINE as readonly string[]).indexOf(order.status);
   const canReview = order.status === "completed" && !existing;
-  const isStaff = session?.role === "owner" || session?.role === "pegawai";
-  const receiptUrl = buildReceiptWhatsAppUrl({
-    phone: order.customer_phone,
-    code: order.code,
-    customerName: order.customer_name,
-    date: formatDateTime(order.created_at),
-    itemLines: (order.items || []).map((it: any) => `• ${it.service_name} ${Number(it.qty)} ${it.unit}: ${rupiah(it.subtotal)}`),
-    total: rupiah(order.total),
-    payment: order.payment_status === "paid" ? "Lunas" : "Belum Lunas",
-    status: order.stage_label,
-  });
-  const shareReceipt = async () => {
-    if (receiptUrl) await Linking.openURL(receiptUrl);
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
@@ -152,9 +137,6 @@ export default function OrderDetail() {
             <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>{rupiah(order.total)}</Text>
           </View>
-          {isStaff && receiptUrl ? (
-            <PrimaryButton label="Kirim Struk ke WhatsApp" icon="whatsapp" tone="lavender" onPress={shareReceipt} testID="share-receipt-whatsapp" />
-          ) : null}
           {Array.isArray(order.photos) && order.photos.length ? (
             <View style={{ gap: spacing.sm }} testID="order-photos">
               <Text style={styles.itemName}>Foto Pakaian</Text>

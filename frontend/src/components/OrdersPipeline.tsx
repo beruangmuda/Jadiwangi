@@ -40,6 +40,7 @@ export function OrdersPipeline({
   const [payError, setPayError] = useState("");
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [receiptOrder, setReceiptOrder] = useState<any>(null);
 
   const buildUrl = () => {
     const params = new URLSearchParams();
@@ -68,9 +69,10 @@ export function OrdersPipeline({
 
   const pay = useMutation({
     mutationFn: (id: string) => api.post(`/orders/${id}/pay`, { method }),
-    onSuccess: () => {
+    onSuccess: (order: any) => {
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setPayError("");
+      if (method === "qris") setReceiptOrder(order);
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
@@ -157,13 +159,6 @@ export function OrdersPipeline({
             </View>
             {item.customer_phone ? <Meta icon="phone" text={item.customer_phone} /> : null}
             {item.notes ? <Text style={styles.notes}>Catatan: {item.notes}</Text> : null}
-            {buildReceiptWhatsAppUrl({ phone: item.customer_phone, code: item.code, customerName: item.customer_name, itemLines: [], total: "", payment: "", status: "" }) ? (
-              <Pressable testID={`share-receipt-${item.code}`} onPress={() => shareReceipt(item)} style={styles.receiptBtn}>
-                <Icon name="whatsapp" size={16} color="#15803D" />
-                <Text style={styles.receiptText}>Kirim Struk WhatsApp</Text>
-              </Pressable>
-            ) : null}
-
             {/* Konfirmasi pembayaran */}
             {item.payment_status !== "paid" && item.status !== "cancelled" && total > 0 ? (
               <View style={{ gap: spacing.sm, marginTop: spacing.xs }}>
@@ -282,6 +277,17 @@ export function OrdersPipeline({
           </View>
         </View>
       </Modal>
+      <Modal visible={!!receiptOrder} transparent animationType="slide" onRequestClose={() => setReceiptOrder(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.receiptSheet}>
+            <Icon name="check-decagram" size={34} color="#15803D" />
+            <Text style={styles.receiptTitle}>QRIS sudah lunas</Text>
+            <Text style={styles.receiptSubtitle}>Kirim struk ke WhatsApp pelanggan sekarang.</Text>
+            <Pressable testID="queue-send-whatsapp-receipt" onPress={() => shareReceipt(receiptOrder)} style={styles.queueReceiptBtn}><Icon name="whatsapp" size={17} color="#15803D" /><Text style={styles.receiptText}>Kirim Struk WhatsApp</Text></Pressable>
+            <Pressable testID="queue-receipt-finish" onPress={() => setReceiptOrder(null)} style={styles.doneReceiptBtn}><Text style={styles.doneReceiptText}>Selesai</Text></Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -327,6 +333,12 @@ const useStyles = makeStyles((c) => ({
   payBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: radius.md },
   receiptBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: radius.md, paddingVertical: 10, backgroundColor: "#DCFCE7" },
   receiptText: { fontFamily: fonts.bodyBold, fontSize: 13, color: "#15803D" },
+  receiptSheet: { backgroundColor: c.surface, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.md, alignItems: "center" },
+  receiptTitle: { fontFamily: fonts.displayBold, fontSize: 19, color: c.onSurface },
+  receiptSubtitle: { fontFamily: fonts.body, fontSize: 13, color: c.muted, textAlign: "center" },
+  queueReceiptBtn: { alignSelf: "stretch", minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, backgroundColor: "#DCFCE7", borderRadius: radius.md },
+  doneReceiptBtn: { minHeight: 44, paddingHorizontal: spacing.lg, alignItems: "center", justifyContent: "center" },
+  doneReceiptText: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.muted },
   paidRow: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#DCFCE7", borderRadius: radius.md, padding: spacing.sm },
   paidText: { fontFamily: fonts.bodyBold, fontSize: 12, color: "#15803D" },
   smallBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 11, paddingHorizontal: 14, borderRadius: radius.md },

@@ -1,0 +1,84 @@
+{
+  "summary": "Iterasi 12: backend regression untuk customer +62 dan express queue lulus; frontend mobile flow sebagian lulus (login pegawai, kartu Transaksi Hari Ini -> detail), namun automation terblokir pada modal Pelanggan Baru/Pembayaran sehingga verifikasi UI duplicate fallback + QRIS CTA belum tuntas.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Modal Pelanggan Baru (Buat Order)",
+        "issue": "Interaksi tombol/field di modal tidak stabil pada viewport mobile web (375x667) saat re-open untuk skenario nomor duplikat; elemen sering detach/out-of-viewport saat automation.",
+        "testID": "btn-new-customer, input-new-cust-name",
+        "priority": "HIGH"
+      },
+      {
+        "component": "Modal Pembayaran QRIS",
+        "issue": "Chip metode bayar QRIS sulit ditap pada viewport mobile web (element outside viewport) saat diuji automation.",
+        "testID": "paymethod-qris",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Pegawai Buat Order -> duplicate nomor pelanggan -> auto pilih pelanggan lama",
+        "issue": "Belum tervalidasi end-to-end via UI karena modal customer tidak stabil ketika dibuka ulang pada run automation.",
+        "affected_testIDs": [
+          "pick-customer",
+          "btn-new-customer",
+          "btn-save-new-customer"
+        ]
+      },
+      {
+        "flow": "Pegawai Buat Order Express -> QRIS -> modal sukses -> CTA WhatsApp",
+        "issue": "Belum tervalidasi penuh via UI automation akibat kendala interaksi di modal pembayaran (paymethod chip/tap area).",
+        "affected_testIDs": [
+          "proceed-payment",
+          "paymethod-qris",
+          "confirm-paid",
+          "qris-payment-success",
+          "btn-send-whatsapp-receipt"
+        ]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Buat Order / Modal Payment",
+        "issues": [
+          "Tap target/modal positioning pada mobile web menyebabkan elemen penting terkadang tidak bisa ditap stabil saat viewport kecil."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter12_customer_express_flow.py",
+    "/app/test_reports/pytest/iter12_results.xml",
+    "/app/test_reports/artifacts_iter12/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter12/today_order_detail.jpeg",
+    "/app/test_reports/artifacts_iter12/qris_success_modal.jpeg"
+  ],
+  "action_items": [
+    "Perkuat stabilitas interaksi modal Pelanggan Baru pada mobile web agar reopen modal + input duplicate dapat dites dan digunakan tanpa elemen detach/out-of-viewport.",
+    "Periksa layout/scrollable area modal pembayaran agar paymethod-qris selalu tappable di viewport 375x667.",
+    "Setelah fix UI modal, retest ulang dua flow prioritas: duplicate customer fallback dan QRIS success CTA WhatsApp final-step.",
+    "MOCKED: QRIS payment confirmation masih alur konfirmasi manual/mock; yang diuji adalah transisi modal sukses + CTA sesuai requirement."
+  ],
+  "critical_code_review_comments": [
+    "backend/server.py sangat besar (>700 lines; saat ini >2000 lines) sehingga sulit dipelihara dan rawan regresi. Perlu modularisasi per domain (auth/customers/orders/payments/reports)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter12_customer_express_flow.py",
+    "/app/scripts/cleanup_iter12_test_data.py",
+    "/app/test_reports/iteration_12.json"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "55%"
+  },
+  "seed_data_creation": "Tidak ada seed permanen. Data uji bertag TEST_iter12_/TEST_UI_iter12_ dibersihkan via /app/scripts/cleanup_iter12_test_data.py.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend API request utama sudah hijau (4/4). UI automation 3 kali tersendat di modal customer/payment pada viewport mobile; fokus retest dengan perhatian khusus pada modal stacking/scroll behavior.",
+  "rca_of_issue": "RCA sementara: kegagalan frontend bukan di response API utama (backend lulus), tetapi pada stabilitas interaksi modal mobile web (element detach / outside viewport) saat state modal berubah cepat. Repro: login pegawai -> Buat Order -> buka/ulang modal pelanggan baru atau modal pembayaran -> beberapa elemen tidak stabil untuk tap. Mitigasi awal: evaluasi container scroll, z-index overlay, dan area hitSlop/height pada sheet mobile."
+}
