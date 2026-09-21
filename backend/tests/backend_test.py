@@ -2,10 +2,16 @@
 import os
 import uuid
 from datetime import date
+from pathlib import Path
 import pytest
 import requests
+from dotenv import load_dotenv
 
-BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://wangi-dashboard.preview.emergentagent.com").rstrip("/")
+ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(ROOT / "frontend" / ".env")
+BASE_URL = (os.environ.get("EXPO_PUBLIC_BACKEND_URL") or "").rstrip("/")
+if not BASE_URL:
+    raise RuntimeError("EXPO_PUBLIC_BACKEND_URL wajib tersedia untuk backend test")
 API = f"{BASE_URL}/api"
 
 OUTLETS = {

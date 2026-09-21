@@ -151,6 +151,14 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] **Modal layar kecil**: konten pembayaran/receipt kini bergulir dengan footer aksi yang tetap terjangkau; E-Money, Konfirmasi, dan Batal Transaksi diuji pada viewport ponsel PASS.
 - [x] Teruji iterasi 13: backend 4/4 PASS untuk paid via cash/qris/emoney dan transisi ironing → packing → ready; screenshot manual timeline dan receipt E-Money PASS. Semua data uji dihapus.
 
+## Update (2026-09, iterasi 17) — Penutupan Siap Diambil & Timbang Antar Jemput
+- [x] **Antrian terpisah**: order dengan status **Siap Diambil** tidak lagi muncul di antrian kerja pegawai; order hanya hadir pada daftar Siap Diambil.
+- [x] **Tutup saat serah-terima**: setiap card Siap Diambil memiliki tombol **Sudah Diambil**. Aksi ini segera menghilangkan card dari daftar, menyelesaikan order (`completed`), dan memperbarui ringkasan dashboard; rollback aman bila koneksi gagal.
+- [x] **Timbang Antar Jemput**: permintaan jemput dapat langsung membuka layar timbang di lokasi, tanpa perlu menunggu konfirmasi jemput. Konfirmasi jemput tetap tersedia sebagai pencatatan perjalanan terpisah.
+- [x] **Kartu layanan konsisten**: layar timbang memakai accordion kategori dan kartu layanan seperti Buat Order, menampilkan Reguler/Express, minimum pesanan, kuantitas otomatis pada batas minimum, serta tetap menyediakan foto Kamera/Galeri.
+- [x] **Aturan owner terlindungi**: backend menolak layanan tidak aktif/lintas outlet, unit salah, dan kuantitas kilogram di bawah minimum pada Buat Order maupun Timbang.
+- [x] Teruji iterasi 14: backend 4/4 PASS. Perbaikan UI pasca-tes memverifikasi tombol timbang muncul untuk permintaan pickup dan card Siap Diambil langsung hilang lalu status order menjadi `completed`; seluruh data uji dihapus.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).
@@ -159,6 +167,7 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - P2: Sinkronisasi kontak perangkat ke akun cloud pelanggan (opsional).
 - P2: Riwayat pengiriman nota WhatsApp per order (opsional).
 - P2: Notifikasi otomatis ke pelanggan ketika order berpindah ke Siap Diambil (opsional).
+- P2: Konfirmasi serah-terima menggunakan tanda tangan pelanggan (opsional).
 - P3: Dark mode.
 
 ## Notes

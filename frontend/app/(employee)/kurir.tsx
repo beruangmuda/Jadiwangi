@@ -76,7 +76,8 @@ export default function Kurir() {
     const nxt = nextStage(item.status);
     const isRequest = item.status === "requested";
     const isQuoted = item.status === "quoted";
-    const readyToWeigh = isRequest && (item.delivery_type !== "pickup" || !!item.picked_up_at);
+    // Kurir dapat menimbang langsung di lokasi jemput; konfirmasi jemput tetap tercatat terpisah.
+    const readyToWeigh = isRequest;
     return (
       <View style={[styles.card, (isRequest || isQuoted) && { borderColor: colors.brandPrimary, borderWidth: 1.5 }]} testID={`kurir-${item.code}`}>
         <View style={styles.rowBetween}>
@@ -147,8 +148,6 @@ export default function Kurir() {
             <Icon name="scale-balance" size={16} color={colors.onBrandPrimary} />
             <Text style={styles.btnText}>Timbang Pakaian & Foto</Text>
           </Pressable>
-        ) : isRequest ? (
-          <Text style={styles.hintSmall}>Konfirmasi penjemputan dulu sebelum menimbang.</Text>
         ) : isQuoted ? (
           <View style={styles.tripDone}>
             <Icon name="send-clock" size={16} color="#15803D" />

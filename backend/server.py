@@ -1326,7 +1326,7 @@ async def list_orders(outlet_id: Optional[str] = None, customer_id: Optional[str
         if status:
             args.append(status); clauses.append(f"status=${len(args)}")
         if active:
-            clauses.append("status in ('received','washing','drying','ironing','packing','ready')")
+            clauses.append("status in ('received','washing','drying','ironing','packing')")
         if today:
             clauses.append("(created_at at time zone 'Asia/Jakarta')::date = (now() at time zone 'Asia/Jakarta')::date")
         if queue:
@@ -1379,12 +1379,33 @@ async def create_order_request(b: OrderRequestBody):
         return (await enrich_orders(conn, [row]))[0]
 
 
+async def validate_service_items(conn, outlet_id, items: List[OrderItemIn]):
+    """Enforce owner-managed service, outlet, and minimum quantity rules."""
+    if not items:
+        raise HTTPException(422, "Minimal 1 layanan wajib dipilih")
+    service_ids = [item.service_id for item in items]
+    rows = await conn.fetch(
+        "select id,name,unit,min_kg,active from services where outlet_id=$1 and id=any($2::uuid[])",
+        outlet_id, service_ids)
+    services = {str(row["id"]): row for row in rows}
+    if len(services) != len(set(service_ids)):
+        raise HTTPException(422, "Layanan tidak tersedia untuk outlet ini")
+    for item in items:
+        service = services.get(item.service_id)
+        qty = Decimal(str(item.qty))
+        if not service or not service["active"] or qty <= 0 or item.unit != service["unit"]:
+            raise HTTPException(422, f"Jumlah untuk {service['name'] if service else 'layanan'} tidak valid")
+        if item.unit == "kg" and service["min_kg"] is not None and qty < service["min_kg"]:
+            raise HTTPException(422, f"{service['name']} minimal {float(service['min_kg']):g} kg")
+
+
 @api.post("/orders")
 async def create_order(b: OrderBody):
     async with pool.acquire() as conn:
         outlet = await conn.fetchrow("select * from outlets where id=$1", b.outlet_id)
         if not outlet:
             raise HTTPException(404, "Outlet tidak ditemukan")
+        await validate_service_items(conn, b.outlet_id, b.items)
         total = Decimal(0); weight = Decimal(0); unit_qty = 0
         for it in b.items:
             sub = Decimal(str(it.price)) * Decimal(str(it.qty)); total += sub
@@ -1447,6 +1468,7 @@ async def weigh_order(oid: str, b: WeighBody):
             raise HTTPException(404, "Order tidak ditemukan")
         if not b.items:
             raise HTTPException(422, "Minimal 1 item layanan")
+        await validate_service_items(conn, row["outlet_id"], b.items)
         total = Decimal(0); weight = Decimal(0); unit_qty = 0
         for it in b.items:
             sub = Decimal(str(it.qty)) * Decimal(str(it.price))

@@ -19,7 +19,6 @@ const FILTERS = [
   { key: "drying", label: "Pengering" },
   { key: "ironing", label: "Setrika" },
   { key: "packing", label: "Packing" },
-  { key: "ready", label: "Siap Diambil" },
   { key: "completed", label: "Selesai" },
 ];
 
@@ -95,7 +94,7 @@ export function OrdersPipeline({
     if (url) await Linking.openURL(url);
   };
 
-  const list = data || [];
+  const list = (data || []).filter((o: any) => o.status !== "ready");
   const express = list.filter((o: any) => o.express);
   const regular = list.filter((o: any) => !o.express);
 

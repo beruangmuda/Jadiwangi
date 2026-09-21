@@ -104,7 +104,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-## user_problem_statement: "Pesan kirim WhatsApp harus muncul untuk semua pembayaran Tunai, QRIS, dan E-Money. Form pembayaran perlu tombol Batal Transaksi sebelum order jadi. Klik Ke Packing pada antrian membuka timeline Cuci → Pengering → Setrika → Packing; setelah packing order masuk Siap Diambil. Card Siap Diambil di dashboard pegawai harus membuka daftar order siap diambil."
+## user_problem_statement: "Order berstatus Siap Diambil harus hilang dari antrian kerja dan hanya ditutup melalui tombol Sudah Diambil pada card Siap Diambil. Di Antar Jemput, pilih layanan dan input berat harus menggunakan kartu layanan serta minimum order yang sama dengan Buat Order, dengan fitur ambil foto tetap tersedia."
 
 ## backend:
 ##   - task: "Kasbon pegawai: pencatatan dan potongan otomatis gaji per bulan"
@@ -214,6 +214,26 @@
 ##         -working: true
 ##         -agent: "testing"
 ##         -comment: "Iterasi 13 backend PASS: ironing→packing→ready dan GET status=ready memuat order."
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Perbaikan: status ready dikeluarkan dari antrian aktif; daftar Siap Diambil memiliki tombol Sudah Diambil yang mengadvance order ke completed. Uji UI dan backend PASS, data uji dihapus."
+##         -working: true
+##         -agent: "main"
+##         -comment: "Setelah perbaikan optimistic update, UI mobile web membuktikan card langsung hilang dan GET detail mengonfirmasi status completed."
+##   - task: "Antar Jemput menggunakan kartu layanan dan minimum order Buat Order"
+##     implemented: true
+##     working: true
+##     file: "frontend/app/timbang/[id].tsx, backend/server.py"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Layar timbang sekarang memakai accordion kategori, kartu layanan, Regular/Express, minimum order otomatis, dan tombol foto. Server memvalidasi layanan milik outlet, status aktif, unit, serta minimum kg pada create/weigh agar aturan owner tidak dapat dilewati."
+##         -working: true
+##         -agent: "main"
+##         -comment: "Perbaikan pasca iterasi 14: semua permintaan, termasuk pickup belum dikonfirmasi, kini punya aksi Timbang Pakaian & Foto. UI membuktikan route timbang dan accordion layanan terbuka."
 ##   - task: "Menu catat kasbon pada Gaji Pegawai"
 ##     implemented: true
 ##     working: true
@@ -297,7 +317,7 @@
 
 ## test_plan:
 ##   current_focus:
-##     - "Verifikasi pengguna di operasional outlet"
+##     - "Verifikasi pengguna pada operasional outlet"
 ##   test_all: true
 ##   test_priority: "high_first"
 
@@ -318,5 +338,11 @@
 ##     -message: "ITERATION 13: Struk WhatsApp diperluas ke Tunai/E-Money/Deposit, Batal Transaksi ditambahkan sebelum order dibuat, timeline proses laundry dan layar Siap Diambil ditambahkan. Uji manual E-Money receipt, cancel payment, dan Setrika→Packing→Siap Diambil PASS; data uji dibersihkan."
 ##     -agent: "main"
 ##     -message: "ITERATION 13 COMPLETE: Backend payment/timeline 4/4 PASS. RCA memperbaiki modal pembayaran layar kecil dengan scroll area dan footer aksi sticky; uji ulang E-Money, Konfirmasi, dan Batal Transaksi pada ponsel PASS."
+##     -agent: "main"
+##     -message: "ITERATION 14: Ready order dipisahkan dari antrian aktif dan ditutup lewat tombol Sudah Diambil di daftar Siap Diambil. Antar Jemput/Timbang kini menggunakan kartu layanan ber-kategori dengan minimum order sama seperti Buat Order, sambil mempertahankan kamera/galeri bukti. Validasi server minimum layanan juga ditambahkan."
+##     -agent: "main"
+##     -message: "ITERATION 14 COMPLETE: Backend test 4/4 PASS. Tindak lanjut frontend: tindakan timbang tersedia langsung untuk request pickup dan daftar Siap Diambil memakai optimistic update. Screenshot membuktikan kedua alur; status completion diverifikasi API dan semua data uji dibersihkan."
+##     -agent: "main"
+##     -message: "CLEANUP FINAL: Menghapus 43 order dan 10 pelanggan bertanda TEST_ dari pengujian lama, termasuk transaksi, work log, serta item terkait. Pemeriksaan akhir menyatakan 0 order/pelanggan TEST_ tersisa."
 ##     -agent: "main"
 ##     -message: "ITERATION 8: (1) TrendChart now has Y-axis rupiah labels at 0/25/50/75/100% and X-axis day ticks; dashboard title 'Trend <bulan Indonesia>'. (2) Dashboard 'X pelanggan' badge is pressable -> /hari-ini screen listing today's orders/notes (GET /orders?today=true). Owner can cancel a nota (reason) via POST /orders/{id}/cancel; employees CANNOT (OrdersPipeline canCancel=false in employee index, and /hari-ini hides cancel unless session.role==owner). (3) Dashboard adds Top 3 Pelanggan bulan ini (name, kg, spend) from GET /dashboard top_customers. (4) Setelan > Database Pelanggan (/manage/pelanggan) fully reworked: search, add/edit (name, phone, ADDRESS, email, deposit, outlet), list with per-customer stats (total_kg, tx_count, total_spend), and detail modal (GET /customers/{id}/detail) showing address, points, deposit, total kiloan, jumlah transaksi, total belanja, transaksi pertama & terakhir, riwayat 10 order. Backend: added address column to customers, aggregates in list_customers, /customers/{id}/detail, today filter, top_customers. Owner owner/owner123, produksi joko/pegawai123. Please test /hari-ini owner cancel + employee cannot cancel, customer DB CRUD+detail, dashboard top_customers, and no regressions."

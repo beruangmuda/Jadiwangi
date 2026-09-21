@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { View, Text, Pressable, Platform, TextInput } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { View, Text, Pressable, Platform, TextInput, LayoutAnimation, UIManager } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +30,7 @@ export default function TimbangOrder() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({ Kiloan: true });
 
   const { data: order } = useQuery({ queryKey: ["order-detail", id], queryFn: () => api.get(`/orders/${id}`), enabled: !!id });
   const { data: services } = useQuery({
@@ -39,6 +40,11 @@ export default function TimbangOrder() {
   });
 
   const priceOf = (s: any) => Number(speed === "express" ? (s.price_express || s.price) : s.price);
+  const grouped = useMemo(() => {
+    const groups: Record<string, any[]> = {};
+    (services || []).forEach((service: any) => { (groups[service.category] = groups[service.category] || []).push(service); });
+    return Object.entries(groups);
+  }, [services]);
 
   const total = useMemo(
     () => lines.reduce((sum, l) => sum + (Number(l.qty) || 0) * l.price, 0),
@@ -62,13 +68,21 @@ export default function TimbangOrder() {
 
   const addService = (s: any) => {
     if (Platform.OS !== "web") Haptics.selectionAsync();
+    const minimum = s.unit === "kg" && Number(s.min_kg) > 0 ? Number(s.min_kg) : 1;
     setLines((p) => p.some((l) => l.service_id === s.id)
       ? p.filter((l) => l.service_id !== s.id)
-      : [...p, { service_id: s.id, service_name: s.name, unit: s.unit, qty: "", price: priceOf(s) }]);
+      : [...p, { service_id: s.id, service_name: s.name, unit: s.unit, qty: String(minimum), price: priceOf(s) }]);
   };
 
   const setQty = (sid: string, v: string) =>
     setLines((p) => p.map((l) => (l.service_id === sid ? { ...l, qty: v.replace(",", ".") } : l)));
+
+  const normalizeQty = (sid: string) => setLines((p) => p.map((l) => {
+    if (l.service_id !== sid) return l;
+    const service = (services || []).find((s: any) => s.id === sid);
+    const min = service?.unit === "kg" && Number(service?.min_kg) > 0 ? Number(service.min_kg) : 1;
+    return { ...l, qty: String(Math.max(min, Number(l.qty) || min)) };
+  }));
 
   const onSpeed = (v: string) => {
     setSpeed(v);
@@ -76,6 +90,15 @@ export default function TimbangOrder() {
       const s = (services || []).find((x: any) => x.id === l.service_id);
       return s ? { ...l, price: Number(v === "express" ? (s.price_express || s.price) : s.price) } : l;
     }));
+  };
+
+  useEffect(() => {
+    if (Platform.OS === "android") UIManager.setLayoutAnimationEnabledExperimental?.(true);
+  }, []);
+
+  const toggleCategory = (category: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedCategories((prev) => ({ ...prev, [category]: !prev[category] }));
   };
 
   const addPhoto = async (source: "camera" | "library") => {
@@ -97,7 +120,11 @@ export default function TimbangOrder() {
     return <View style={{ flex: 1, backgroundColor: colors.surface }}><StackHeader title="Timbang Order" /><Loading /></View>;
   }
 
-  const valid = lines.length > 0 && lines.every((l) => Number(l.qty) > 0);
+  const valid = lines.length > 0 && lines.every((line) => {
+    const service = (services || []).find((s: any) => s.id === line.service_id);
+    const minimum = service?.unit === "kg" && Number(service?.min_kg) > 0 ? Number(service.min_kg) : 1;
+    return Number(line.qty) >= minimum;
+  });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
@@ -124,34 +151,17 @@ export default function TimbangOrder() {
 
         <View style={{ gap: spacing.sm }}>
           <Text style={styles.label}>Pilih Layanan & Input Berat</Text>
-          {!services ? <Loading /> : (services || []).map((s: any) => {
-            const line = lines.find((l) => l.service_id === s.id);
-            return (
-              <View key={s.id} style={[styles.svc, line && { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary }]}>
-                <Pressable testID={`svc-${s.id}`} onPress={() => addService(s)} style={styles.svcHead}>
-                  <Icon name={line ? "checkbox-marked" : "checkbox-blank-outline"} size={22} color={line ? colors.brandPrimary : colors.muted} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.svcName}>{s.name}</Text>
-                    <Text style={styles.hint}>{rupiah(priceOf(s))} / {s.unit}{s.min_kg ? ` • min ${s.min_kg} kg` : ""}</Text>
-                  </View>
-                </Pressable>
-                {line ? (
-                  <View style={styles.qtyRow}>
-                    <TextInput
-                      testID={`qty-${s.id}`}
-                      value={line.qty}
-                      onChangeText={(v) => setQty(s.id, v)}
-                      keyboardType="decimal-pad"
-                      placeholder={s.unit === "kg" ? "Berat (kg)" : `Jumlah (${s.unit})`}
-                      placeholderTextColor={colors.muted}
-                      style={styles.qtyField}
-                    />
-                    <Text style={styles.lineTotal}>{rupiah((Number(line.qty) || 0) * line.price)}</Text>
-                  </View>
-                ) : null}
-              </View>
-            );
-          })}
+          <Text style={styles.hint}>Gunakan kartu layanan yang sama seperti Buat Order. Minimum order terapkan otomatis saat dipilih.</Text>
+          {!services ? <Loading /> : grouped.map(([category, list]) => <View key={category} style={{ gap: spacing.sm }}>
+            <Pressable testID={`weigh-category-${category}`} onPress={() => toggleCategory(category)} style={styles.catHeader}><View style={styles.catTitleRow}><Icon name={expandedCategories[category] ? "chevron-up" : "chevron-down"} size={20} color={colors.brand} /><Text style={styles.catTitle}>{category}</Text></View><Text style={styles.catCount}>{list.length} layanan</Text></Pressable>
+            {expandedCategories[category] ? list.map((s: any) => {
+              const line = lines.find((l) => l.service_id === s.id);
+              return <View key={s.id} style={[styles.svc, line && { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary }]}>
+                <Pressable testID={`svc-${s.id}`} onPress={() => addService(s)} style={styles.svcHead}><View style={styles.svcIcon}><Icon name={s.icon} size={20} color={colors.brand} /></View><View style={{ flex: 1 }}><Text style={styles.svcName}>{s.name}</Text><Text style={styles.hint}>{rupiah(priceOf(s))}/{s.unit}{s.duration ? ` • ${speed === "express" && s.duration_express ? s.duration_express : s.duration}` : ""}</Text>{s.min_kg ? <Text style={styles.minBadge}>Minimal {Number(s.min_kg)} kg</Text> : null}</View><Icon name={line ? "checkbox-marked" : "plus-circle-outline"} size={23} color={line ? colors.brandPrimary : colors.muted} /></Pressable>
+                {line ? <View style={styles.qtyRow}><TextInput testID={`qty-${s.id}`} value={line.qty} onChangeText={(v) => setQty(s.id, v)} onBlur={() => normalizeQty(s.id)} keyboardType="decimal-pad" placeholder={s.unit === "kg" ? "Berat (kg)" : `Jumlah (${s.unit})`} placeholderTextColor={colors.muted} style={styles.qtyField} /><Text style={styles.lineTotal}>{rupiah((Number(line.qty) || 0) * line.price)}</Text></View> : null}
+              </View>;
+            }) : null}
+          </View>)}
         </View>
 
         {/* Foto pakaian */}
@@ -203,11 +213,17 @@ const useStyles = makeStyles((c) => ({
   label: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurface },
   hint: { fontFamily: fonts.body, fontSize: 12, color: c.muted, lineHeight: 17 },
   svc: { borderRadius: radius.md, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface, padding: spacing.md, gap: spacing.sm },
-  svcHead: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  svcHead: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 44 },
+  svcIcon: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   svcName: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurface },
   qtyRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   qtyField: { flex: 1, height: 44, borderRadius: radius.sm, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface, paddingHorizontal: spacing.md, fontFamily: fonts.bodyBold, fontSize: 15, color: c.onSurface },
   lineTotal: { fontFamily: fonts.displayBold, fontSize: 15, color: c.brandPrimary, minWidth: 92, textAlign: "right" },
+  catHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: c.surfaceSecondary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 13 },
+  catTitleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  catTitle: { fontFamily: fonts.displayBold, fontSize: 14, color: c.brand, textTransform: "uppercase", letterSpacing: 0.5 },
+  catCount: { fontFamily: fonts.bodySemi, fontSize: 12, color: c.muted },
+  minBadge: { alignSelf: "flex-start", marginTop: 4, backgroundColor: "#FEF3C7", color: "#92400E", overflow: "hidden", borderRadius: radius.pill, paddingHorizontal: 7, paddingVertical: 3, fontFamily: fonts.bodyBold, fontSize: 11 },
   footer: { position: "absolute", left: 0, right: 0, bottom: 0, padding: spacing.lg, gap: spacing.sm, backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.divider, ...shadow.soft },
   totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   totalLabel: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurfaceSecondary },

@@ -1,0 +1,75 @@
+{
+  "summary": "Backend regressions for ready filtering, ready->completed advance, and min_kg/outlet validation passed. Frontend mobile checks partially passed (queue hides ready cards), but key UI interactions for closing ready order and opening timbang flow could not be validated end-to-end.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Siap Diambil list card action",
+        "issue": "Tapping button with testID prefix complete-ready- did not trigger observable order removal in UI run (count stayed 5->5 and no corresponding /api/orders/{id}/advance call observed in backend logs for that tap).",
+        "testID": "complete-ready-*",
+        "priority": "HIGH"
+      },
+      {
+        "component": "Antar Jemput list to Timbang action",
+        "issue": "No timbang button rendered during test run (selector [data-testid^='weigh-'] count=0), so accordion/min-4kg auto-fill verification could not be completed in UI.",
+        "testID": "weigh-*",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Pegawai dashboard -> Siap Diambil -> Sudah Diambil",
+        "issue": "Backend API supports ready->completed (verified by pytest), but UI click path did not complete in automation.",
+        "affected_testIDs": [
+          "ready-orders-card",
+          "complete-ready-*"
+        ]
+      },
+      {
+        "flow": "Antar Jemput -> Timbang Pakaian & Foto",
+        "issue": "Request order setup existed in backend, but kurir page did not expose weigh action in tested UI state.",
+        "affected_testIDs": [
+          "weigh-*",
+          "weigh-category-*",
+          "photo-camera",
+          "photo-library"
+        ]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter14_ready_pickup_weigh.py",
+    "/app/test_reports/pytest/iter14_ready_pickup_weigh.xml",
+    "/app/test_reports/artifacts_iter14/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter14/ui_failure_third.jpeg",
+    "/app/test_reports/artifacts_iter14/kurir_failure.jpeg"
+  ],
+  "action_items": [
+    "Main agent: investigate why complete-ready button tap is not resulting in reliable advance/refetch in web mobile preview.",
+    "Main agent: verify kurir requested-order visibility path for test data (possible currentOutlet/session mismatch or filter/state issue).",
+    "After fixes, retest Siap Diambil close action and Timbang flow (accordion + min 4kg auto qty + camera/gallery controls)."
+  ],
+  "critical_code_review_comments": [
+    "backend/tests/backend_test.py still uses hardcoded default BASE_URL fallback instead of fail-fast env-only behavior."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter14_ready_pickup_weigh.py",
+    "/app/tests/iter14_ui_data_setup.py",
+    "/app/tests/iter14_ui_data_cleanup.py",
+    "/app/test_reports/iteration_14.json"
+  ],
+  "success_rate": {
+    "backend": "100% (4/4)",
+    "frontend": "40% (partial: login/queue check pass; core ready-close and timbang entry blocked)"
+  },
+  "seed_data_creation": "Created temporary TEST_iter14_ui_* customer/orders via /app/tests/iter14_ui_data_setup.py and fully cleaned with /app/tests/iter14_ui_data_cleanup.py.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Three Playwright iterations were already attempted on ready/timbang selectors. Avoid repeated selector rewrites; focus on root cause (event not firing/refetch/state/outlet context).",
+  "rca_of_issue": "RCA (current evidence): Backend endpoints and business rules are working (pytest pass). UI failure is likely client-side interaction/state issue: complete-ready tap did not produce backend call in observed run; kurir weigh action absent despite backend-request order creation. Repro: login Pegawai -> /siap-diambil -> tap complete-ready-* (list unchanged); login Pegawai -> /(employee)/kurir -> no weigh-* rendered."
+}
