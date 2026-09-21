@@ -62,14 +62,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  const persist = async (s: Session | null) => {
+  const persist = (s: Session | null) => {
     setSession(s);
-    if (s) {
-      await storage.setItem(SESSION_KEY, s as any);
-      await storage.setItem(VERSION_KEY, APP_VERSION as any);
-    } else {
-      await storage.removeItem(SESSION_KEY);
-    }
+    const write = s
+      ? Promise.all([storage.setItem(SESSION_KEY, s as any), storage.setItem(VERSION_KEY, APP_VERSION as any)])
+      : storage.removeItem(SESSION_KEY);
+    void write.catch(() => console.warn("Sesi belum tersimpan ke perangkat"));
   };
 
   const sessionFromRes = (res: any): Session => {
@@ -83,12 +81,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login: AuthCtx["login"] = async (username, password) => {
     const res = await api.post("/auth/login", { username, password });
-    await persist(sessionFromRes(res));
+    persist(sessionFromRes(res));
   };
 
   const register: AuthCtx["register"] = async (name, phone, password, outletId) => {
     const res = await api.post("/auth/register", { name, phone, password, outlet_id: outletId });
-    await persist(sessionFromRes(res));
+    persist(sessionFromRes(res));
   };
 
   const updateCustomer = (patch: any) => {
@@ -98,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    await persist(null);
+    persist(null);
   };
 
   const setOutlet = (id: string | null) => {

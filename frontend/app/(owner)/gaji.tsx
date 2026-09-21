@@ -14,6 +14,7 @@ import { PrimaryButton, EmptyState, Loading } from "@/src/components/ui";
 import { Field } from "@/src/components/form";
 import { OutletSwitcher } from "@/src/components/OutletSwitcher";
 import { rupiah, kg } from "@/src/format";
+import { msUntilJakartaNightRefresh } from "@/src/summaryCache";
 
 export default function GajiPegawai() {
   const styles = useStyles();
@@ -35,11 +36,13 @@ export default function GajiPegawai() {
     queryKey: ["payroll", outletId, period],
     queryFn: () => api.get(`/payroll?period=${period}${outletId ? `&outlet_id=${outletId}` : ""}`),
     enabled: outletsReady,
+    staleTime: msUntilJakartaNightRefresh(), refetchOnMount: false, refetchOnWindowFocus: false,
   });
   const { data: kasbonEntries = [] } = useQuery({
     queryKey: ["kasbon", outletId, period],
     queryFn: () => api.get(`/kasbon?period=${period}${outletId ? `&outlet_id=${outletId}` : ""}`),
     enabled: outletsReady,
+    staleTime: msUntilJakartaNightRefresh(), refetchOnMount: false, refetchOnWindowFocus: false,
   });
 
   const saveManual = useMutation({

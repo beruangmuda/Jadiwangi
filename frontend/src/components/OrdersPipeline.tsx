@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, Pressable, RefreshControl, Modal, TextInput, Platform, Linking } from "react-native";
+import { View, Text, ScrollView, Pressable, RefreshControl, Modal, TextInput } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
 
 import { api } from "@/src/api";
 import { fonts, makeStyles, radius, spacing, useTheme, shadow } from "@/src/theme";
@@ -10,7 +9,6 @@ import { Icon } from "@/src/components/Icon";
 import { Pill, ChipRow, PrimaryButton, Loading, EmptyState, BodyText } from "@/src/components/ui";
 import { STAGE, NEXT_LABEL, nextStage } from "@/src/status";
 import { rupiah, kg, timeLeft } from "@/src/format";
-import { buildReceiptWhatsAppUrl } from "@/src/whatsapp";
 
 const FILTERS = [
   { key: "active", label: "Aktif" },
@@ -22,13 +20,6 @@ const FILTERS = [
   { key: "completed", label: "Selesai" },
 ];
 
-const PAY_METHODS = [
-  { key: "cash", label: "Tunai", icon: "cash" },
-  { key: "qris", label: "QRIS", icon: "qrcode-scan" },
-  { key: "emoney", label: "E-Money", icon: "wallet" },
-  { key: "coin", label: "JW Coin", icon: "hand-coin" },
-];
-
 export function OrdersPipeline({
   outletId, employeeId, employeeName, canCancel = true, todayOnly = false,
 }: { outletId: string | null; employeeId?: string; employeeName?: string; canCancel?: boolean; todayOnly?: boolean }) {
@@ -38,11 +29,8 @@ export function OrdersPipeline({
   const router = useRouter();
   const [filter, setFilter] = useState("active");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [method, setMethod] = useState("cash");
-  const [payError, setPayError] = useState("");
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
-  const [receiptOrder, setReceiptOrder] = useState<any>(null);
 
   const buildUrl = () => {
     const params = new URLSearchParams();
@@ -64,18 +52,6 @@ export function OrdersPipeline({
 
   useEffect(() => { if (outletId) ["received", "washing", "drying", "ironing", "packing"].forEach((status) => qc.prefetchQuery({ queryKey: ["orders", outletId, status, todayOnly], queryFn: () => api.get(`/orders?outlet_id=${outletId}&status=${status}${todayOnly ? "&queue=true" : ""}&sort=fifo&limit=100`), staleTime: 15000 })); }, [outletId, todayOnly, qc]);
 
-  const pay = useMutation({
-    mutationFn: (id: string) => api.post(`/orders/${id}/pay`, { method }),
-    onSuccess: (order: any) => {
-      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setPayError("");
-      setReceiptOrder({ ...order, receipt_method: method });
-      qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
-    },
-    onError: (e: any) => setPayError(e?.message || "Verifikasi pembayaran gagal"),
-  });
-
   const cancel = useMutation({
     mutationFn: (id: string) => api.post(`/orders/${id}/cancel`, { reason: reason || "Dibatalkan" }),
     onSuccess: () => {
@@ -84,19 +60,6 @@ export function OrdersPipeline({
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
-
-  const shareReceipt = async (item: any) => {
-    const url = buildReceiptWhatsAppUrl({
-      phone: item.customer_phone,
-      code: item.code,
-      customerName: item.customer_name,
-      itemLines: item.items_summary ? [`• ${item.items_summary}`] : [],
-      total: rupiah(item.total),
-      payment: `Lunas via ${{ cash: "Tunai", qris: "QRIS", emoney: "E-Money", coin: "JW Coin", deposit: "Deposit" }[item.receipt_method || item.payment_method] || "Pembayaran"}`,
-      status: item.stage_label,
-    });
-    if (url) await Linking.openURL(url);
-  };
 
   const list = (data || []).filter((o: any) => o.status !== "ready");
   const express = list.filter((o: any) => o.express);
@@ -108,14 +71,13 @@ export function OrdersPipeline({
     const nxt = nextStage(item.status);
     const canAdvance = nxt && item.status !== "cancelled";
     const total = Number(item.total);
-    const coinCharge = Math.round(total * 0.9);
 
     return (
       <View style={[styles.card, item.express && { borderColor: "#DC2626", borderWidth: 1.5, backgroundColor: "#FFF7F7" }]} testID={`order-card-${item.code}`}>
         {/* Ringkas */}
         <Pressable
           testID={`toggle-order-${item.code}`}
-          onPress={() => { setOpenId(open ? null : item.id); setMethod("cash"); setPayError(""); }}
+          onPress={() => setOpenId(open ? null : item.id)}
           style={styles.cardHead}
         >
           <View style={[styles.queueNo, item.express && { backgroundColor: "#DC2626" }]}>
@@ -158,47 +120,10 @@ export function OrdersPipeline({
             </View>
             {item.customer_phone ? <Meta icon="phone" text={item.customer_phone} /> : null}
             {item.notes ? <Text style={styles.notes}>Catatan: {item.notes}</Text> : null}
-            {/* Konfirmasi pembayaran */}
-            {item.payment_status !== "paid" && item.status !== "cancelled" && total > 0 ? (
-              <View style={{ gap: spacing.sm, marginTop: spacing.xs }}>
-                <Text style={styles.label}>Konfirmasi Pembayaran</Text>
-                <View style={styles.methodRow}>
-                  {PAY_METHODS.map((m) => {
-                    const on = method === m.key;
-                    return (
-                      <Pressable
-                        key={m.key}
-                        testID={`pay-method-${m.key}-${item.code}`}
-                        onPress={() => { setMethod(m.key); setPayError(""); }}
-                        style={[styles.methodCard, on && { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary }]}
-                      >
-                        <Icon name={m.icon} size={16} color={on ? colors.brandPrimary : colors.muted} />
-                        <Text style={[styles.methodLabel, on && { color: colors.brandPrimary }]}>{m.label}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                {method === "coin" ? (
-                  <Text style={styles.hint}>Saldo coin pelanggan terpotong {coinCharge.toLocaleString("id-ID")} coin (diskon 10%).</Text>
-                ) : null}
-                {payError ? <Text style={styles.error} testID="pay-error">{payError}</Text> : null}
-                <Pressable
-                  testID={`pay-${item.code}`}
-                  onPress={() => pay.mutate(item.id)}
-                  style={[styles.payBtn, { backgroundColor: colors.brand }]}
-                >
-                  <Icon name="cash-check" size={16} color={colors.onBrand} />
-                  <Text style={[styles.smallBtnText, { color: colors.onBrand }]}>
-                    Tandai Lunas • {rupiah(method === "coin" ? coinCharge : total)}
-                  </Text>
-                </Pressable>
-              </View>
-            ) : item.payment_status === "paid" ? (
-              <View style={styles.paidRow}>
-                <Icon name="check-decagram" size={16} color="#15803D" />
-                <Text style={styles.paidText}>Lunas • {item.payment_method === "coin" ? "JW Coin" : (item.payment_method || "-").toUpperCase()}</Text>
-              </View>
-            ) : null}
+            <View testID={`payment-status-${item.code}`} style={[styles.paymentStatus, item.payment_status === "paid" ? styles.paidRow : styles.unpaidRow]}>
+              <Icon name={item.payment_status === "paid" ? "check-decagram" : "lock-outline"} size={16} color={item.payment_status === "paid" ? "#15803D" : colors.error} />
+              <Text style={[styles.paymentStatusText, { color: item.payment_status === "paid" ? "#15803D" : colors.error }]}>{item.payment_status === "paid" ? `Lunas • ${item.payment_method === "coin" ? "JW Coin" : (item.payment_method || "-").toUpperCase()}` : "Belum Lunas"}</Text>
+            </View>
 
             {/* Aksi status */}
             {item.status !== "cancelled" ? (
@@ -206,7 +131,7 @@ export function OrdersPipeline({
                 {canAdvance ? (
                   <Pressable
                     testID={`advance-${item.code}`}
-                    onPress={() => router.push(`/proses/${item.id}`)}
+                    onPress={() => { qc.setQueryData(["order-process", item.id], item); router.push(`/proses/${item.id}`); }}
                     style={[styles.smallBtn, { backgroundColor: colors.brandPrimary, flex: 1, ...shadow.soft }]}
                   >
                     <Text style={[styles.smallBtnText, { color: colors.onBrandPrimary }]}>{NEXT_LABEL[item.status]}</Text>
@@ -276,17 +201,6 @@ export function OrdersPipeline({
           </View>
         </View>
       </Modal>
-      <Modal visible={!!receiptOrder} transparent animationType="slide" onRequestClose={() => setReceiptOrder(null)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.receiptSheet}>
-            <Icon name="check-decagram" size={34} color="#15803D" />
-            <Text style={styles.receiptTitle}>Pembayaran berhasil</Text>
-            <Text style={styles.receiptSubtitle}>Kirim struk ke WhatsApp pelanggan sekarang.</Text>
-            <Pressable testID="queue-send-whatsapp-receipt" onPress={() => shareReceipt(receiptOrder)} style={styles.queueReceiptBtn}><Icon name="whatsapp" size={17} color="#15803D" /><Text style={styles.receiptText}>Kirim Struk WhatsApp</Text></Pressable>
-            <Pressable testID="queue-receipt-finish" onPress={() => setReceiptOrder(null)} style={styles.doneReceiptBtn}><Text style={styles.doneReceiptText}>Selesai</Text></Pressable>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -326,22 +240,10 @@ const useStyles = makeStyles((c) => ({
   itemsText: { flex: 1, fontFamily: fonts.body, fontSize: 12, color: c.onSurfaceSecondary, lineHeight: 17 },
   metaRow: { flexDirection: "row", gap: spacing.lg, flexWrap: "wrap" },
   notes: { fontFamily: fonts.body, fontSize: 12, color: c.muted },
-  label: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurfaceSecondary },
-  hint: { fontFamily: fonts.body, fontSize: 12, color: c.muted },
-  methodRow: { flexDirection: "row", gap: spacing.sm },
-  methodCard: { flex: 1, alignItems: "center", gap: 4, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface },
-  methodLabel: { fontFamily: fonts.bodyBold, fontSize: 11, color: c.onSurfaceSecondary },
-  payBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: radius.md },
-  receiptBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: radius.md, paddingVertical: 10, backgroundColor: "#DCFCE7" },
-  receiptText: { fontFamily: fonts.bodyBold, fontSize: 13, color: "#15803D" },
-  receiptSheet: { backgroundColor: c.surface, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.md, alignItems: "center" },
-  receiptTitle: { fontFamily: fonts.displayBold, fontSize: 19, color: c.onSurface },
-  receiptSubtitle: { fontFamily: fonts.body, fontSize: 13, color: c.muted, textAlign: "center" },
-  queueReceiptBtn: { alignSelf: "stretch", minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, backgroundColor: "#DCFCE7", borderRadius: radius.md },
-  doneReceiptBtn: { minHeight: 44, paddingHorizontal: spacing.lg, alignItems: "center", justifyContent: "center" },
-  doneReceiptText: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.muted },
-  paidRow: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#DCFCE7", borderRadius: radius.md, padding: spacing.sm },
-  paidText: { fontFamily: fonts.bodyBold, fontSize: 12, color: "#15803D" },
+  paymentStatus: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: radius.md, padding: spacing.sm },
+  paidRow: { backgroundColor: "#DCFCE7" },
+  unpaidRow: { backgroundColor: "#FFF1F2" },
+  paymentStatusText: { fontFamily: fonts.bodyBold, fontSize: 12 },
   smallBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 11, paddingHorizontal: 14, borderRadius: radius.md },
   smallBtnText: { fontFamily: fonts.bodyBold, fontSize: 13 },
   cancelBtn: { width: 42, alignItems: "center", justifyContent: "center", borderRadius: radius.md, backgroundColor: "#FFE4E6" },

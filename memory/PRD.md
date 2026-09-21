@@ -202,6 +202,14 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] **Stabilitas Gaji**: query Gaji mengikuti OutletSwitcher dari sesi aktif (termasuk Semua Outlet) dan menunggu daftar outlet siap sebelum memuat, sehingga tidak menampilkan daftar pegawai kosong saat konteks outlet berubah.
 - [x] Teruji iterasi 25: backend 3/3 PASS untuk lock unpaid → bayar → selesai dan penyimpanan tanggal kasbon; uji layar ponsel memverifikasi kartu Bayar Sekarang serta kalender memilih tanggal bulan berikutnya.
 
+## Update (2026-09, iterasi 26–27) — Petugas Tahap, Kartu Cepat, dan Ringkasan Malam
+- [x] **Petugas per tahap berbeda**: Cuci, Pengering, Setrika, serta Lipat & Packing mencatat pegawai yang sedang login pada saat tombol tahap ditekan. Satu order dapat memiliki petugas berbeda di setiap tahap; timeline menampilkan badge **Dikerjakan oleh [nama]** setelah sinkron ke server.
+- [x] **Antrian ringkas & pembayaran tepat tempat**: kartu Antrian hanya menampilkan **Lunas** atau **Belum Lunas**. Kartu metode pembayaran tetap eksklusif di Siap Diambil sehingga pegawai baru dapat menyerahkan laundry setelah status lunas.
+- [x] **Pembukaan kartu lebih cepat**: order Proses dipanaskan ke cache sebelum navigasi; dashboard Pegawai memprefetch daftar Siap Diambil dan Transaksi Hari Ini. Uji mobile membuka Proses dari kartu dalam 48–77 ms.
+- [x] **Ringkasan otomatis pukul 21.00 WIB**: Dashboard Owner/Pegawai, Gaji, dan Kasbon mempertahankan cache sampai jadwal refresh 21.00 Asia/Jakarta untuk mengurangi loading. Transaksi order, pembayaran, serta tahap produksi tetap tersimpan langsung saat dilakukan.
+- [x] **Indikator Dikerjakan**: angka proses dipindahkan menjadi pill kecil di bawah statistik utama agar lebih seimbang dan tidak mengganggu dua kartu aksi utama.
+- [x] Login Owner dan Dashboard kini memulihkan sesi lebih cepat serta mempertahankan data terakhir saat konteks outlet berubah; screenshot KPI Owner PASS tanpa skeleton tertahan.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).

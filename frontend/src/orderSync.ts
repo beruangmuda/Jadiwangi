@@ -21,5 +21,5 @@ export async function queueOrderStage(job: Job) {
     jobs.push(job);
     await AsyncStorage.setItem(KEY, JSON.stringify(jobs));
   }
-  void flushOrderSync();
+  await flushOrderSync();
 }

@@ -369,6 +369,39 @@
 ##         -working: true
 ##         -agent: "main"
 ##         -comment: "Rincian kerja kiloan dikembalikan ke Bonus Cuci/Bonus Setrika. Input tanggal kasbon manual diganti kalender bulan ringkas, lengkap dengan navigasi bulan dan pemilihan hari. Screenshot mobile PASS."
+##   - task: "Nama petugas tahap proses dan status pembayaran antrian ringkas"
+##     implemented: true
+##     working: "NA"
+##     file: "frontend/app/proses/[id].tsx, frontend/src/components/OrdersPipeline.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Timeline langsung mengisi Dikerjakan oleh [nama] secara optimistis saat tahap produksi diklik, lalu merefresh data server. Kartu antrian hanya menampilkan Lunas/Belum Lunas; kartu pembayaran tetap hanya di Siap Diambil. Order uji membuktikan Cuci oleh Joko Produksi tampil di timeline."
+##   - task: "Pembukaan kartu proses dan ringkasan pegawai lebih cepat"
+##     implemented: true
+##     working: "NA"
+##     file: "frontend/src/components/OrdersPipeline.tsx, frontend/app/(employee)/index.tsx, frontend/src/orderSync.ts"
+##     stuck_count: 0
+##     priority: "medium"
+##     needs_retesting: true
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Data order dipanaskan ke cache sebelum route Proses dibuka; dashboard Pegawai memprefetch Siap Diambil dan Transaksi Hari Ini. Uji mobile membuka timeline dari kartu dalam 77 ms."
+##   - task: "Atribusi pegawai lintas tahap dan cache ringkasan malam"
+##     implemented: true
+##     working: true
+##     file: "frontend/app/proses/[id].tsx, frontend/src/summaryCache.ts, frontend/app/(employee)/index.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Tahap Cuci/Pengering/Setrika/Packing langsung diberi nama pegawai login dan boleh berbeda per tahap. Ringkasan Dashboard, Gaji, dan Kasbon memakai cache hingga pukul 21.00 Asia/Jakarta; transaksi order/pembayaran tetap dikirim langsung. Indikator Dikerjakan dipindahkan menjadi pill ringkas terpisah."
 
 ## test_plan:
 ##   current_focus:
@@ -413,3 +446,9 @@
 ##     -message: "ITERATION 25: Menambahkan Bayar Sekarang inline untuk ready/unpaid dengan kartu metode pembayaran yang sama, lalu mengaktifkan Sudah Diambil setelah lunas. Rincian Gaji kembali ringkas (Bonus Cuci/Setrika) dan tanggal kasbon kini memakai kalender kecil. Perlu retest UI dan pembayaran API."
 ##     -agent: "main"
 ##     -message: "ITERATION 25 FIX VERIFIED: Gaji kini mengambil outlet langsung dari session/OutletSwitcher sehingga tidak dapat memakai outlet lokal yang stale; kondisi outlet belum siap menampilkan Loading, bukan Belum ada pegawai. Sheet kasbon menjadi scrollable dan menerima tap saat keyboard aktif. Screenshot membuktikan daftar 7 pegawai, Bonus Cuci/Setrika ringkas, dan kalender memilih 01 October 2026."
+##     -agent: "main"
+##     -message: "ITERATION 26: Timeline proses kini mengisi nama petugas secara optimistis lalu sinkron ke server, kartu antrian hanya memiliki status Lunas/Belum Lunas, dan cache dipanaskan sebelum membuka Proses/Siap Diambil/Transaksi. Uji lokal: timeline Cuci oleh Joko Produksi tampil, status Belum Lunas ringkas tanpa Konfirmasi Pembayaran, dan proses terbuka 77 ms. Perlu retest." 
+##     -agent: "main"
+##     -message: "ITERATION 27: Transaksi tetap realtime, sedangkan Dashboard Owner/Pegawai, Gaji, dan Kasbon memakai stale cache hingga 21.00 Asia/Jakarta. Label tahap petugas mendapat visual account-check yang lebih jelas dan indikator Dikerjakan menjadi pill ringkas terpisah. Perlu retest atribusi pekerja berbeda per tahap dan cache UI."
+##     -agent: "main"
+##     -message: "ITERATION 27 FIX VERIFIED: Retest 27 backend 3/3 dan frontend stage/queue/ready PASS. Owner Dashboard sempat skeleton intermittent saat login; login sekarang menyetel sesi langsung tanpa menunggu penyimpanan perangkat dan dashboard menunggu sesi siap sambil mempertahankan data cache. Screenshot login Owner menampilkan KPI dashboard PASS."

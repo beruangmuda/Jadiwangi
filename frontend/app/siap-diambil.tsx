@@ -55,15 +55,25 @@ export default function SiapDiambil() {
   });
   const payOrder = useMutation({
     mutationFn: (orderId: string) => api.post(`/orders/${orderId}/pay`, { method: paymentMethod }),
+    onMutate: async (orderId) => {
+      await qc.cancelQueries({ queryKey: ["ready-orders", outletId] });
+      const previous = qc.getQueryData<any[]>(["ready-orders", outletId]);
+      setPaymentOrderId(null); setPaymentError("");
+      qc.setQueryData<any[]>(["ready-orders", outletId], (items) => (items || []).map((order) => order.id === orderId ? { ...order, payment_status: "paid", payment_method: paymentMethod } : order));
+      return { previous, orderId };
+    },
     onSuccess: (updated: any) => {
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setPaymentOrderId(null); setPaymentError("");
       qc.setQueryData<any[]>(["ready-orders", outletId], (items) => (items || []).map((order) => order.id === updated.id ? { ...order, ...updated } : order));
-      qc.invalidateQueries({ queryKey: ["ready-orders", outletId] });
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dashboard", outletId] });
     },
-    onError: (error: any) => setPaymentError(error?.message || "Pembayaran belum dapat dikonfirmasi"),
+    onError: (error: any, _orderId, context) => {
+      if (context?.previous) qc.setQueryData(["ready-orders", outletId], context.previous);
+      setPaymentOrderId(context?.orderId || null);
+      setPaymentError(error?.message || "Pembayaran belum dapat dikonfirmasi");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["ready-orders", outletId] }),
   });
   return <View style={{ flex: 1, backgroundColor: colors.surface }}>
     <StackHeader title="Siap Diambil" subtitle={`${orders.length} order menunggu pelanggan`} />

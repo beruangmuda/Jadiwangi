@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
@@ -10,21 +10,30 @@ import { fonts, makeStyles, radius, shadow, spacing, useTheme } from "@/src/them
 import { Icon } from "@/src/components/Icon";
 import { OrdersPipeline } from "@/src/components/OrdersPipeline";
 import { kg } from "@/src/format";
+import { msUntilJakartaNightRefresh } from "@/src/summaryCache";
 
 export default function EmployeeHome() {
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { session, logout } = useAuth();
+  const qc = useQueryClient();
+  const { session, logout, loading: authLoading } = useAuth();
   const outletId = session?.currentOutletId ?? null;
 
   const { data } = useQuery({
     queryKey: ["dashboard", outletId],
     queryFn: () => api.get(`/dashboard${outletId ? `?outlet_id=${outletId}` : ""}`),
+    staleTime: msUntilJakartaNightRefresh(), refetchOnMount: false, refetchOnWindowFocus: false, enabled: !!session && !authLoading, placeholderData: (previous) => previous, retry: 1,
   });
   const t = data?.today;
   const queue = data?.queue;
+
+  useEffect(() => {
+    if (!outletId) return;
+    void qc.prefetchQuery({ queryKey: ["ready-orders", outletId], queryFn: () => api.get(`/orders?status=ready&sort=fifo&outlet_id=${outletId}`), staleTime: 15000 });
+    void qc.prefetchQuery({ queryKey: ["orders-today", outletId], queryFn: () => api.get(`/orders?today=true&outlet_id=${outletId}`), staleTime: 15000 });
+  }, [outletId, qc]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
@@ -46,9 +55,9 @@ export default function EmployeeHome() {
 
       <View style={styles.statStrip}>
         <Stat icon="receipt-text" label="Transaksi Hari Ini" value={String(t?.orders ?? 0)} sub={kg(t?.kg)} onPress={() => router.push("/hari-ini")} testID="today-orders-card" />
-        <Stat icon="progress-wrench" label="Dikerjakan" value={String(queue?.in_progress ?? 0)} testID="in-progress-card" informational />
         <Stat icon="basket-check" label="Siap Diambil" value={String(queue?.ready ?? 0)} onPress={() => router.push("/siap-diambil")} testID="ready-orders-card" />
       </View>
+      <View testID="in-progress-card" style={styles.inProgressIndicator}><View style={styles.inProgressCount}><Text style={styles.inProgressNumber}>{String(queue?.in_progress ?? 0)}</Text></View><View><Text style={styles.inProgressTitle}>Dikerjakan</Text><Text style={styles.inProgressSub}>Laundry sedang diproses</Text></View><Icon name="progress-wrench" size={20} color={colors.brandPrimary} /></View>
 
       <OrdersPipeline outletId={outletId} employeeId={session?.employee?.id} employeeName={session?.name} canCancel={false} todayOnly />
 
@@ -64,11 +73,11 @@ export default function EmployeeHome() {
   );
 }
 
-function Stat({ icon, label, value, sub, onPress, testID, informational }: { icon: string; label: string; value: string; sub?: string; onPress?: () => void; testID?: string; informational?: boolean }) {
+function Stat({ icon, label, value, sub, onPress, testID }: { icon: string; label: string; value: string; sub?: string; onPress?: () => void; testID?: string }) {
   const styles = useStyles();
   const { colors } = useTheme();
   return (
-    <Pressable testID={testID} onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.stat, informational && styles.infoStat, pressed && onPress && { opacity: 0.75 }]}>
+    <Pressable testID={testID} onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.stat, pressed && onPress && { opacity: 0.75 }]}>
       <Icon name={icon} size={18} color={colors.brand} />
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
@@ -84,9 +93,13 @@ const useStyles = makeStyles((c) => ({
   role: { fontFamily: fonts.bodySemi, fontSize: 13, color: c.muted },
   logoutBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#FFE4E6", alignItems: "center", justifyContent: "center" },
   coinBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.brandTertiary, alignItems: "center", justifyContent: "center", marginRight: spacing.sm },
-  statStrip: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
+  statStrip: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   stat: { flex: 1, backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, padding: spacing.md, gap: 2, ...shadow.card },
-  infoStat: { backgroundColor: "transparent", borderWidth: 0, paddingHorizontal: spacing.sm, shadowOpacity: 0, alignItems: "center", justifyContent: "center", gap: 4 },
+  inProgressIndicator: { flexDirection: "row", alignItems: "center", alignSelf: "center", gap: spacing.sm, borderRadius: radius.pill, backgroundColor: c.brandTertiary, paddingVertical: 7, paddingHorizontal: spacing.md, marginBottom: spacing.md },
+  inProgressCount: { width: 28, height: 28, borderRadius: 14, backgroundColor: c.brandPrimary, alignItems: "center", justifyContent: "center" },
+  inProgressNumber: { fontFamily: fonts.displayBold, fontSize: 14, color: c.onBrandPrimary },
+  inProgressTitle: { fontFamily: fonts.bodyBold, fontSize: 12, color: c.onSurface },
+  inProgressSub: { marginTop: 1, fontFamily: fonts.body, fontSize: 10, color: c.muted },
   statValue: { fontFamily: fonts.displayBold, fontSize: 22, color: c.onSurface },
   statLabel: { fontFamily: fonts.bodySemi, fontSize: 11, color: c.muted },
   statSub: { fontFamily: fonts.bodyBold, fontSize: 11, color: c.brand },

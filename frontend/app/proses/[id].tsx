@@ -20,9 +20,14 @@ export default function ProsesOrder() {
   const router = useRouter();
   const qc = useQueryClient();
   const { session } = useAuth();
-  const { data: order, isLoading } = useQuery({ queryKey: ["order-process", id], queryFn: () => api.get(`/orders/${id}`), enabled: !!id });
+  const { data: order, isLoading } = useQuery({ queryKey: ["order-process", id], queryFn: () => api.get(`/orders/${id}`), enabled: !!id, staleTime: 15000 });
   const moveTo = (target: string) => {
-    const optimistic = { ...order, status: target, stage_label: STAGE[target]?.label || target };
+    const productionStages = ["washing", "drying", "ironing", "packing"];
+    const stageWorkers = { ...(order.stage_workers || {}) };
+    if (productionStages.includes(order.status)) {
+      stageWorkers[order.status] = { employee_id: session?.employee?.id, employee_name: session?.name || "Pegawai", completed_at: new Date().toISOString() };
+    }
+    const optimistic = { ...order, status: target, stage_label: STAGE[target]?.label || target, stage_workers: stageWorkers };
     qc.setQueryData(["order-process", id], optimistic);
     qc.setQueriesData({ queryKey: ["orders"] }, (data: any) => Array.isArray(data) ? data.map((o) => o.id === id ? optimistic : o) : data);
     const active = ["washing", "drying", "ironing", "packing"];
@@ -32,7 +37,10 @@ export default function ProsesOrder() {
       return { ...data, queue: { ...data.queue, in_progress: Math.max(0, (data.queue.in_progress || 0) + (nowActive ? 1 : 0) - (wasActive ? 1 : 0)), ready: Math.max(0, (data.queue.ready || 0) + (target === "ready" ? 1 : 0) - (order.status === "ready" ? 1 : 0)) } };
     });
     if (target === "ready") qc.setQueryData<any[]>(["ready-orders", session?.currentOutletId], (items) => [optimistic, ...(items || []).filter((item) => item.id !== id)]);
-    void queueOrderStage({ id: id!, target_status: target, employee_id: session?.employee?.id, employee_name: session?.name || "" });
+    void queueOrderStage({ id: id!, target_status: target, employee_id: session?.employee?.id, employee_name: session?.name || "" }).then(() => {
+      qc.invalidateQueries({ queryKey: ["order-process", id] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+    });
     if (target === "ready") router.replace("/siap-diambil");
   };
 
@@ -50,10 +58,10 @@ export default function ProsesOrder() {
       <Text style={styles.sectionTitle}>Tahapan Proses</Text>
       <View testID="process-timeline" style={styles.timeline}>
         {PIPELINE.slice(0, 6).map((key, index) => {
-          const stage = STAGE[key]; const complete = index <= current; const available = index === current + 1 && !isDone; const pending = index > current + 1;
+          const stage = STAGE[key]; const complete = index <= current; const available = index === current + 1 && !isDone; const pending = index > current + 1; const workerName = order.stage_workers?.[key]?.employee_name;
           return <View key={key} testID={`process-stage-${key}`} style={styles.stageRow}>
             <View style={styles.rail}><View style={[styles.stageDot, (complete || available) && { backgroundColor: available ? colors.brandPrimary : colors.success }]}>{complete ? <Icon name="check" size={15} color="#fff" /> : <Icon name={stage.icon} size={15} color={available ? "#fff" : colors.muted} />}</View>{index < 5 ? <View style={[styles.stageLine, complete && { backgroundColor: colors.success }]} /> : null}</View>
-            <Pressable disabled={!available} onPress={() => moveTo(key)} style={[styles.stageCard, available && { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary }, pending && { opacity: 0.45 }]}><Text style={styles.stageTitle}>{stage.label}</Text><Text testID={`process-stage-detail-${key}`} style={styles.stageSub}>{available ? "Klik untuk lanjut ke tahap ini →" : complete && order.stage_workers?.[key]?.employee_name ? `Dikerjakan oleh ${order.stage_workers[key].employee_name}` : complete ? "Selesai" : "Menunggu tahap sebelumnya"}</Text></Pressable>
+            <Pressable disabled={!available} onPress={() => moveTo(key)} style={[styles.stageCard, available && { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary }, pending && { opacity: 0.45 }]}><Text style={styles.stageTitle}>{stage.label}</Text>{workerName ? <View testID={`process-stage-detail-${key}`} style={styles.workerRow}><Icon name="account-check" size={14} color="#15803D" /><Text style={styles.workerName}>Dikerjakan oleh {workerName}</Text></View> : <Text testID={`process-stage-detail-${key}`} style={styles.stageSub}>{available ? "Klik untuk lanjut ke tahap ini →" : complete ? "Selesai" : "Menunggu tahap sebelumnya"}</Text>}</Pressable>
           </View>;
         })}
       </View>
@@ -67,7 +75,7 @@ const useStyles = makeStyles((c) => ({
   summary: { flexDirection: "row", gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, ...shadow.card },
   customer: { fontFamily: fonts.displayBold, fontSize: 18, color: c.onSurface }, items: { marginTop: 4, fontFamily: fonts.body, fontSize: 13, color: c.muted, lineHeight: 19 }, total: { fontFamily: fonts.displayBold, fontSize: 15, color: c.brandPrimary },
   sectionTitle: { fontFamily: fonts.displayBold, fontSize: 18, color: c.onSurface }, timeline: { gap: 0 }, stageRow: { flexDirection: "row", minHeight: 78 }, rail: { width: 42, alignItems: "center" }, stageDot: { width: 32, height: 32, borderRadius: 16, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center", zIndex: 1 }, stageLine: { position: "absolute", top: 31, bottom: -1, width: 2, backgroundColor: c.border },
-  stageCard: { flex: 1, alignSelf: "flex-start", minHeight: 62, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, padding: spacing.md, marginBottom: spacing.sm }, stageTitle: { fontFamily: fonts.bodyBold, fontSize: 15, color: c.onSurface }, stageSub: { marginTop: 2, fontFamily: fonts.body, fontSize: 12, color: c.muted },
+  stageCard: { flex: 1, alignSelf: "flex-start", minHeight: 62, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, padding: spacing.md, marginBottom: spacing.sm }, stageTitle: { fontFamily: fonts.bodyBold, fontSize: 15, color: c.onSurface }, stageSub: { marginTop: 4, fontFamily: fonts.body, fontSize: 12, color: c.muted }, workerRow: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 5, marginTop: 7, paddingHorizontal: 7, paddingVertical: 4, borderRadius: radius.sm, backgroundColor: "#DCFCE7" }, workerName: { color: "#15803D", fontFamily: fonts.bodyBold, fontSize: 11 },
   readyBox: { flexDirection: "row", gap: spacing.md, backgroundColor: "#DCFCE7", borderRadius: radius.md, padding: spacing.md }, readyTitle: { fontFamily: fonts.displayBold, fontSize: 16, color: "#15803D" }, readySub: { marginTop: 2, fontFamily: fonts.body, fontSize: 12, color: "#166534" },
   footer: { position: "absolute", bottom: 0, left: 0, right: 0, padding: spacing.lg, backgroundColor: c.surface, borderTopWidth: 1, borderColor: c.border }, backBtn: { minHeight: 48, alignItems: "center", justifyContent: "center", backgroundColor: c.surfaceSecondary, borderRadius: radius.md }, backText: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurfaceSecondary },
 }));

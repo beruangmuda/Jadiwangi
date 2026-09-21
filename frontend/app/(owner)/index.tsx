@@ -13,19 +13,21 @@ import { Logo, Card, SectionHeader, Skeleton, EmptyState } from "@/src/component
 import { OutletSwitcher } from "@/src/components/OutletSwitcher";
 import { TrendChart } from "@/src/components/Chart";
 import { rupiah, rupiahShort, kg } from "@/src/format";
+import { msUntilJakartaNightRefresh } from "@/src/summaryCache";
 
 export default function Dashboard() {
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const { width } = useWindowDimensions();
   const outletId = session?.currentOutletId ?? null;
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["dashboard", outletId],
     queryFn: () => api.get(`/dashboard${outletId ? `?outlet_id=${outletId}` : ""}`),
+    staleTime: msUntilJakartaNightRefresh(), refetchOnMount: false, refetchOnWindowFocus: false, enabled: !!session && !authLoading, placeholderData: (previous) => previous, retry: 1,
   });
 
   const chartWidth = Math.min(width, 640) - spacing.lg * 2 - spacing.lg * 2;
@@ -81,7 +83,7 @@ export default function Dashboard() {
           </View>
         ) : null}
 
-        {isLoading ? (
+        {isLoading && !data ? (
           <>
             <View style={{ flexDirection: "row", gap: spacing.md }}>
               <Skeleton height={130} style={{ flex: 1 }} />
