@@ -175,6 +175,12 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] Express diberi card/badge **EXPRESS** merah. Card Dikerjakan menjadi informasi pasif.
 - [x] Retest iterasi 17 PASS untuk queue retry, Express, timeline, idempotensi, dan retensi foto.
 
+## Update (2026-09, iterasi 20) — Card Dashboard Pegawai Real-time
+- [x] Klik tahap proses kini langsung memperbarui jumlah **Dikerjakan** dan **Siap Diambil** pada dashboard serta memasukkan order ke daftar Siap Diambil secara optimistis.
+- [x] Tombol Sudah Diambil langsung menghapus card dan mengurangi hitungan; rollback mengembalikan card jika jaringan gagal.
+- [x] Cache dan invalidasi dashboard dibatasi per outlet agar perubahan outlet lain tidak tercampur.
+- [x] Retest iterasi 20 (4/4) dan iterasi 21 (2/2) PASS, termasuk timeline → ready, penutupan ready, rollback, dan scoping outlet.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).

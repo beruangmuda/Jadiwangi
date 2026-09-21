@@ -1,0 +1,43 @@
+{
+  "summary": "Final consistency check completed for outlet-scoped dashboard invalidation in siap-diambil and ready-close regression. Targeted backend suite passed; mobile UI showed immediate card removal after close action and queue count decrement.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter21_outlet_scoped_invalidation.py",
+    "/app/test_reports/pytest/iter21_outlet_scope.xml",
+    "/app/test_reports/artifacts_iter21/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter21/iter21_ready_preclick_attempt3.jpeg",
+    "/app/test_reports/artifacts_iter21/iter21_ready_postclick_attempt3.jpeg",
+    "/app/tests/iter19_seed_ready_order.py",
+    "/app/tests/iter19_cleanup_test_data.py"
+  ],
+  "action_items": [
+    "No blocking defects found for this scoped regression.",
+    "QRIS flow remains MOCKED and was not validated in this scope."
+  ],
+  "critical_code_review_comments": [
+    "Verified /app/frontend/app/siap-diambil.tsx invalidation is outlet-scoped: qc.invalidateQueries({ queryKey: [\"dashboard\", outletId] }) and no broad [\"dashboard\"] invalidation remains.",
+    "Verified /app/frontend/app/proses/[id].tsx still mutates dashboard cache with outlet scope key [\"dashboard\", session?.currentOutletId]."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter21_outlet_scoped_invalidation.py",
+    "/app/test_reports/iteration_21.json"
+  ],
+  "success_rate": {
+    "backend": "100% (2/2 targeted tests)",
+    "frontend": "100% (scoped ready-close UI regression passed)"
+  },
+  "seed_data_creation": "Created TEST_iter19_ready_* customer/order via /app/tests/iter19_seed_ready_order.py for UI regression and cleaned via /app/tests/iter19_cleanup_test_data.py.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Credentials used from /app/memory/test_credentials.md: Pegawai / pegawai123. UI evidence captured card count drop from 2 to 1 immediately after close action on Siap Diambil screen.",
+  "rca_of_issue": "Risk area was cross-outlet cache invalidation from broad dashboard key. Current source confirms outlet key scoping, preventing multi-outlet cache bleed while preserving ready close behavior."
+}

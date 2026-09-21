@@ -1,0 +1,68 @@
+{
+  "summary": "Retest for optimistic queue/ready updates executed on backend + mobile-web UI. Core ready-list optimistic behavior and ready-close rollback/completion worked; one code-level risk remains for outlet-specific dashboard cache updates.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Employee dashboard stat cards",
+        "issue": "Dikerjakan stat card has no dedicated testID, making deterministic mobile automation for count assertions brittle.",
+        "testID": "missing",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "proses -> klik Siap Diambil",
+        "issue": "UI shows ready order immediately via optimistic cache while backend can still be at previous stage for a short delay before queue sync flush succeeds (eventual consistency observed).",
+        "affected_testIDs": [
+          "process-timeline",
+          "ready-order-{code}"
+        ]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter19_optimistic_queue_ready.py",
+    "/app/test_reports/pytest/iter19_optimistic_queue_ready.xml",
+    "/app/tests/iter19_seed_ironing_order.py",
+    "/app/tests/iter19_seed_ready_order.py",
+    "/app/tests/iter19_cleanup_test_data.py",
+    "/app/test_reports/artifacts_iter19/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter19/ready_list_contains_order_iter2.jpeg",
+    "/app/test_reports/artifacts_iter19/ready_completion_result.jpeg",
+    "/app/test_reports/artifacts_iter19/rollback_probe_ready_order.jpeg",
+    "/app/test_reports/artifacts_iter19/ready_count_consistency_probe.jpeg"
+  ],
+  "action_items": [
+    "Make dashboard optimistic update outlet-scoped in /app/frontend/app/proses/[id].tsx (avoid broad queryKey ['dashboard']).",
+    "Add explicit testID for Dikerjakan stat card/value to support stable regression automation.",
+    "Optional: if strict consistency is required, await/confirm advance success before navigating away from proses->ready; current behavior is optimistic + eventual sync.",
+    "QRIS remains MOCKED and was not validated in this scope."
+  ],
+  "critical_code_review_comments": [
+    "In /app/frontend/app/proses/[id].tsx, qc.setQueriesData({ queryKey: ['dashboard'] }) can touch all dashboard caches, not strictly the active outlet cache key ['dashboard', outletId].",
+    "closeOrder mutation in /app/frontend/app/siap-diambil.tsx correctly applies optimistic removal + dashboard decrement with rollback on error.",
+    "No negative queue counters observed; Math.max(0, ...) guards are present in optimistic updates."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter19_optimistic_queue_ready.py",
+    "/app/tests/iter19_seed_ironing_order.py",
+    "/app/tests/iter19_seed_ready_order.py",
+    "/app/tests/iter19_cleanup_test_data.py",
+    "/app/test_reports/iteration_19.json"
+  ],
+  "success_rate": {
+    "backend": "100% (2/2 targeted tests)",
+    "frontend": "85% (core optimistic + rollback + completion flows passed; one deterministic stat-card assertion gap due missing testID)"
+  },
+  "seed_data_creation": "Created TEST_iter19_ui_* and TEST_iter19_ready_* customer/order data via /app/tests/iter19_seed_ironing_order.py and /app/tests/iter19_seed_ready_order.py; cleaned using /app/tests/iter19_cleanup_test_data.py.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Credentials used from /app/memory/test_credentials.md: Pegawai / pegawai123. Forced-failure rollback for ready close validated by intercepting POST /api/orders/{id}/advance with 500 once, card remained visible and backend stayed ready.",
+  "rca_of_issue": "Outlet-specific risk RCA: proses/[id].tsx optimistic dashboard updater uses broad query prefix ['dashboard'] rather than ['dashboard', currentOutletId]. In multi-outlet cache scenarios this can update unrelated outlet counters. Mitigation: read session.currentOutletId and set/invalidate that exact key for optimistic mutation and rollback logic."
+}

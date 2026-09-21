@@ -1,0 +1,45 @@
+{
+  "summary": "Final retest completed for outlet-scoped dashboard cache update and employee ironing→packing→ready flow. Backend targeted suite passed and mobile-web UI showed immediate ready-list update plus successful completion with non-negative queue counters.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter19_optimistic_queue_ready.py",
+    "/app/backend/tests/test_iter20_dashboard_cache_scope.py",
+    "/app/test_reports/pytest/iter20_final_retest.xml",
+    "/app/test_reports/artifacts_iter20/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter20/iter20_ready_list_immediate.jpeg",
+    "/app/test_reports/artifacts_iter20/iter20_dashboard_after_complete.jpeg",
+    "/app/tests/iter19_seed_ironing_order.py",
+    "/app/tests/iter19_cleanup_test_data.py"
+  ],
+  "action_items": [
+    "No blocking defects found for this retest scope.",
+    "QRIS flow remains MOCKED and was not part of this validation scope."
+  ],
+  "critical_code_review_comments": [
+    "Verified /app/frontend/app/proses/[id].tsx uses outlet-scoped optimistic key: [\"dashboard\", session?.currentOutletId] and no broad setQueriesData for dashboard.",
+    "Verified employee dashboard includes deterministic testIDs for queue cards: in-progress-card and ready-orders-card.",
+    "Observed /app/frontend/app/siap-diambil.tsx still invalidates broad [\"dashboard\"] on success; not failing this scope, but may trigger extra refetches across cached outlets."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter20_dashboard_cache_scope.py",
+    "/app/test_reports/iteration_20.json"
+  ],
+  "success_rate": {
+    "backend": "100% (4/4 targeted tests)",
+    "frontend": "100% (targeted retest flow passed)"
+  },
+  "seed_data_creation": "Created TEST_iter19_ui_* order/customer via /app/tests/iter19_seed_ironing_order.py for retest; cleaned using /app/tests/iter19_cleanup_test_data.py.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Credentials used from /app/memory/test_credentials.md: Pegawai / pegawai123. Verified order 61f784fa-05c6-4707-9816-2fe0d10a7f21 reached backend status completed after explicit click on complete-ready-JW-260921-1757.",
+  "rca_of_issue": "Prior multi-outlet risk came from broad dashboard cache mutation. Current fix correctly scopes optimistic process update to active outlet key, preventing cross-outlet cache contamination during status transition."
+}

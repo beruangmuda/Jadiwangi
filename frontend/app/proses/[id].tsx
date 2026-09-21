@@ -25,6 +25,13 @@ export default function ProsesOrder() {
     const optimistic = { ...order, status: target, stage_label: STAGE[target]?.label || target };
     qc.setQueryData(["order-process", id], optimistic);
     qc.setQueriesData({ queryKey: ["orders"] }, (data: any) => Array.isArray(data) ? data.map((o) => o.id === id ? optimistic : o) : data);
+    const active = ["washing", "drying", "ironing", "packing"];
+    qc.setQueryData(["dashboard", session?.currentOutletId], (data: any) => {
+      if (!data?.queue) return data;
+      const wasActive = active.includes(order.status); const nowActive = active.includes(target);
+      return { ...data, queue: { ...data.queue, in_progress: Math.max(0, (data.queue.in_progress || 0) + (nowActive ? 1 : 0) - (wasActive ? 1 : 0)), ready: Math.max(0, (data.queue.ready || 0) + (target === "ready" ? 1 : 0) - (order.status === "ready" ? 1 : 0)) } };
+    });
+    if (target === "ready") qc.setQueryData<any[]>(["ready-orders", session?.currentOutletId], (items) => [optimistic, ...(items || []).filter((item) => item.id !== id)]);
     void queueOrderStage({ id: id!, target_status: target, employee_id: session?.employee?.id, employee_name: session?.name || "" });
     if (target === "ready") router.replace("/siap-diambil");
   };

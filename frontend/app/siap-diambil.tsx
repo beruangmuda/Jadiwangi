@@ -21,17 +21,20 @@ export default function SiapDiambil() {
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ["ready-orders", outletId] });
       const previous = qc.getQueryData<any[]>(["ready-orders", outletId]);
+      const previousDashboard = qc.getQueryData<any>(["dashboard", outletId]);
       qc.setQueryData<any[]>(["ready-orders", outletId], (current) => (current || []).filter((order) => order.id !== id));
-      return { previous };
+      qc.setQueryData<any>(["dashboard", outletId], (dashboard) => dashboard?.queue ? { ...dashboard, queue: { ...dashboard.queue, ready: Math.max(0, (dashboard.queue.ready || 0) - 1) } } : dashboard);
+      return { previous, previousDashboard };
     },
     onError: (_error, _id, context) => {
       if (context?.previous) qc.setQueryData(["ready-orders", outletId], context.previous);
+      if (context?.previousDashboard) qc.setQueryData(["dashboard", outletId], context.previousDashboard);
     },
     onSuccess: () => {
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       qc.invalidateQueries({ queryKey: ["ready-orders", outletId] });
       qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", outletId] });
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["ready-orders", outletId] }),
   });
