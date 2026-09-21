@@ -1,0 +1,45 @@
+{
+  "summary": "Retest completed for payroll/kasbon regression and mobile UI flows. GET /api/payroll returns 200, multi-entry dated kasbon behavior works with period-scoped deduction, owner Gaji cards/modal render, and employee filter interactions remain responsive.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter22_kasbon_payroll.py",
+    "/app/backend/tests/test_iter23_payroll_kasbon_regression.py",
+    "/app/tests/iter23_cleanup_test_data.py",
+    "/app/test_reports/pytest/iter23_kasbon_payroll.xml",
+    "/app/test_reports/pytest/iter23_payroll_kasbon_regression.xml",
+    "/app/test_reports/artifacts_iter23/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter23/owner_gaji_kasbon_modal.jpeg",
+    "/app/test_reports/artifacts_iter23/employee_filters_after_switch.jpeg"
+  ],
+  "action_items": [
+    "No blocking regression found for requested scope; keep monitoring payroll and kasbon period logic in future iterations.",
+    "Align frontend API env key usage with platform rule (currently src/api.ts uses EXPO_PUBLIC_BACKEND_URL; rule expects EXPO_BACKEND_URL/Constants extra).",
+    "QRIS flow is MOCKED and remains out of scope in this retest."
+  ],
+  "critical_code_review_comments": [
+    "frontend/src/api.ts hardcodes process.env.EXPO_PUBLIC_BACKEND_URL instead of the expected EXPO_BACKEND_URL convention from project rules."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter23_payroll_kasbon_regression.py",
+    "/app/tests/iter23_cleanup_test_data.py",
+    "/app/test_reports/iteration_23.json"
+  ],
+  "success_rate": {
+    "backend": "100% (3/3 targeted regression tests passed)",
+    "frontend": "95% (all requested flows passed; no blocking UI/integration defects in tested scope)"
+  },
+  "seed_data_creation": "No seed data created. Cleanup script scanned recent kasbon periods and found no residual TEST_ records.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Credentials read from /app/memory/test_credentials.md. Verified owner Gaji screen renders employee cards and Catat Kasbon modal fields (kasbon-date, kasbon-amount, kasbon-note). Verified employee filter chips (Diterima/Cuci/Pengering/Setrika/Packing) switch without full-screen Loading blank and second-switch latency improved (~720ms vs ~1220ms first switch). Verified Antar Jemput tab opens. Dikerjakan card is borderless and click does not navigate.",
+  "rca_of_issue": "Previous iteration 22 failure was due payroll SQL referencing invalid work_logs.kasbon_date and period deduction using created_at. Current code now filters work_logs by created_at (Asia/Jakarta date cast) and kasbon by kasbon_date, resolving the 500 and period-scoping behavior in regression tests."
+}

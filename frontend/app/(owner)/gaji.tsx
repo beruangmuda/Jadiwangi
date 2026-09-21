@@ -59,6 +59,7 @@ export default function GajiPegawai() {
       outlet_id: outletId,
       amount: Number(kasbon.amount) || 0,
       note: kasbon.note || "",
+      kasbon_date: kasbon.kasbon_date,
     }),
     onSuccess: () => {
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -136,7 +137,7 @@ export default function GajiPegawai() {
                           <Icon name="pencil" size={16} color={colors.brandPrimary} />
                           <Text style={styles.editText}>Ubah Manual</Text>
                         </Pressable>
-                        <Pressable testID={`gaji-kasbon-${e.employee_id}`} onPress={() => setKasbon({ ...e, amount: "", note: "" })} style={[styles.kasbonBtn, { flex: 1 }]}>
+                        <Pressable testID={`gaji-kasbon-${e.employee_id}`} onPress={() => setKasbon({ ...e, amount: "", note: "", kasbon_date: dayjs().format("YYYY-MM-DD") })} style={[styles.kasbonBtn, { flex: 1 }]}>
                           <Icon name="cash-minus" size={16} color={colors.error} />
                           <Text style={styles.kasbonText}>Catat Kasbon</Text>
                         </Pressable>
@@ -178,6 +179,7 @@ export default function GajiPegawai() {
                 <View style={styles.grabber} />
                 <Text style={styles.sheetTitle}>Catat Kasbon</Text>
                 <Text style={styles.sheetSub}>{kasbon.name} · otomatis dipotong pada gaji {dayjs(period + "-01").format("MMMM YYYY")}</Text>
+                <Field label="Tanggal Kasbon" value={kasbon.kasbon_date} onChangeText={(kasbon_date) => setKasbon({ ...kasbon, kasbon_date })} placeholder="YYYY-MM-DD" testID="kasbon-date" />
                 <Field label="Nominal Kasbon (Rp)" value={kasbon.amount} onChangeText={(t) => setKasbon({ ...kasbon, amount: t })} placeholder="Contoh: 100000" keyboardType="number-pad" testID="kasbon-amount" />
                 <Field label="Catatan (opsional)" value={kasbon.note} onChangeText={(t) => setKasbon({ ...kasbon, note: t })} placeholder="Contoh: Kasbon kebutuhan pribadi" testID="kasbon-note" />
                 <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm }}>

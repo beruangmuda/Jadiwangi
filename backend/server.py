@@ -174,6 +174,8 @@ create unique index if not exists payroll_manual_uq on payroll_manual (employee_
 create index if not exists attendance_employee_day_idx on attendance (employee_id, day);
 create index if not exists work_logs_employee_stage_created_idx on work_logs (employee_id, stage, created_at);
 create index if not exists kasbon_employee_created_idx on kasbon (employee_id, created_at);
+create index if not exists orders_outlet_status_created_idx on orders (outlet_id, status, created_at desc);
+alter table kasbon add column if not exists kasbon_date date not null default (now() at time zone 'Asia/Jakarta')::date;
 alter table customers add column if not exists address text default '';
 alter table orders add column if not exists is_request boolean not null default false;
 alter table orders add column if not exists picked_up_at timestamptz;
@@ -859,6 +861,7 @@ class KasbonBody(BaseModel):
     outlet_id: Optional[str] = None
     amount: float
     note: str = ""
+    kasbon_date: Optional[str] = None
 
 
 class OrderItemIn(BaseModel):
@@ -1764,7 +1767,7 @@ async def report_financial(outlet_id: Optional[str] = None, frm: Optional[str] =
         args4 = []
         cl4 = date_filter("created_at", outlet_id, frm, to, args4)
         w4 = (" where " + " and ".join(cl4)) if cl4 else ""
-        kasbon = await conn.fetchval(f"select coalesce(sum(amount),0) from kasbon{w4}", *args4)
+        kasbon = await conn.fetchval(f"select coalesce(sum(amount),0) from kasbon{w4.replace('created_at', 'kasbon_date')}", *args4)
 
         # income breakdown by payment method
         argsM = []
@@ -1989,8 +1992,7 @@ async def payroll(outlet_id: Optional[str] = None, period: Optional[str] = None)
         kasbon_rows = await conn.fetch(
             """select employee_id, coalesce(sum(amount),0) as amount from kasbon
                where employee_id = any($1::uuid[])
-                 and (created_at at time zone 'Asia/Jakarta')::date >= $2
-                 and (created_at at time zone 'Asia/Jakarta')::date <= $3
+                 and kasbon_date >= $2 and kasbon_date <= $3
                group by employee_id""", employee_ids, frm, to)
         attendance_by_employee = {r["employee_id"]: int(r["count"]) for r in attendance_rows}
         manual_by_employee = {r["employee_id"]: r for r in manual_rows}
@@ -2046,7 +2048,7 @@ async def payroll_manual(b: PayrollManualBody):
 async def list_kasbon(outlet_id: Optional[str] = None, employee_id: Optional[str] = None, period: Optional[str] = None):
     frm, to = _period_range(period)
     async with pool.acquire() as conn:
-        args, clauses = [frm, to], ["(k.created_at at time zone 'Asia/Jakarta')::date >= $1", "(k.created_at at time zone 'Asia/Jakarta')::date <= $2"]
+        args, clauses = [frm, to], ["k.kasbon_date >= $1", "k.kasbon_date <= $2"]
         if outlet_id:
             args.append(outlet_id)
             clauses.append(f"k.outlet_id=${len(args)}")
@@ -2071,9 +2073,9 @@ async def create_kasbon(b: KasbonBody):
             raise HTTPException(404, "Pegawai tidak ditemukan atau tidak aktif")
         outlet_id = b.outlet_id or emp["outlet_id"]
         row = await conn.fetchrow(
-            """insert into kasbon(employee_id,employee_name,outlet_id,amount,note)
-               values($1,$2,$3,$4,$5) returning *""",
-            emp["id"], emp["name"], outlet_id, b.amount, b.note.strip())
+            """insert into kasbon(employee_id,employee_name,outlet_id,amount,note,kasbon_date)
+               values($1,$2,$3,$4,$5,$6) returning *""",
+            emp["id"], emp["name"], outlet_id, b.amount, b.note.strip(), _to_date(b.kasbon_date) or (now_utc().astimezone().date()))
         return row_to_dict(row)
 
 

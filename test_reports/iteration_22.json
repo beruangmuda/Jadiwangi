@@ -1,0 +1,69 @@
+{
+  "summary": "Targeted regression executed for OrdersPipeline filter UX, kasbon date/payroll behavior, owner gaji kasbon modal, and employee dashboard cards. Employee filter/tab/card behaviors passed; owner gaji flow blocked by payroll API 500.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "GET /api/payroll",
+        "issue": "Returns 500 due to SQL query referencing non-existent column work_logs.kasbon_date in payroll work_rows query.",
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "GET /api/payroll",
+        "issue": "Kasbon deduction query uses created_at date range instead of kasbon_date, so out-of-period kasbon entries created today can be included in current payroll period.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Owner login -> Gaji tab -> employee payroll list -> Catat Kasbon modal",
+        "issue": "Gaji screen stuck loading and employee rows never render because dependent GET /api/payroll fails with 500.",
+        "affected_testIDs": [
+          "gaji-emp-*",
+          "gaji-kasbon-*",
+          "kasbon-date"
+        ]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter22_kasbon_payroll.py",
+    "/app/test_reports/pytest/iter22_kasbon_payroll.xml",
+    "/app/test_reports/artifacts_iter22/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter22/employee_dashboard_loaded.jpeg",
+    "/app/test_reports/artifacts_iter22/employee_filter_switch.jpeg",
+    "/app/test_reports/artifacts_iter22/iter22_ui_failure.jpeg",
+    "/app/test_reports/artifacts_iter22/gaji_kasbon_modal.jpeg",
+    "/app/tests/iter22_cleanup_test_data.py"
+  ],
+  "action_items": [
+    "Fix /api/payroll SQL at server.py:1980+ by replacing work_logs.kasbon_date filter with valid date column (likely work_logs.created_at::date or explicit stage-date field).",
+    "Update payroll kasbon aggregation at server.py:1992-1996 to filter by kasbon.kasbon_date (not created_at) to satisfy period-by-date payroll requirement.",
+    "After backend fix, retest owner Gaji UI and verify kasbon-date modal can submit multiple entries without overwrite.",
+    "QRIS remains MOCKED and was not tested (out of scope)."
+  ],
+  "critical_code_review_comments": [
+    "server.py payroll work_rows query references kasbon_date on work_logs, but schema/migrations only define created_at for work_logs -> hard runtime failure.",
+    "server.py payroll kasbon_rows still filters by created_at date cast instead of kasbon_date; contradicts requested payroll-by-kasbon-date behavior.",
+    "frontend/src/api.ts uses EXPO_PUBLIC_BACKEND_URL; project rule states frontend should use EXPO_BACKEND_URL (or Constants extra) for API base consistency."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter22_kasbon_payroll.py",
+    "/app/tests/iter22_cleanup_test_data.py",
+    "/app/test_reports/iteration_22.json"
+  ],
+  "success_rate": {
+    "backend": "50% (1/2 targeted tests passed)",
+    "frontend": "70% (employee-side targeted checks passed; owner gaji blocked by backend 500)"
+  },
+  "seed_data_creation": "No persistent seed files created. Targeted kasbon TEST_iter22 records were auto-cleaned by pytest fixture; explicit cleanup script found 0 remaining TEST_iter22 kasbon rows.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Credentials used from /app/memory/test_credentials.md: Pegawai/pegawai123 and owner/owner123. Employee checks verified: in-progress-card aria-disabled=true and borderWidth 0px; today-orders-card and ready-orders-card navigate correctly; filter chips switched normally with immediate card presence. Owner gaji test blocked due /api/payroll 500.",
+  "rca_of_issue": "Reproduction: call GET /api/payroll?period=YYYY-MM&outlet_id=<id> -> 500. Backend log shows asyncpg.exceptions.UndefinedColumnError: column \"kasbon_date\" does not exist at payroll work_rows query (server.py line ~1980). Additional logical defect: payroll kasbon sum uses created_at date window, so kasbon dated outside selected period but created now can be incorrectly deducted. Mitigation: use valid work_logs date field and kasbon.kasbon_date filters, then rerun test_iter22_kasbon_payroll.py and owner gaji UI flow."
+}

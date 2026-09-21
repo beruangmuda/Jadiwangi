@@ -46,7 +46,7 @@ export default function EmployeeHome() {
 
       <View style={styles.statStrip}>
         <Stat icon="receipt-text" label="Transaksi Hari Ini" value={String(t?.orders ?? 0)} sub={kg(t?.kg)} onPress={() => router.push("/hari-ini")} testID="today-orders-card" />
-        <Stat icon="progress-wrench" label="Dikerjakan" value={String(queue?.in_progress ?? 0)} testID="in-progress-card" />
+        <Stat icon="progress-wrench" label="Dikerjakan" value={String(queue?.in_progress ?? 0)} testID="in-progress-card" informational />
         <Stat icon="basket-check" label="Siap Diambil" value={String(queue?.ready ?? 0)} onPress={() => router.push("/siap-diambil")} testID="ready-orders-card" />
       </View>
 
@@ -64,11 +64,11 @@ export default function EmployeeHome() {
   );
 }
 
-function Stat({ icon, label, value, sub, onPress, testID }: { icon: string; label: string; value: string; sub?: string; onPress?: () => void; testID?: string }) {
+function Stat({ icon, label, value, sub, onPress, testID, informational }: { icon: string; label: string; value: string; sub?: string; onPress?: () => void; testID?: string; informational?: boolean }) {
   const styles = useStyles();
   const { colors } = useTheme();
   return (
-    <Pressable testID={testID} onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.stat, pressed && onPress && { opacity: 0.75 }]}>
+    <Pressable testID={testID} onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.stat, informational && styles.infoStat, pressed && onPress && { opacity: 0.75 }]}>
       <Icon name={icon} size={18} color={colors.brand} />
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
@@ -86,6 +86,7 @@ const useStyles = makeStyles((c) => ({
   coinBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.brandTertiary, alignItems: "center", justifyContent: "center", marginRight: spacing.sm },
   statStrip: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   stat: { flex: 1, backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, padding: spacing.md, gap: 2, ...shadow.card },
+  infoStat: { backgroundColor: "transparent", borderWidth: 0, paddingHorizontal: spacing.sm, shadowOpacity: 0 },
   statValue: { fontFamily: fonts.displayBold, fontSize: 22, color: c.onSurface },
   statLabel: { fontFamily: fonts.bodySemi, fontSize: 11, color: c.muted },
   statSub: { fontFamily: fonts.bodyBold, fontSize: 11, color: c.brand },

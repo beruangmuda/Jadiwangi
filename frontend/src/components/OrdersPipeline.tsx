@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, Pressable, RefreshControl, Modal, TextInput, Platform, Linking } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -58,7 +58,11 @@ export function OrdersPipeline({
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["orders", outletId, filter, todayOnly],
     queryFn: () => api.get(buildUrl()),
+    placeholderData: (previous) => previous,
+    staleTime: 15000,
   });
+
+  useEffect(() => { if (outletId) ["received", "washing", "drying", "ironing", "packing"].forEach((status) => qc.prefetchQuery({ queryKey: ["orders", outletId, status, todayOnly], queryFn: () => api.get(`/orders?outlet_id=${outletId}&status=${status}${todayOnly ? "&queue=true" : ""}&sort=fifo&limit=100`), staleTime: 15000 })); }, [outletId, todayOnly, qc]);
 
   const pay = useMutation({
     mutationFn: (id: string) => api.post(`/orders/${id}/pay`, { method }),

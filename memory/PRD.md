@@ -181,6 +181,12 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] Cache dan invalidasi dashboard dibatasi per outlet agar perubahan outlet lain tidak tercampur.
 - [x] Retest iterasi 20 (4/4) dan iterasi 21 (2/2) PASS, termasuk timeline → ready, penutupan ready, rollback, dan scoping outlet.
 
+## Update (2026-09, iterasi 23) — Sortir Responsif & Kasbon Mingguan
+- [x] Sortir antrian Diterima/Cuci/Pengering/Setrika/Packing menyimpan daftar sebelumnya saat fetch dan melakukan prefetch tahap, sehingga tidak lagi blank/loading penuh saat filter diklik.
+- [x] Kasbon dapat dicatat berkali-kali per pegawai dengan **Tanggal Kasbon**, nominal, dan catatan. Payroll memakai `kasbon_date`, sehingga hanya kasbon pada periode gaji yang sesuai yang dipotong.
+- [x] Card **Dikerjakan** kini indikator pasif tanpa kotak/border dan tidak dapat diketuk; Transaksi Hari Ini serta Siap Diambil tetap card interaktif.
+- [x] Perbaikan SQL payroll: work log memakai timestamp proses Asia/Jakarta, sementara kasbon memakai tanggal kasbon. Retest iterasi 23 PASS untuk payroll 200, multi-entry kasbon lintas periode, Gaji Owner, sortir, Antar Jemput, dan card dashboard.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="2" time="11.241" timestamp="2026-09-21T12:58:49.512888+00:00" hostname="agent-env-37729b80-5047-4e01-ab90-b48ccd12590d"><testcase classname="tests.test_iter22_kasbon_payroll.TestKasbonDateAndPayroll" name="test_multiple_kasbon_saved_and_visible_with_dates" time="5.941" /><testcase classname="tests.test_iter22_kasbon_payroll.TestKasbonDateAndPayroll" name="test_payroll_uses_kasbon_date_and_excludes_out_of_period_entry" time="4.950"><failure message="AssertionError: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_iter22_kasbon_payroll.py:136: in test_payroll_uses_kasbon_date_and_excludes_out_of_period_entry
+    baseline = _payroll_kasbon_for_employee(
+backend/tests/test_iter22_kasbon_payroll.py:65: in _payroll_kasbon_for_employee
+    assert response.status_code == 200, response.text
+E   AssertionError: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase></testsuite></testsuites>
