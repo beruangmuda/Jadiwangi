@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, Pressable, ScrollView, Modal, Platform } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,27 +22,24 @@ export default function GajiPegawai() {
   const qc = useQueryClient();
   const { session } = useAuth();
   const outlets = useMemo(() => session?.outlets || [], [session?.outlets]);
-  const [outletId, setOutletId] = useState<string>(session?.currentOutletId || outlets[0]?.id || "");
+  const outletId = session?.currentOutletId ?? null;
+  const outletsReady = outlets.length > 0;
   const [period, setPeriod] = useState<string>(dayjs().format("YYYY-MM"));
   const [expanded, setExpanded] = useState<string | null>(null);
   const [edit, setEdit] = useState<any>(null);
   const [kasbon, setKasbon] = useState<any>(null);
-
-  useEffect(() => {
-    if (!outletId && outlets.length > 0) setOutletId(session?.currentOutletId || outlets[0].id);
-  }, [outlets, outletId, session]);
 
   const months = useMemo(() => Array.from({ length: 6 }).map((_, i) => dayjs().subtract(i, "month").format("YYYY-MM")), []);
 
   const { data, isLoading } = useQuery({
     queryKey: ["payroll", outletId, period],
     queryFn: () => api.get(`/payroll?period=${period}${outletId ? `&outlet_id=${outletId}` : ""}`),
-    enabled: !!outletId,
+    enabled: outletsReady,
   });
   const { data: kasbonEntries = [] } = useQuery({
     queryKey: ["kasbon", outletId, period],
     queryFn: () => api.get(`/kasbon?period=${period}${outletId ? `&outlet_id=${outletId}` : ""}`),
-    enabled: !!outletId,
+    enabled: outletsReady,
   });
 
   const saveManual = useMutation({
@@ -75,6 +72,7 @@ export default function GajiPegawai() {
   });
 
   const emps = data?.employees || [];
+  const payrollLoading = !outletsReady || isLoading;
   const grandTotal = emps.reduce((s: number, e: any) => s + e.total, 0);
 
   return (
@@ -98,7 +96,7 @@ export default function GajiPegawai() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingBottom: spacing["3xl"] }}>
-        {isLoading ? <Loading /> : emps.length === 0 ? <EmptyState icon="account-cash" title="Belum ada pegawai" /> : (
+        {payrollLoading ? <Loading /> : emps.length === 0 ? <EmptyState icon="account-cash" title="Belum ada pegawai" /> : (
           <>
             <View style={styles.totalCard}>
               <Text style={styles.totalLabel}>Total Gaji ({dayjs(period + "-01").format("MMMM YYYY")})</Text>
@@ -129,12 +127,8 @@ export default function GajiPegawai() {
                       <Row label="Tunjangan Kasir" value={rupiah(e.tunjangan_kasir)} />
                       <Row label={`Kehadiran ${e.kehadiran} hari + lembur ${e.lembur_shifts}`} value="" muted />
                       <Row label="Uang Makan" value={rupiah(e.uang_makan)} />
-                      <Text testID={`work-summary-title-${e.employee_id}`} style={styles.workTitle}>Rincian kerja kiloan per tahap</Text>
-                      <StageRow testID={`work-washing-${e.employee_id}`} icon="washing-machine" label="Cuci" kilograms={e.wash_kg} pieces={e.wash_pcs} value={rupiah(e.bonus_cuci)} />
-                      <StageRow testID={`work-drying-${e.employee_id}`} icon="weather-sunny" label="Pengering" kilograms={e.dry_kg} pieces={e.dry_pcs} />
-                      <StageRow testID={`work-ironing-${e.employee_id}`} icon="iron" label="Setrika" kilograms={e.iron_kg} pieces={e.iron_pcs} value={rupiah(e.bonus_setrika)} />
-                      <StageRow testID={`work-packing-${e.employee_id}`} icon="package-variant-closed" label="Lipat & Packing" kilograms={e.packing_kg} pieces={e.packing_pcs} />
-                      <Text testID={`processed-weight-${e.employee_id}`} style={styles.processedText}>Total tahap produksi: {kg(e.processed_kg)}</Text>
+                      <Row label={`Bonus Cuci (${kg(e.wash_kg)} + ${e.wash_pcs} pcs)`} value={rupiah(e.bonus_cuci)} />
+                      <Row label={`Bonus Setrika (${kg(e.iron_kg)} + ${e.iron_pcs} pcs)`} value={rupiah(e.bonus_setrika)} />
                       <Row label={`Antar Jemput (${e.trips} trip)`} value={rupiah(e.antar_jemput)} />
                       <Row label="Perjalanan Dinas" value={rupiah(e.perjalanan_dinas)} />
                       <Row label="Kasbon (potongan)" value={`- ${rupiah(e.kasbon)}`} tone={colors.error} />
@@ -164,7 +158,7 @@ export default function GajiPegawai() {
 
       <Modal visible={!!edit} transparent animationType="slide" onRequestClose={() => setEdit(null)}>
         <View style={styles.overlay}>
-          <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }} bottomOffset={20}>
+          <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end", paddingTop: insets.top + spacing.md }} bottomOffset={20} keyboardShouldPersistTaps="handled">
             {edit ? (
               <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
                 <View style={styles.grabber} />
@@ -184,13 +178,13 @@ export default function GajiPegawai() {
 
       <Modal visible={!!kasbon} transparent animationType="slide" onRequestClose={() => setKasbon(null)}>
         <View style={styles.overlay}>
-          <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }} bottomOffset={20}>
+          <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end", paddingTop: insets.top + spacing.md }} bottomOffset={20} keyboardShouldPersistTaps="handled">
             {kasbon ? (
               <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
                 <View style={styles.grabber} />
                 <Text style={styles.sheetTitle}>Catat Kasbon</Text>
                 <Text style={styles.sheetSub}>{kasbon.name} · otomatis dipotong pada gaji {dayjs(period + "-01").format("MMMM YYYY")}</Text>
-                <Field label="Tanggal Kasbon" value={kasbon.kasbon_date} onChangeText={(kasbon_date) => setKasbon({ ...kasbon, kasbon_date })} placeholder="YYYY-MM-DD" testID="kasbon-date" />
+                <KasbonDatePicker value={kasbon.kasbon_date} onChange={(kasbon_date) => setKasbon({ ...kasbon, kasbon_date })} />
                 <Field label="Nominal Kasbon (Rp)" value={kasbon.amount} onChangeText={(t) => setKasbon({ ...kasbon, amount: t })} placeholder="Contoh: 100000" keyboardType="number-pad" testID="kasbon-amount" />
                 <Field label="Catatan (opsional)" value={kasbon.note} onChangeText={(t) => setKasbon({ ...kasbon, note: t })} placeholder="Contoh: Kasbon kebutuhan pribadi" testID="kasbon-note" />
                 <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm }}>
@@ -217,12 +211,25 @@ function Row({ label, value, tone, muted }: { label: string; value: string; tone
   );
 }
 
-function StageRow({ testID, icon, label, kilograms, pieces, value }: { testID: string; icon: string; label: string; kilograms?: number; pieces?: number; value?: string }) {
-  const styles = useStyles();
-  const { colors } = useTheme();
-  return <View testID={testID} style={styles.stageRow}>
-    <View style={styles.stageLabelWrap}><Icon name={icon} size={15} color={colors.brandPrimary} /><Text style={styles.stageLabel}>{label}</Text></View>
-    <View style={{ alignItems: "flex-end" }}><Text style={styles.stageQty}>{kg(kilograms)}{pieces ? ` · ${pieces} pcs` : ""}</Text>{value ? <Text style={styles.stageValue}>{value}</Text> : null}</View>
+function KasbonDatePicker({ value, onChange }: { value: string; onChange: (date: string) => void }) {
+  const styles = useStyles(); const { colors } = useTheme();
+  const [open, setOpen] = useState(false);
+  const [month, setMonth] = useState(() => dayjs(value || undefined).startOf("month"));
+  const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  const selectedDate = dayjs(value);
+  const offset = (month.startOf("month").day() + 6) % 7;
+  const days = month.daysInMonth();
+  const cells = Array.from({ length: offset + days }, (_, index) => index < offset ? null : index - offset + 1);
+  return <View style={{ gap: spacing.xs }}>
+    <Text style={styles.datePickerLabel}>Tanggal Kasbon</Text>
+    <Pressable testID="kasbon-date-picker" onPress={() => setOpen(!open)} style={styles.datePickerButton}>
+      <Icon name="calendar-month" size={18} color={colors.brandPrimary} /><Text testID="kasbon-date-value" style={styles.datePickerValue}>{String(selectedDate.date()).padStart(2, "0")} {monthNames[selectedDate.month()]} {selectedDate.year()}</Text><Icon name={open ? "chevron-up" : "chevron-down"} size={18} color={colors.muted} />
+    </Pressable>
+    {open ? <View testID="kasbon-calendar" style={styles.calendar}>
+      <View style={styles.calendarHeader}><Pressable testID="kasbon-calendar-prev" onPress={() => setMonth(month.subtract(1, "month"))} style={styles.calendarNav}><Icon name="chevron-left" size={18} color={colors.onSurface} /></Pressable><Text style={styles.calendarMonth}>{monthNames[month.month()]} {month.year()}</Text><Pressable testID="kasbon-calendar-next" onPress={() => setMonth(month.add(1, "month"))} style={styles.calendarNav}><Icon name="chevron-right" size={18} color={colors.onSurface} /></Pressable></View>
+      <View style={styles.weekRow}>{["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((label) => <Text key={label} style={styles.weekLabel}>{label}</Text>)}</View>
+      <View style={styles.dayGrid}>{cells.map((day, index) => { if (!day) return <View key={`blank-${index}`} style={styles.dayCell} />; const date = month.date(day).format("YYYY-MM-DD"); const selected = date === value; return <Pressable key={date} testID={`kasbon-calendar-day-${date}`} onPress={() => { onChange(date); setOpen(false); }} style={[styles.dayCell, selected && { backgroundColor: colors.brandPrimary }]}><Text style={[styles.dayText, selected && { color: colors.onBrandPrimary }]}>{day}</Text></Pressable>; })}</View>
+    </View> : null}
   </View>;
 }
 
@@ -258,13 +265,18 @@ const useStyles = makeStyles((c) => ({
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   rowLabel: { fontFamily: fonts.body, fontSize: 13, color: c.onSurfaceSecondary, flex: 1 },
   rowValue: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurface },
-  workTitle: { marginTop: spacing.xs, fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurface },
-  stageRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: c.surfaceSecondary, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 8 },
-  stageLabelWrap: { flexDirection: "row", alignItems: "center", gap: 7 },
-  stageLabel: { fontFamily: fonts.bodySemi, fontSize: 12, color: c.onSurfaceSecondary },
-  stageQty: { fontFamily: fonts.bodyBold, fontSize: 12, color: c.onSurface },
-  stageValue: { marginTop: 1, fontFamily: fonts.bodyBold, fontSize: 11, color: c.success },
-  processedText: { fontFamily: fonts.bodySemi, fontSize: 12, color: c.muted, textAlign: "right", marginTop: -2 },
+  datePickerLabel: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurfaceSecondary },
+  datePickerButton: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, backgroundColor: c.surfaceSecondary, paddingHorizontal: spacing.md },
+  datePickerValue: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 14, color: c.onSurface },
+  calendar: { borderRadius: radius.md, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, padding: spacing.sm, gap: 6 },
+  calendarHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  calendarNav: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center" },
+  calendarMonth: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurface },
+  weekRow: { flexDirection: "row" },
+  weekLabel: { width: "14.285%", textAlign: "center", fontFamily: fonts.bodyBold, fontSize: 10, color: c.muted },
+  dayGrid: { flexDirection: "row", flexWrap: "wrap" },
+  dayCell: { width: "14.285%", aspectRatio: 1, alignItems: "center", justifyContent: "center", borderRadius: radius.sm },
+  dayText: { fontFamily: fonts.bodySemi, fontSize: 12, color: c.onSurface },
   kasbonHistory: { marginTop: spacing.xs, borderRadius: radius.md, backgroundColor: "#FFF7F7", padding: spacing.sm, gap: 7 },
   kasbonHistoryHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   kasbonHistoryTitle: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurface },

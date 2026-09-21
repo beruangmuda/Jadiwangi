@@ -347,6 +347,28 @@
 ##         -working: true
 ##         -agent: "main"
 ##         -comment: "Gaji menampilkan kasbon per tanggal/catatan, rincian kerja kiloan tiap tahap, Dikerjakan dipusatkan sebagai indikator pasif, dan warna grafik berbeda untuk Pulomas/Ujungberung/Kalimulya."
+##   - task: "Pembayaran langsung dari kartu Siap Diambil belum lunas"
+##     implemented: true
+##     working: true
+##     file: "frontend/app/siap-diambil.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Order ready yang belum lunas kini memiliki Bayar Sekarang inline menggunakan kartu Konfirmasi Pembayaran yang sama (Tunai/QRIS/E-Money/JW Coin). Uji manual E-Money mengubah payment_status menjadi paid dan mengaktifkan Sudah Diambil; data uji dibersihkan."
+##   - task: "Kalender tanggal kasbon dan format gaji ringkas"
+##     implemented: true
+##     working: true
+##     file: "frontend/app/(owner)/gaji.tsx"
+##     stuck_count: 0
+##     priority: "medium"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Rincian kerja kiloan dikembalikan ke Bonus Cuci/Bonus Setrika. Input tanggal kasbon manual diganti kalender bulan ringkas, lengkap dengan navigasi bulan dan pemilihan hari. Screenshot mobile PASS."
 
 ## test_plan:
 ##   current_focus:
@@ -387,3 +409,7 @@
 ##     -message: "ITERATION 24: Menambahkan stage_workers pada order untuk Cuci/Pengering/Setrika/Packing, agregasi semua tahap pada payroll, UI payroll per tahap dan riwayat kasbon per tanggal. Order ready belum lunas terkunci UI dan divalidasi API (400). Trend memakai palet unik per outlet; indikator Dikerjakan dipusatkan. Perlu retest backend dan frontend."
 ##     -agent: "main"
 ##     -message: "ITERATION 24 FIX VERIFIED: Retest backend 2/2 PASS. Stabilitas Siap Diambil diperbaiki dengan menunggu outlet aktif sebelum query dan refetch saat halaman dipasang; screenshot login Pegawai→Siap Diambil PASS. Grafik trend memakai key per outlet dan gradient unik; screenshot membuktikan warna Kalimulya (#7C3AED/#2563EB) berubah ke Pulomas (#0F766E/#0EA5E9)."
+##     -agent: "main"
+##     -message: "ITERATION 25: Menambahkan Bayar Sekarang inline untuk ready/unpaid dengan kartu metode pembayaran yang sama, lalu mengaktifkan Sudah Diambil setelah lunas. Rincian Gaji kembali ringkas (Bonus Cuci/Setrika) dan tanggal kasbon kini memakai kalender kecil. Perlu retest UI dan pembayaran API."
+##     -agent: "main"
+##     -message: "ITERATION 25 FIX VERIFIED: Gaji kini mengambil outlet langsung dari session/OutletSwitcher sehingga tidak dapat memakai outlet lokal yang stale; kondisi outlet belum siap menampilkan Loading, bukan Belum ada pegawai. Sheet kasbon menjadi scrollable dan menerima tap saat keyboard aktif. Screenshot membuktikan daftar 7 pegawai, Bonus Cuci/Setrika ringkas, dan kalender memilih 01 October 2026."

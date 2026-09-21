@@ -1,0 +1,63 @@
+{
+  "summary": "Targeted iter25 backend+frontend retest executed. Backend regression passed for ready/unpaid lock, inline payment methods (Tunai/E-Money), completion after paid, and kasbon selected-date persistence. Frontend pegawai flow passed for inline Bayar Sekarang and payment-to-Sudah Diambil transition, but owner kasbon calendar interaction showed unstable behavior across reruns.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Owner Gaji > Catat Kasbon modal",
+        "issue": "Kasbon date picker interaction was unstable in mobile web replay (element reported outside viewport in one run; in another run payroll list became empty with 'Belum ada pegawai').",
+        "testID": "kasbon-date-picker, gaji-emp-*",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Owner Gaji data loading",
+        "issue": "Intermittent empty payroll state seen on /gaji despite owner logged in; likely outlet-state sync/query timing issue.",
+        "affected_testIDs": [
+          "gaji-emp-*"
+        ]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter25_ready_inline_payment_and_kasbon_calendar.py",
+    "/app/test_reports/pytest/iter25_ready_inline_payment_and_kasbon_calendar.xml",
+    "/app/tests/iter25_ui_seed.py",
+    "/app/tests/iter25_ui_cleanup.py",
+    "/app/test_reports/artifacts_iter25/frontend_load_error.jpeg",
+    "/app/test_reports/artifacts_iter25/iter25_ui_failure.jpeg",
+    "/app/test_reports/artifacts_iter25/iter25_owner_flow_failure.jpeg",
+    "/app/test_reports/artifacts_iter25/iter25_kasbon_calendar_failure.jpeg"
+  ],
+  "action_items": [
+    "Investigate owner payroll empty-state intermittency on Gaji tab (outlet/query synchronization).",
+    "Stabilize Kasbon date-picker modal interaction on small mobile viewport so calendar is always tappable.",
+    "Keep inline ready-payment card behavior as implemented; pegawai flow for unpaid->paid->Sudah Diambil is working.",
+    "QRIS gateway remains MOCKED/manual confirmation; keep option visible but treat gateway status separately."
+  ],
+  "critical_code_review_comments": [
+    "frontend/src/api.ts still hardcodes EXPO_PUBLIC_BACKEND_URL instead of expected EXPO_BACKEND_URL convention from project rules.",
+    "frontend/app/(owner)/gaji.tsx uses local outletId state with OutletSwitcher global state, creating potential stale/empty query states when outlet context changes."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter25_ready_inline_payment_and_kasbon_calendar.py",
+    "/app/tests/iter25_ui_seed.py",
+    "/app/tests/iter25_ui_cleanup.py",
+    "/app/test_reports/iteration_25.json"
+  ],
+  "success_rate": {
+    "backend": "100% (3/3 targeted tests passed)",
+    "frontend": "75% (pegawai inline payment flow passed; owner kasbon calendar flow unstable)"
+  },
+  "seed_data_creation": "Created TEST_iter25_ui customer and two ready orders (unpaid+paid) via /app/tests/iter25_ui_seed.py. Cleanup completed via /app/tests/iter25_ui_cleanup.py (orders, work_logs, transactions, order_items, kasbon test notes, and customers).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Credentials were read from /app/memory/test_credentials.md before auth tests. Verified pegawai flow: ready unpaid card shows lock warning, Bayar Sekarang opens inline card with Tunai/QRIS/E-Money/JW Coin, E-Money payment updates /api/orders/{id} payment_status=paid, then Sudah Diambil works. Owner Gaji compact text validation passed (Bonus Cuci + Bonus Setrika; forbidden stage labels absent), but kasbon calendar interaction became unstable due viewport/empty payroll state in reruns.",
+  "rca_of_issue": "Reproduction: owner login -> Gaji -> expand pegawai -> Catat Kasbon. In one run kasbon-date-picker existed but Playwright reported outside viewport; in another run list switched to empty ('Belum ada pegawai'). Potential RCA is state sync between OutletSwitcher/session outlet and local outletId query dependency plus mobile sheet layout constraints causing tap target to fall outside visible/tappable region under certain render states."
+}

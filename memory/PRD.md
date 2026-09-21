@@ -195,6 +195,13 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] **Penyempurnaan dashboard**: indikator Dikerjakan pasif dipusatkan; grafik trend menggunakan palet berbeda per outlet (Kalimulya ungu/biru, Pulomas teal/biru muda, Ujungberung oranye/emas) dan dimuat ulang stabil saat cabang berubah.
 - [x] Teruji iterasi 24: backend 2/2 PASS untuk pelacakan tahap/payroll/kunci unpaid; screenshot Owner memverifikasi Gaji dan Pegawai memverifikasi Siap Diambil. Warna trend berubah terverifikasi saat Kalimulya → Pulomas.
 
+## Update (2026-09, iterasi 25) — Bayar dari Siap Diambil & Bukti Kasbon Rapi
+- [x] **Bayar Sekarang di Siap Diambil**: kartu ready yang belum lunas tetap terkunci untuk penyerahan, namun kini menyediakan kartu **Konfirmasi Pembayaran** inline dengan Tunai, QRIS, E-Money, dan JW Coin. Setelah pembayaran berhasil, tombol **Sudah Diambil** langsung aktif tanpa kembali ke antrian.
+- [x] **Gaji ringkas untuk bukti**: detail Gaji Owner kembali menampilkan format utama—Gaji Pokok, tunjangan, kehadiran, Uang Makan, **Bonus Cuci**, **Bonus Setrika**, perjalanan, kasbon, dan Total Diterima—tanpa rincian tahap produksi yang panjang.
+- [x] **Kalender kasbon**: tanggal kasbon tidak lagi diinput manual. Owner memilih hari dari kalender bulan ringkas, dengan tombol bulan sebelumnya/berikutnya, sehingga hasil perhitungan siap dijadikan screenshot bukti.
+- [x] **Stabilitas Gaji**: query Gaji mengikuti OutletSwitcher dari sesi aktif (termasuk Semua Outlet) dan menunggu daftar outlet siap sebelum memuat, sehingga tidak menampilkan daftar pegawai kosong saat konteks outlet berubah.
+- [x] Teruji iterasi 25: backend 3/3 PASS untuk lock unpaid → bayar → selesai dan penyimpanan tanggal kasbon; uji layar ponsel memverifikasi kartu Bayar Sekarang serta kalender memilih tanggal bulan berikutnya.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).
