@@ -5,7 +5,7 @@ import { HERO_IMG, LOGO_URL, trackEvent, waLink } from "@/data/laundry";
 
 const LINES = [
   { text: "Laundry Sebersih Sutra,", italic: false },
-  { text: "Sewangi Parfum", italic: false, accent: "Prancis." },
+  { text: "Sewangi Parfum", italic: false, accent: "Paris." },
 ];
 
 const CHIPS = [
