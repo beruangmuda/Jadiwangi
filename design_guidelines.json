@@ -1,0 +1,326 @@
+{
+  "project_name": "Jadiwangi Laundry - Dashboard Analisa Pelanggan & Winback WhatsApp Blast",
+  "archetype": "ORGANIC & FRESH HYGIENE TECH (Laundry Care & Trust)",
+  "emotional_tone": "Bersih, terpercaya, tenang, operasional cekatan, ramah Indonesia",
+  "theme": "Light mode by default with clean deep slate/indigo accents and rich mint-emerald freshness for positive action states. Subtle dark mode support.",
+  "target_audience": "Pemilik dan Manajer Operasional Jadiwangi Laundry yang ingin meningkatkan retensi pelanggan, mendeteksi churn/pelanggan hilang kontak, dan menjalankan reaktivasi via WhatsApp Blast secara instan tanpa ribet.",
+  "language_copy": "Bahasa Indonesia formal-ramah khas operasional UMKM modern (e.g. 'Login Pengelola', 'Unggah Data Transaksi', 'Pelanggan Dormant / Lama Tidak Datang', '10 Pelanggan Teratas Prioritas Winback', 'Buka Draft WhatsApp', 'Template Pesan')",
+  "typography": {
+    "heading_font": "Plus Jakarta Sans, -apple-system, sans-serif",
+    "body_font": "IBM Plex Sans, -apple-system, sans-serif",
+    "mono_font": "JetBrains Mono, monospace",
+    "google_fonts_url": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap",
+    "scale": {
+      "h1": "text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight text-slate-800",
+      "h3": "text-xl sm:text-2xl font-semibold text-slate-800",
+      "h4": "text-base sm:text-lg font-semibold text-slate-900",
+      "body": "text-sm sm:text-base text-slate-600 leading-relaxed",
+      "caption": "text-xs font-medium uppercase tracking-[0.18em] text-slate-400",
+      "stat_number": "text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono tracking-tight text-slate-900"
+    }
+  },
+  "colors": {
+    "primary": {
+      "brand_indigo": "#1E3A8A",
+      "brand_blue": "#2563EB",
+      "brand_light_blue": "#EFF6FF",
+      "brand_accent_cyan": "#0284C7"
+    },
+    "whatsapp_green": {
+      "base": "#25D366",
+      "hover": "#1EBE5D",
+      "active": "#169C4B",
+      "badge_bg": "#DCFCE7",
+      "text": "#166534"
+    },
+    "surface": {
+      "bg_canvas": "#F8FAFC",
+      "card_bg": "#FFFFFF",
+      "card_border": "#E2E8F0",
+      "card_inner_glow": "rgba(37, 99, 235, 0.04)",
+      "table_hover": "#F1F5F9",
+      "table_stripe": "#FAF5FF"
+    },
+    "status": {
+      "dormant_critical": {
+        "badge_bg": "#FEE2E2",
+        "badge_text": "#991B1B",
+        "border": "#FCA5A5",
+        "label": "Kritis (>60 Hari)"
+      },
+      "dormant_warning": {
+        "badge_bg": "#FEF3C7",
+        "badge_text": "#92400E",
+        "border": "#FCD34D",
+        "label": "Waspada (30-60 Hari)"
+      },
+      "dormant_mild": {
+        "badge_bg": "#E0F2FE",
+        "badge_text": "#075985",
+        "border": "#BAE6FD",
+        "label": "Mulai Pasif (15-30 Hari)"
+      },
+      "active": {
+        "badge_bg": "#DCFCE7",
+        "badge_text": "#166534",
+        "border": "#86EFAC",
+        "label": "Aktif (<15 Hari)"
+      }
+    }
+  },
+  "layout_architecture": {
+    "type": "Dashboard with dedicated Landing/Auth Entry Point",
+    "routes": [
+      {
+        "path": "/",
+        "view": "Landing & Portal Entry (jadiwangilaundry.com)",
+        "description": "Halaman representasi jadiwangilaundry.com dengan header resmi, status layanan, dan tombol mencolok 'Login Pengelola' untuk masuk ke dashboard analitik."
+      },
+      {
+        "path": "/login",
+        "view": "Login Pengelola",
+        "description": "Autentikasi kredensial email & password untuk akses satu akun pengelola Jadiwangi Laundry dengan visual preview brand, keamanan sessi, dan tombol demo instan."
+      },
+      {
+        "path": "/dashboard",
+        "view": "Dashboard Analisa Pelanggan & WhatsApp Winback",
+        "description": "Pusat operasional: upload Excel/CSV, KPI metrics ringkas, filter ambang batas hari (misal >30 hari), tabel 10 Teratas Pelanggan Lama Tidak Kembali, modal kustomisasi pesan WA blast, log riwayat blast."
+      }
+    ],
+    "grid_spec": {
+      "kpi_bar": "grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8",
+      "upload_and_action_row": "grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8",
+      "main_table_container": "w-full overflow-hidden bg-white rounded-2xl border border-slate-200 shadow-sm"
+    }
+  },
+  "key_components": [
+    {
+      "name": "ManagerNavbar",
+      "purpose": "Header navigasi konsisten dengan status login pengelola, nama outlet Jadiwangi Laundry, quick action unggah data, dan tombol keluar.",
+      "testid": "manager-navbar"
+    },
+    {
+      "name": "PortalHeroSection",
+      "purpose": "Halaman muka jadiwangilaundry.com dengan tombol eksplisit 'Login Pengelola' menuju sistem analisa pelanggan.",
+      "testid": "portal-login-pengelola-btn"
+    },
+    {
+      "name": "AuthLoginForm",
+      "purpose": "Form login pengelola dengan validasi email, password, error notification, dan kredensial default untuk kemudahan evaluasi.",
+      "testid": "login-form-container"
+    },
+    {
+      "name": "TransactionFileUploader",
+      "purpose": "Komponen Drag & Drop file Excel (.xlsx, .xls) atau CSV transaksi laundry dengan parsing otomatis, preview kolom (Nama, No HP, Tanggal Terakhir, Total Nota, Layanan Favorit), dan sample dataset loader satu-klik.",
+      "testid": "file-upload-dropzone"
+    },
+    {
+      "name": "RetentionMetricsOverview",
+      "purpose": "4 Kartu KPI: Total Pelanggan Terdata, Pelanggan Aktif, Pelanggan Dormant (>30 Hari), Potensi Omzet Terancam Churn (Rp).",
+      "testid": "retention-metrics-card-grid"
+    },
+    {
+      "name": "Top10DormantTable",
+      "purpose": "Tabel interaktif peringkat 10 pelanggan paling lama tidak berkunjung, menampilkan nama, nomor WhatsApp terverifikasi, jumlah hari sejak transaksi terakhir, total akumulasi belanja (LTV), riwayat layanan, dan tombol aksi 'Draft WhatsApp'.",
+      "testid": "top-10-dormant-table"
+    },
+    {
+      "name": "WhatsAppDraftModal",
+      "purpose": "Modal dialog interaktif untuk memilih template pesan kangen (Diskon Cuci Kiloan 20%, Gratis Antar-Jemput, Voucher Wangi Baru), kustomisasi pesan dengan placeholder {nama_pelanggan}, preview gelembung chat WhatsApp realistis, dan tombol eksekusi 'Buka WhatsApp Web'.",
+      "testid": "whatsapp-draft-modal"
+    },
+    {
+      "name": "WhatsAppBatchBlastHelper",
+      "purpose": "Fitur quick-launch untuk memproses antrian 10 teratas satu per satu secara teratur untuk mematuhi regulasi anti-spam WhatsApp Web.",
+      "testid": "batch-blast-container"
+    }
+  ],
+  "image_urls": [
+    {
+      "category": "Hero Laundry Care & Fresh Stack",
+      "url": "https://images.unsplash.com/photo-1635274605638-d44babc08a4f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwxfHxmcmVzaCUyMGNsZWFuJTIwZm9sZGVkJTIwbGF1bmRyeSUyMHN0YWNrfGVufDB8fHx8MTc5MDUwMTc2Nnww&ixlib=rb-4.1.0&q=85",
+      "description": "Tumpukan baju bersih rapi terlipat dengan palet biru lembut, melambangkan higienitas dan standar mutu Jadiwangi Laundry.",
+      "use_location": "Portal Landing Hero Banner & Background kartu promosi winback"
+    },
+    {
+      "category": "Modern Laundromat Facility",
+      "url": "https://images.unsplash.com/photo-1604335398549-1b80aadd00a8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBsYXVuZHJvbWF0JTIwaW50ZXJpb3IlMjBibHVlfGVufDB8fHx8MTc5MDUwMTc2OXww&ixlib=rb-4.1.0&q=85",
+      "description": "Deretan mesin cuci modern premium bersih dengan pencahayaan profesional.",
+      "use_location": "Sidebar login pengelola dan kartu identitas outlet"
+    },
+    {
+      "category": "Fabric Texture & Clean Linen",
+      "url": "https://images.unsplash.com/photo-1604176354204-9268737828e4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwzfHxmcmVzaCUyMGNsZWFuJTIwZm9sZGVkJTIwbGF1bmRyeSUyMHN0YWNrfGVufDB8fHx8MTc5MDUwMTc2Nnww&ixlib=rb-4.1.0&q=85",
+      "description": "Pakaian bersih hasil laundry berkualitas tinggi digenggam rapi.",
+      "use_location": "Aksen kartu tips retensi pelanggan dan empty state ilustratif"
+    }
+  ],
+  "whatsapp_message_templates": [
+    {
+      "id": "promo_kangen_diskon",
+      "title": "Promo Kangen (Diskon 20%)",
+      "template": "Halo Kak *{nama}*! 👋\n\nKami dari *Jadiwangi Laundry* rindu menyegarkan pakaian Kakak. Sudah {hari_terakhir} hari Kakak belum mampir nih ke outlet kami.\n\nKhusus minggu ini, kami ada *Promo Kangen Diskon 20%* untuk layanan Cuci Komplit / Bed Cover! Cukup tunjukkan pesan WhatsApp ini saat drop pakaian atau hubungi kami untuk pickup.\n\nSemoga hari Kakak menyenangkan! ✨🧺"
+    },
+    {
+      "id": "gratis_antar_jemput",
+      "title": "Gratis Antar-Jemput (Free Delivery)",
+      "template": "Salam hangat dari *Jadiwangi Laundry*, Kak *{nama}*! 🛵🧺\n\nLagi sibuk dan belum sempat antar cucian? Tenang, Jadiwangi siap *Jemput Cucian GRATIS* langsung ke rumah Kakak tanpa minimum order khusus hari ini.\n\nBalas pesan ini dengan alamat & waktu pickup yang Kakak inginkan yaa. Baju bersih, wangi tahan lama, tinggal santai di rumah! 😊"
+    },
+    {
+      "id": "cek_kepuasan_layanan",
+      "title": "Cek Kepuasan & Voucher Wangi",
+      "template": "Halo Kak *{nama}* terkasih di *Jadiwangi Laundry*! 🙏\n\nTerakhir Kakak mempercayakan cucian pada {tanggal_terakhir}. Kami ingin memastikan apakah kualitas wangi dan kebersihan hasil cucian kami sudah memuaskan Kakak?\n\nSebagai tanda terima kasih kami, kami siapkan voucher cashback Rp 15.000 untuk transaksi berikutnya. Balas 'MAU' untuk klaim ya Kak! 🌸"
+    }
+  ],
+  "sample_dataset_blueprint": [
+    {
+      "id": "CUST-001",
+      "nama": "Ibu Ratna Sari",
+      "whatsapp": "081288921102",
+      "tanggal_terakhir": "2024-03-12",
+      "hari_tidak_kembali": 138,
+      "total_transaksi": 14,
+      "total_nilai_belanja": 845000,
+      "layanan_favorit": "Cuci Setrika Reguler (Wangi Akasia)",
+      "status_churn": "Kritis (>60 Hari)",
+      "whatsapp_status": "Belum Dihubungi"
+    },
+    {
+      "id": "CUST-002",
+      "nama": "Pak Hendra Wijaya",
+      "whatsapp": "085691223450",
+      "tanggal_terakhir": "2024-03-28",
+      "hari_tidak_kembali": 122,
+      "total_transaksi": 9,
+      "total_nilai_belanja": 620000,
+      "layanan_favorit": "Cuci Kering Lipat Express",
+      "status_churn": "Kritis (>60 Hari)",
+      "whatsapp_status": "Belum Dihubungi"
+    },
+    {
+      "id": "CUST-003",
+      "nama": "dr. Maya Anggraini",
+      "whatsapp": "087781290311",
+      "tanggal_terakhir": "2024-04-05",
+      "hari_tidak_kembali": 114,
+      "total_transaksi": 22,
+      "total_nilai_belanja": 1450000,
+      "layanan_favorit": "Dry Clean & Jas Spesial",
+      "status_churn": "Kritis (>60 Hari)",
+      "whatsapp_status": "Belum Dihubungi"
+    },
+    {
+      "id": "CUST-004",
+      "nama": "Budi Santoso (Kost Sakura)",
+      "whatsapp": "081399451209",
+      "tanggal_terakhir": "2024-04-19",
+      "hari_tidak_kembali": 100,
+      "total_transaksi": 18,
+      "total_nilai_belanja": 910000,
+      "layanan_favorit": "Paket Bulanan Kiloan",
+      "status_churn": "Kritis (>60 Hari)",
+      "whatsapp_status": "Draft Terkirim"
+    },
+    {
+      "id": "CUST-005",
+      "nama": "Ibu Fenny Kusuma",
+      "whatsapp": "081804291823",
+      "tanggal_terakhir": "2024-05-02",
+      "hari_tidak_kembali": 87,
+      "total_transaksi": 7,
+      "total_nilai_belanja": 480000,
+      "layanan_favorit": "Bed Cover Jumbo & Selimut",
+      "status_churn": "Kritis (>60 Hari)",
+      "whatsapp_status": "Belum Dihubungi"
+    },
+    {
+      "id": "CUST-006",
+      "nama": "Reza Rahardian",
+      "whatsapp": "085718290034",
+      "tanggal_terakhir": "2024-05-18",
+      "hari_tidak_kembali": 71,
+      "total_transaksi": 11,
+      "total_nilai_belanja": 730000,
+      "layanan_favorit": "Cuci Sepatu & Setrika Uap",
+      "status_churn": "Kritis (>60 Hari)",
+      "whatsapp_status": "Belum Dihubungi"
+    },
+    {
+      "id": "CUST-007",
+      "nama": "Ibu Linda Maryani",
+      "whatsapp": "081219842231",
+      "tanggal_terakhir": "2024-06-01",
+      "hari_tidak_kembali": 57,
+      "total_transaksi": 15,
+      "total_nilai_belanja": 1120000,
+      "layanan_favorit": "Cuci Komplit Parfum Ocean Fresh",
+      "status_churn": "Waspada (30-60 Hari)",
+      "whatsapp_status": "Belum Dihubungi"
+    },
+    {
+      "id": "CUST-008",
+      "nama": "Agus Prayitno",
+      "whatsapp": "081599823412",
+      "tanggal_terakhir": "2024-06-11",
+      "hari_tidak_kembali": 47,
+      "total_transaksi": 6,
+      "total_nilai_belanja": 340000,
+      "layanan_favorit": "Cuci Lipat Hemat",
+      "status_churn": "Waspada (30-60 Hari)",
+      "whatsapp_status": "Belum Dihubungi"
+    },
+    {
+      "id": "CUST-009",
+      "nama": "Siti Nurhaliza",
+      "whatsapp": "087812904832",
+      "tanggal_terakhir": "2024-06-19",
+      "hari_tidak_kembali": 39,
+      "total_transaksi": 13,
+      "total_nilai_belanja": 890000,
+      "layanan_favorit": "Cuci Boneka & Gorden",
+      "status_churn": "Waspada (30-60 Hari)",
+      "whatsapp_status": "Belum Dihubungi"
+    },
+    {
+      "id": "CUST-010",
+      "nama": "Kevin Pratama",
+      "whatsapp": "081387654321",
+      "tanggal_terakhir": "2024-06-25",
+      "hari_tidak_kembali": 33,
+      "total_transaksi": 8,
+      "total_nilai_belanja": 520000,
+      "layanan_favorit": "Cuci Kiloan Express 4 Jam",
+      "status_churn": "Waspada (30-60 Hari)",
+      "whatsapp_status": "Belum Dihubungi"
+    }
+  ],
+  "testing_attributes": {
+    "login_pengelola_button": "login-pengelola-nav-btn",
+    "login_email_input": "login-email-input",
+    "login_password_input": "login-password-input",
+    "login_submit_button": "login-submit-button",
+    "logout_button": "logout-button",
+    "file_upload_input": "transaction-file-upload-input",
+    "load_sample_data_button": "load-sample-data-btn",
+    "reset_data_button": "reset-data-btn",
+    "filter_threshold_slider": "filter-dormant-days-slider",
+    "top_10_table": "top-10-dormant-table",
+    "customer_row_prefix": "customer-row-",
+    "customer_wa_blast_button_prefix": "btn-draft-wa-",
+    "wa_modal_container": "wa-draft-modal-container",
+    "wa_template_select": "wa-template-select",
+    "wa_message_textarea": "wa-message-textarea",
+    "wa_send_web_button": "wa-open-web-action-btn",
+    "wa_copy_message_button": "wa-copy-message-btn"
+  },
+  "instructions_to_main_agent": [
+    "Implementasi fullstack/client flow sesuai user choices: Autentikasi Pengelola tunggal (email: admin@jadiwangilaundry.com, password default aman), portal muka 'jadiwangilaundry.com' dengan tombol jelas 'Login Pengelola', serta Dashboard Analisa Pelanggan.",
+    "Fitur 1 Utama: Analisa pelanggan lama tidak kembali (dormant) yang dihitung dari tanggal transaksi terakhir sampai hari ini. Sediakan filter/pengurutan 10 pelanggan teratas (Top 10 Dormant).",
+    "Upload File Excel/CSV: Buat parser serbaguna untuk file Excel (.xlsx/.xls) dan CSV dengan mapping kolom fleksibel (Nama Pelanggan, Nomor HP/WhatsApp, Tanggal Terakhir Cuci / Tanggal Transaksi, Total Nilai Transaksi / LTV). Berikan tombol 'Pakai Data Contoh Jadiwangi' (Load Sample Data) agar penguji langsung bisa mencoba tanpa harus menyiapkan file Excel.",
+    "Tombol WhatsApp Blast: Ketika diklik pada baris pelanggan, buka modal draft pesan WA yang memformat nomor HP ke format internasional (+62/628...), menaruh nama pelanggan secara dinamis, menyediakan 3 pilihan template promo, dan tombol 'Buka WhatsApp Web' yang membuka https://web.whatsapp.com/send?phone=...&text=... (atau api.whatsapp.com) di tab baru.",
+    "Semua elemen interaktif WAJIB memiliki attribute data-testid sesuai spesifikasi testing_attributes di file ini.",
+    "Jangan gunakan background transparan penuh pada dropdown atau modal. Gunakan kartu solid dengan border tipis 1px dan bayangan lembut.",
+    "Berikan status feedback (toast sonner) ketika data berhasil dimuat, pesan disalin, atau status pelanggan diperbarui menjadi 'Sudah Dihubungi'."
+  ]
+}
