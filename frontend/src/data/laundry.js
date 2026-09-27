@@ -159,16 +159,16 @@ export const OUTLETS = [
     hours: "07.00 – 21.00 WIB · Setiap Hari",
     waOutlet: "0856 0198 4480",
     pricelistImage:
-      "https://customer-assets-rejwkqb3.emergentagent.net/job_307e2abc-0d5f-4f42-a8d4-2c090b6b8405/artifacts/pmnjilvz_Price%20List%20Jadiwangi%20Ujungberung.webp",
+      "https://customer-assets-jt897jd0.emergentagent.net/job_jadiwangi-laundry/artifacts/139oqrk5_Price%20List%20Jadiwangi%20%2859.4%20x%2042%20cm%29%20%281%29.pdf",
     dettolKiloan: 2000,
     kiloan: [
-      { name: "Cuci Kering Setrika", min: 3, reg: 6900, exp: 12000, regTime: "2 Hari", expTime: "6 Jam" },
-      { name: "Cuci Lipat", min: 3, reg: 5900, exp: 7000, regTime: "2 Hari", expTime: "6 Jam" },
-      { name: "Setrika", min: 5, reg: 6000, exp: 8000, regTime: "2 Hari", expTime: "6 Jam" },
+      { name: "Cuci Kering Setrika", min: 3, reg: 8900, exp: 12000, regTime: "2 Hari", expTime: "6 Jam" },
+      { name: "Cuci Lipat", min: 3, reg: 7900, exp: 8900, regTime: "2 Hari", expTime: "6 Jam" },
+      { name: "Setrika", min: 5, reg: 8000, exp: 9500, regTime: "2 Hari", expTime: "6 Jam" },
     ],
     premium: [
       { title: "Bed Cover", mode: "dual", items: [
-        { name: "Single (100-120)", reg: 28000, exp: 40000 },
+        { name: "Single (100-120)", reg: 30000, exp: 40000 },
         { name: "Queen (160-180)", reg: 40000, exp: 65000 },
         { name: "Super XL (200)", reg: 80000, exp: null },
       ]},
@@ -194,7 +194,7 @@ export const OUTLETS = [
         { name: "Coat", reg: 38000, exp: 70000 },
         { name: "Jubah / Toga", reg: 30000, exp: 45000 },
         { name: "Handuk", reg: 10000, exp: 17000 },
-        { name: "Sprei Set", reg: 15000, exp: 25000 },
+        { name: "Sprei Set", reg: 17900, exp: 25000 },
       ]},
       { title: "Satuan — Bawahan", mode: "dual", items: [
         { name: "Celana", reg: 19000, exp: 29000 },
@@ -212,8 +212,8 @@ export const OUTLETS = [
         { name: "Tas", price: 38000, duration: "2 Hari" },
       ]},
       { title: "Karpet & Gorden", mode: "single", unit: "/ m", duration: "7 Hari", items: [
-        { name: "Karpet Tipis", price: 21000 },
-        { name: "Karpet Tebal", price: 23000 },
+        { name: "Karpet Tipis", price: 22000 },
+        { name: "Karpet Tebal", price: 24000 },
         { name: "Gorden", price: 14000 },
         { name: "Vitrase Gorden", price: 10000 },
       ]},

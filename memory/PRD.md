@@ -71,6 +71,10 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
 
 ## Update 24 Sep 2026 (iterasi 9)
 - OG/THUMBNAIL LINK: dibuat /app/frontend/public/og-image.jpg (1200×630, komposit PIL: foto mesin cuci dinding ungu + logo Jadiwangi di pill putih pojok kanan atas). Meta og:/twitter: lengkap di public/index.html, og:image → https://jadiwangilaundry.com/og-image.jpg. STATUS: preview sudah serve tag+image; domain LIVE jadiwangilaundry.com masih HTML lama (og-image.jpg masih fallback SPA 3,3KB) → PERLU DEPLOY agar thumbnail aktif di WA. WhatsApp meng-cache preview per URL — share ulang atau tambahkan ?v=1 pada link.
+- Hero: kata aksen diganti "Prancis." → "Paris."
+
+## Update 27 Sep 2026 (iterasi 10)
+- PRICELIST UJUNGBERUNG diperbarui dari PDF terbaru user: Kiloan CKS reg 8.900 (dari 6.900), Cuci Lipat 7.900/8.900, Setrika 8.000/9.500; Bed Cover Single reg 30.000; Sprei Set reg 17.900; Karpet tipis 22.000/m, tebal 24.000/m. Link "Pricelist Asli" Ujungberung kini mengarah ke PDF baru (artifact 139oqrk5). Label tombol "Lihat Pricelist Asli" digeneralisasi (tanpa kata "Gambar"). Kalkulator otomatis ikut harga baru.
 - ALAMAT LENGKAP 3 outlet terpasang di kartu outlet & footer: Pulomas = Jl. Angkur No. 26D (Ruko Biru), Kayu Putih, Pulogadung, Jakarta Timur; Ujungberung = Jl. Rumah Sakit No. 50 (Ruko Orange sebelah Alfamart), Ujungberung, Bandung; Kalimulya = Jl. Raya Kalimulya No. 86B (Depan Sekolah Tunas Bangsa Islamic School), Cilodong, Depok.
 
 ## Backlog

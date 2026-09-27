@@ -132,7 +132,7 @@ export default function Pricelist() {
                 className="inline-flex items-center gap-2.5 bg-white hover:bg-purple-50 text-[#581C87] font-semibold px-6 py-3 rounded-full border border-purple-200 transition-colors duration-300 text-sm"
               >
                 <FileImage className="w-4.5 h-4.5 w-5 h-5" />
-                Lihat Pricelist Asli {outlet.name} (Gambar)
+                Lihat Pricelist Asli {outlet.name}
               </a>
               <p className="text-xs text-[#645B72]">
                 Pakaian mudah luntur / putih / branded? Kami sarankan cuci satuan agar lebih tahan lama.
