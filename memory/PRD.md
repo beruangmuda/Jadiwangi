@@ -25,6 +25,9 @@ Ak ingin membuat dashboard untuk analisa pelanggan di jadiwangi. masuknya dari t
 - Modal dengan tiga template WhatsApp, pratinjau pesan, salin pesan, dan buka WhatsApp Web.
 - Pengujian alur portal, login, tabel, filter, draft WhatsApp, serta impor CSV berhasil. Variasi header Nomor HP/WhatsApp telah didukung.
 
+## Pembaruan — 16 Oktober 2026
+- Header portal dashboard kini menggunakan logo Jadiwangi Laundry dengan label identitas “Backroom”.
+
 ## Backlog Prioritas
 ### P0
 - Hubungkan tombol Login Pengelola ini ke situs produksi jadiwangilaundry.com saat kode situs tersebut tersedia.
