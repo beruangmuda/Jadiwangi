@@ -30,6 +30,7 @@ Ak ingin membuat dashboard untuk analisa pelanggan di jadiwangi. masuknya dari t
 - Tombol login duplikat pada header dihapus; akses login kini hanya tersedia melalui CTA utama portal.
 - Label “Backroom” diperkuat dengan bobot huruf dan gaya huruf kapital.
 - Logo pada header portal dihapus sesuai arahan; header kini hanya menampilkan identitas “Backroom”.
+- Logo overlay pada halaman login dihapus; visual foto laundry dan alur login tetap dipertahankan.
 
 ## Backlog Prioritas
 ### P0
