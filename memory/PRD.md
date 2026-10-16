@@ -43,6 +43,7 @@ Ak ingin membuat dashboard untuk analisa pelanggan di jadiwangi. masuknya dari t
 - Pengujian aturan gabungan file, tanggal ISO/timestamp, outlet, serta pemulihan data contoh lulus 24/24 tes.
 - Login mendukung email pengelola utama dan email admin lama sebagai kompatibilitas, keduanya memakai satu kata sandi aktif dan sesi akun yang sama.
 - Perbaikan login telah diverifikasi pada backend serta portal browser: 100% pengujian akses lulus.
+- Dependensi frontend diselaraskan: React dan React DOM menggunakan 18.3.1, sedangkan date-fns menggunakan 3.6.0.
 
 ## Backlog Prioritas
 ### P0
