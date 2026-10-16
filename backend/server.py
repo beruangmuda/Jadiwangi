@@ -30,6 +30,7 @@ mongo_url = os.environ["MONGO_URL"]
 db_name = os.environ["DB_NAME"]
 admin_email = os.environ["ADMIN_EMAIL"]
 admin_password = os.environ["ADMIN_PASSWORD"]
+legacy_admin_email = os.environ["LEGACY_ADMIN_EMAIL"]
 jwt_secret = os.environ["JWT_SECRET_KEY"]
 email_key = os.environ["EMERGENT_EMAIL_KEY"]
 email_from_name = os.environ["EMAIL_FROM_NAME"]
@@ -394,7 +395,8 @@ async def root():
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(input_data: LoginInput):
     account = await manager_account()
-    if input_data.email.lower() != account["email"] or not password_matches(input_data.password, account["password_hash"]):
+    accepted_emails = {account["email"], legacy_admin_email.lower()}
+    if input_data.email.lower() not in accepted_emails or not password_matches(input_data.password, account["password_hash"]):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email atau kata sandi tidak sesuai.")
     return TokenResponse(access_token=create_token(account["email"]), manager_name=account["manager_name"])
 

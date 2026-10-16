@@ -41,6 +41,8 @@ Ak ingin membuat dashboard untuk analisa pelanggan di jadiwangi. masuknya dari t
 - Unggahan CSV/XLS/XLSX kini membangun database pelanggan gabungan: pelanggan baru ditambahkan, sedangkan nomor WhatsApp yang sama hanya diperbarui apabila transaksi baru lebih terkini.
 - Analisa pelanggan kini menampilkan outlet transaksi. Kolom yang didukung saat impor: Outlet, Cabang, atau Lokasi.
 - Pengujian aturan gabungan file, tanggal ISO/timestamp, outlet, serta pemulihan data contoh lulus 24/24 tes.
+- Login mendukung email pengelola utama dan email admin lama sebagai kompatibilitas, keduanya memakai satu kata sandi aktif dan sesi akun yang sama.
+- Perbaikan login telah diverifikasi pada backend serta portal browser: 100% pengujian akses lulus.
 
 ## Backlog Prioritas
 ### P0
