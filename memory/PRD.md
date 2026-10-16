@@ -31,6 +31,9 @@ Ak ingin membuat dashboard untuk analisa pelanggan di jadiwangi. masuknya dari t
 - Label “Backroom” diperkuat dengan bobot huruf dan gaya huruf kapital.
 - Logo pada header portal dihapus sesuai arahan; header kini hanya menampilkan identitas “Backroom”.
 - Logo overlay pada halaman login dihapus; visual foto laundry dan alur login tetap dipertahankan.
+- Analisa pelanggan kini menampilkan nilai pelanggan sebagai akumulasi nominal transaksi, kebiasaan hari/jam dominan, dan saran promo berbasis nilai, layanan favorit, serta masa tidak kembali.
+- Setelah Draft WA dibuka, pelanggan masuk jeda follow-up selama 7 hari; tombol Draft WA otomatis kembali setelah masa jeda berakhir.
+- Pengujian backend dan frontend untuk agregasi nilai, kebiasaan transaksi, promo, serta jeda follow-up telah lulus.
 
 ## Backlog Prioritas
 ### P0

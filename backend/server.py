@@ -1,4 +1,5 @@
 import io
+import math
 import os
 import re
 import uuid
@@ -56,6 +57,12 @@ class Customer(BaseModel):
     favorite_service: str
     status: str
     contact_status: str = "Belum dihubungi"
+    usual_day: str = "Belum cukup data"
+    usual_time: str = "Waktu belum tercatat"
+    promo_suggestion: str = "Promo Kangen 10%"
+    last_contacted_at: str | None = None
+    can_draft_whatsapp: bool = True
+    days_until_next_draft: int = 0
 
 
 class DashboardData(BaseModel):
@@ -128,7 +135,33 @@ def customer_status(days_inactive: int) -> str:
     return "Aktif"
 
 
-def make_customer(customer_id: str, name: str, phone: str, latest: datetime, count: int, value: float, service: str) -> dict:
+WEEKDAYS_ID = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
+
+
+def recommended_promo(service: str, count: int, value: float, days_inactive: int) -> str:
+    service_name = service.lower()
+    if count >= 12 or value >= 1_000_000:
+        return "Promo VIP 20% Cuci Komplit"
+    if any(keyword in service_name for keyword in ["bed", "selimut", "gorden", "karpet"]):
+        return "Voucher Bed Cover 15%"
+    if "express" in service_name:
+        return "Gratis Antar-Jemput"
+    if days_inactive >= 90:
+        return "Voucher Kembali Rp15.000"
+    return "Promo Kangen Diskon 10%"
+
+
+def make_customer(
+    customer_id: str,
+    name: str,
+    phone: str,
+    latest: datetime,
+    count: int,
+    value: float,
+    service: str,
+    usual_day: str = "Belum cukup data",
+    usual_time: str = "Waktu belum tercatat",
+) -> dict:
     days = max(0, (datetime.now(timezone.utc).date() - latest.date()).days)
     return {
         "id": customer_id,
@@ -141,6 +174,10 @@ def make_customer(customer_id: str, name: str, phone: str, latest: datetime, cou
         "favorite_service": service or "Laundry reguler",
         "status": customer_status(days),
         "contact_status": "Belum dihubungi",
+        "usual_day": usual_day,
+        "usual_time": usual_time,
+        "promo_suggestion": recommended_promo(service or "Laundry reguler", count, value, days),
+        "last_contacted_at": None,
     }
 
 
@@ -156,13 +193,28 @@ def aggregate_transactions(frame: pd.DataFrame) -> list[dict]:
         raw_value = row.get(mapping["value"], 0) if mapping["value"] else 0
         value = pd.to_numeric(str(raw_value).replace("Rp", "").replace(".", "").replace(",", "."), errors="coerce")
         service = str(row.get(mapping["service"], "Laundry reguler")).strip() if mapping["service"] else "Laundry reguler"
-        grouped[(name, phone)].append({"date": date.to_pydatetime().replace(tzinfo=timezone.utc), "value": 0 if pd.isna(value) else float(value), "service": service})
+        timestamp = date.to_pydatetime()
+        timestamp = timestamp.replace(tzinfo=timezone.utc) if timestamp.tzinfo is None else timestamp.astimezone(timezone.utc)
+        time_label = f"{timestamp.hour:02d}.{timestamp.minute:02d}" if (timestamp.hour or timestamp.minute or timestamp.second) else "Waktu belum tercatat"
+        grouped[(name, phone)].append({
+            "date": timestamp,
+            "value": 0 if pd.isna(value) else float(value),
+            "service": service,
+            "day": WEEKDAYS_ID[timestamp.weekday()],
+            "time": time_label,
+        })
 
     customers = []
     for index, ((name, phone), rows) in enumerate(grouped.items(), start=1):
         latest = max(item["date"] for item in rows)
         favorite = Counter(item["service"] for item in rows if item["service"]).most_common(1)
-        customers.append(make_customer(f"CUST-{index:03d}", name, phone, latest, len(rows), sum(item["value"] for item in rows), favorite[0][0] if favorite else "Laundry reguler"))
+        usual_day = Counter(item["day"] for item in rows).most_common(1)[0][0]
+        known_times = [item["time"] for item in rows if item["time"] != "Waktu belum tercatat"]
+        usual_time = Counter(known_times).most_common(1)[0][0] if known_times else "Waktu belum tercatat"
+        customers.append(make_customer(
+            f"CUST-{index:03d}", name, phone, latest, len(rows), sum(item["value"] for item in rows),
+            favorite[0][0] if favorite else "Laundry reguler", usual_day, usual_time,
+        ))
     if not customers:
         raise HTTPException(status_code=422, detail="Tidak ada transaksi valid yang dapat dibaca dari file ini.")
     return customers
@@ -171,19 +223,19 @@ def aggregate_transactions(frame: pd.DataFrame) -> list[dict]:
 def sample_customers() -> list[dict]:
     today = datetime.now(timezone.utc)
     rows = [
-        ("Ibu Ratna Sari", "081288921102", 138, 14, 845000, "Cuci Setrika Reguler"),
-        ("Pak Hendra Wijaya", "085691223450", 122, 9, 620000, "Cuci Kering Lipat Express"),
-        ("dr. Maya Anggraini", "087781290311", 114, 22, 1450000, "Dry Clean & Jas Spesial"),
-        ("Budi Santoso", "081399451209", 100, 18, 910000, "Paket Bulanan Kiloan"),
-        ("Ibu Fenny Kusuma", "081804291823", 87, 7, 480000, "Bed Cover & Selimut"),
-        ("Reza Rahardian", "085718290034", 71, 11, 730000, "Cuci Sepatu & Setrika Uap"),
-        ("Ibu Linda Maryani", "081219842231", 57, 15, 1120000, "Cuci Komplit"),
-        ("Agus Prayitno", "081599823412", 47, 6, 340000, "Cuci Lipat Hemat"),
-        ("Siti Nurhaliza", "087812904832", 39, 13, 890000, "Cuci Boneka & Gorden"),
-        ("Kevin Pratama", "081387654321", 33, 8, 520000, "Cuci Kiloan Express"),
-        ("Nadia Putri", "081311222333", 10, 4, 215000, "Cuci Setrika Reguler"),
+        ("Ibu Ratna Sari", "081288921102", 138, 14, 845000, "Cuci Setrika Reguler", "Sabtu", "09.30"),
+        ("Pak Hendra Wijaya", "085691223450", 122, 9, 620000, "Cuci Kering Lipat Express", "Jumat", "18.00"),
+        ("dr. Maya Anggraini", "087781290311", 114, 22, 1450000, "Dry Clean & Jas Spesial", "Rabu", "17.30"),
+        ("Budi Santoso", "081399451209", 100, 18, 910000, "Paket Bulanan Kiloan", "Minggu", "10.00"),
+        ("Ibu Fenny Kusuma", "081804291823", 87, 7, 480000, "Bed Cover & Selimut", "Sabtu", "11.00"),
+        ("Reza Rahardian", "085718290034", 71, 11, 730000, "Cuci Sepatu & Setrika Uap", "Kamis", "19.00"),
+        ("Ibu Linda Maryani", "081219842231", 57, 15, 1120000, "Cuci Komplit", "Minggu", "09.00"),
+        ("Agus Prayitno", "081599823412", 47, 6, 340000, "Cuci Lipat Hemat", "Selasa", "18.30"),
+        ("Siti Nurhaliza", "087812904832", 39, 13, 890000, "Cuci Boneka & Gorden", "Sabtu", "13.00"),
+        ("Kevin Pratama", "081387654321", 33, 8, 520000, "Cuci Kiloan Express", "Jumat", "17.00"),
+        ("Nadia Putri", "081311222333", 10, 4, 215000, "Cuci Setrika Reguler", "Minggu", "10.30"),
     ]
-    return [make_customer(f"CUST-{index:03d}", name, normalize_phone(phone), today - timedelta(days=days), count, value, service) for index, (name, phone, days, count, value, service) in enumerate(rows, start=1)]
+    return [make_customer(f"CUST-{index:03d}", name, normalize_phone(phone), today - timedelta(days=days), count, value, service, usual_day, usual_time) for index, (name, phone, days, count, value, service, usual_day, usual_time) in enumerate(rows, start=1)]
 
 
 async def save_customers(customers: list[dict], source_name: str) -> None:
@@ -205,8 +257,27 @@ async def get_dataset() -> dict:
     return {"customers": customers, "source_name": "Data contoh Jadiwangi", "updated_at": datetime.now(timezone.utc).isoformat()}
 
 
+def enrich_contact_window(customer: dict) -> dict:
+    result = customer.copy()
+    contacted_at = result.get("last_contacted_at")
+    if not contacted_at:
+        result.update({"can_draft_whatsapp": True, "days_until_next_draft": 0})
+        return result
+    try:
+        last_contact = datetime.fromisoformat(contacted_at)
+        last_contact = last_contact.replace(tzinfo=timezone.utc) if last_contact.tzinfo is None else last_contact.astimezone(timezone.utc)
+        remaining = (last_contact + timedelta(days=7)) - datetime.now(timezone.utc)
+        if remaining.total_seconds() > 0:
+            result.update({"can_draft_whatsapp": False, "days_until_next_draft": max(1, math.ceil(remaining.total_seconds() / 86_400))})
+            return result
+    except (TypeError, ValueError):
+        pass
+    result.update({"can_draft_whatsapp": True, "days_until_next_draft": 0})
+    return result
+
+
 def dashboard_response(dataset: dict, threshold: int) -> DashboardData:
-    customers = [Customer(**row) for row in dataset.get("customers", [])]
+    customers = [Customer(**enrich_contact_window(row)) for row in dataset.get("customers", [])]
     dormant = [item for item in customers if item.days_inactive >= threshold]
     sorted_customers = sorted(dormant, key=lambda item: (-item.days_inactive, -item.lifetime_value))[:10]
     return DashboardData(
@@ -268,7 +339,8 @@ async def mark_contacted(customer_id: str, payload: ContactUpdate, _: str = Depe
     for customer in dataset["customers"]:
         if customer["id"] == customer_id:
             customer["contact_status"] = payload.contact_status
-            updated = customer
+            customer["last_contacted_at"] = datetime.now(timezone.utc).isoformat()
+            updated = enrich_contact_window(customer)
             break
     if not updated:
         raise HTTPException(status_code=404, detail="Pelanggan tidak ditemukan.")

@@ -1,15 +1,31 @@
-"""API tests for auth, dashboard analytics, contact update, and CSV upload flows."""
+"""API tests for auth, dashboard analytics, upload parsing, and follow-up eligibility."""
 
 import io
 import os
+import re
+from pathlib import Path
 
 import pytest
 import requests
 
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL")
-ADMIN_EMAIL = "admin@jadiwangilaundry.com"
-ADMIN_PASSWORD = "Jadiwangi2026!"
+
+
+def _load_test_credentials() -> tuple[str, str]:
+    """Read test credentials from shared memory file (source of truth for auth tests)."""
+    cred_file = Path("/app/memory/test_credentials.md")
+    if not cred_file.exists():
+        pytest.skip("/app/memory/test_credentials.md is missing")
+    text = cred_file.read_text(encoding="utf-8")
+    email_match = re.search(r"Email:\s*`([^`]+)`", text)
+    password_match = re.search(r"(?:Kata sandi|Password):\s*`([^`]+)`", text)
+    if not email_match or not password_match:
+        pytest.skip("Test credentials not found in /app/memory/test_credentials.md")
+    return email_match.group(1), password_match.group(1)
+
+
+ADMIN_EMAIL, ADMIN_PASSWORD = _load_test_credentials()
 
 
 @pytest.fixture(scope="session")
@@ -81,6 +97,20 @@ def test_dashboard_loads_and_returns_max_10_sorted(api_client, api_base_url, aut
     assert days == sorted(days, reverse=True)
 
 
+def test_dashboard_customer_fields_include_value_habits_promo_and_draft_status(api_client, api_base_url, auth_headers):
+    """Dashboard customer record contains lifetime value, dominant day/time, promo, and draft eligibility."""
+    response = api_client.get(f"{api_base_url}/api/dashboard?threshold=30", headers=auth_headers, timeout=30)
+    assert response.status_code == 200
+    customers = response.json()["customers"]
+    assert len(customers) > 0
+    customer = customers[0]
+    assert isinstance(customer["lifetime_value"], (int, float))
+    assert isinstance(customer["usual_day"], str) and customer["usual_day"]
+    assert isinstance(customer["usual_time"], str) and customer["usual_time"]
+    assert isinstance(customer["promo_suggestion"], str) and customer["promo_suggestion"]
+    assert isinstance(customer["can_draft_whatsapp"], bool)
+
+
 def test_dashboard_rejects_invalid_threshold(api_client, api_base_url, auth_headers):
     response = api_client.get(f"{api_base_url}/api/dashboard?threshold=0", headers=auth_headers, timeout=30)
     assert response.status_code == 422
@@ -121,6 +151,24 @@ def test_contact_status_update_persists(api_client, api_base_url, auth_headers):
     assert matched and matched[0]["contact_status"] == "Sudah dihubungi"
 
 
+def test_contact_update_disables_draft_for_7_days(api_client, api_base_url, auth_headers):
+    """After contact update, customer should not be draftable and expose wait-days countdown."""
+    sample = api_client.post(f"{api_base_url}/api/dashboard/sample", headers=auth_headers, timeout=30)
+    assert sample.status_code == 200
+    customer_id = sample.json()["customers"][0]["id"]
+
+    patch_response = api_client.patch(
+        f"{api_base_url}/api/customers/{customer_id}/contact",
+        headers={**auth_headers, "Content-Type": "application/json"},
+        json={"contact_status": "Sudah dihubungi"},
+        timeout=30,
+    )
+    assert patch_response.status_code == 200
+    updated = patch_response.json()
+    assert updated["can_draft_whatsapp"] is False
+    assert updated["days_until_next_draft"] >= 1
+
+
 # Upload module checks
 def test_upload_valid_csv_replaces_dataset(api_client, api_base_url, auth_headers):
     csv_content = (
@@ -146,6 +194,51 @@ def test_upload_valid_csv_replaces_dataset(api_client, api_base_url, auth_header
     assert data["source_name"] == "test_transaksi.csv"
     names = [row["name"] for row in data["customers"]]
     assert "TEST Budi" in names
+
+
+def test_upload_csv_accumulates_customer_lifetime_value(api_client, api_base_url, auth_headers):
+    """Lifetime value must equal sum of all customer transactions in uploaded file."""
+    csv_content = (
+        "Nama Pelanggan,Nomor HP/WhatsApp,Tanggal Transaksi,Total,Layanan\n"
+        "TEST AKUMULASI,081200001111,01/01/2025,100000,Cuci Reguler\n"
+        "TEST AKUMULASI,081200001111,05/01/2025,250000,Cuci Reguler\n"
+        "TEST LAIN,081200009999,10/01/2025,50000,Express\n"
+    )
+    files = {"file": ("accumulate.csv", io.BytesIO(csv_content.encode("utf-8")), "text/csv")}
+    response = api_client.post(
+        f"{api_base_url}/api/dashboard/upload",
+        headers={"Authorization": auth_headers["Authorization"]},
+        files=files,
+        timeout=30,
+    )
+    assert response.status_code == 200
+    rows = response.json()["customers"]
+    target = next(item for item in rows if item["name"] == "TEST AKUMULASI")
+    assert target["lifetime_value"] == 350000
+    assert target["transaction_count"] == 2
+
+
+def test_upload_csv_with_timestamps_returns_dominant_day_and_hour(api_client, api_base_url, auth_headers):
+    """Timestamped CSV should produce dominant weekday and time slot for each customer."""
+    csv_content = (
+        "Nama Pelanggan,Nomor HP/WhatsApp,Tanggal Transaksi,Total,Layanan\n"
+        "TEST JAM,081211119999,06/01/2025 09:30,120000,Cuci Reguler\n"
+        "TEST JAM,081211119999,13/01/2025 09:30,80000,Cuci Reguler\n"
+        "TEST JAM,081211119999,07/01/2025 10:00,50000,Cuci Reguler\n"
+    )
+    files = {"file": ("habit.csv", io.BytesIO(csv_content.encode("utf-8")), "text/csv")}
+    response = api_client.post(
+        f"{api_base_url}/api/dashboard/upload",
+        headers={"Authorization": auth_headers["Authorization"]},
+        files=files,
+        timeout=30,
+    )
+    assert response.status_code == 200
+    rows = response.json()["customers"]
+    target = next(item for item in rows if item["name"] == "TEST JAM")
+    assert target["usual_day"] == "Senin"
+    assert target["usual_time"] == "09.30"
+    assert isinstance(target["promo_suggestion"], str) and len(target["promo_suggestion"]) > 0
 
 
 def test_upload_missing_required_columns_returns_422(api_client, api_base_url, auth_headers):
