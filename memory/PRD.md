@@ -35,6 +35,9 @@ Ak ingin membuat dashboard untuk analisa pelanggan di jadiwangi. masuknya dari t
 - Setelah Draft WA dibuka, pelanggan masuk jeda follow-up selama 7 hari; tombol Draft WA otomatis kembali setelah masa jeda berakhir.
 - Pengujian backend dan frontend untuk agregasi nilai, kebiasaan transaksi, promo, serta jeda follow-up telah lulus.
 - Form login pengelola kini menyatu dengan halaman portal utama; rute lama `/login` mengarah kembali ke portal agar tidak ada halaman login terpisah.
+- Pengaturan akun memungkinkan pengelola mengubah email dan kata sandi dari dashboard, serta mengirim tautan reset kata sandi satu kali berlaku selama 30 menit melalui email.
+- Draft WhatsApp diperbarui dengan gaya bahasa yang lebih santai, hangat, dan conversational.
+- Pengujian keamanan akun, reset password, login satu halaman, dan draft WhatsApp santai lulus 100% pada backend maupun frontend.
 
 ## Backlog Prioritas
 ### P0

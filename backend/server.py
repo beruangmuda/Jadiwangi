@@ -2,12 +2,18 @@ import io
 import math
 import os
 import re
+import secrets
+import hashlib
 import uuid
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated
+from html import escape
+from urllib.parse import quote
 
+import bcrypt
+import httpx
 import pandas as pd
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, UploadFile, status
@@ -25,6 +31,10 @@ db_name = os.environ["DB_NAME"]
 admin_email = os.environ["ADMIN_EMAIL"]
 admin_password = os.environ["ADMIN_PASSWORD"]
 jwt_secret = os.environ["JWT_SECRET_KEY"]
+email_key = os.environ["EMERGENT_EMAIL_KEY"]
+email_from_name = os.environ["EMAIL_FROM_NAME"]
+email_reply_to = os.environ.get("EMAIL_REPLY_TO")
+app_frontend_url = os.environ["APP_FRONTEND_URL"].rstrip("/")
 
 client = AsyncIOMotorClient(mongo_url)
 db = client[db_name]
@@ -32,6 +42,7 @@ app = FastAPI(title="Jadiwangi Customer Dashboard")
 api_router = APIRouter(prefix="/api")
 security = HTTPBearer()
 TOKEN_EXPIRY_HOURS = 12
+EMAIL_BASE_URL = "https://integrations.emergentagent.com"
 
 
 class LoginInput(BaseModel):
@@ -79,9 +90,83 @@ class ContactUpdate(BaseModel):
     contact_status: str = "Sudah dihubungi"
 
 
+class AccountResponse(BaseModel):
+    email: EmailStr
+    manager_name: str
+
+
+class EmailUpdate(BaseModel):
+    email: EmailStr
+
+
+class PasswordUpdate(BaseModel):
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class ResetRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPassword(BaseModel):
+    token: str = Field(min_length=20, max_length=255)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
 def create_token(email: str) -> str:
     expires = datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRY_HOURS)
     return jwt.encode({"sub": email, "exp": expires}, jwt_secret, algorithm="HS256")
+
+
+def password_hash(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def password_matches(password: str, hashed: str) -> bool:
+    return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
+
+
+async def manager_account() -> dict:
+    account = await db.manager_accounts.find_one({"account_id": "primary"}, {"_id": 0})
+    if account:
+        return account
+    account = {
+        "account_id": "primary",
+        "email": admin_email.lower(),
+        "password_hash": password_hash(admin_password),
+        "manager_name": "Pengelola Jadiwangi",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.manager_accounts.insert_one(account.copy())
+    return account
+
+
+def assert_safe_email(subject: str, html: str) -> None:
+    if any(tag in html.lower() for tag in ("<form", "<input", "<textarea", "<select")):
+        raise ValueError("Email tidak boleh memuat form atau input.")
+    links = re.findall(r'(?:href|src)=["\']([^"\']+)', html, flags=re.I)
+    for link in links:
+        if not link.startswith("https://"):
+            raise ValueError("Tautan email wajib HTTPS.")
+    if any(phrase in f"{subject} {html}".lower() for phrase in ("reply with your password", "send your password", "cvv", "seed phrase")):
+        raise ValueError("Konten email tidak aman.")
+
+
+async def send_email(*, recipient: str, subject: str, html: str) -> str | None:
+    assert_safe_email(subject, html)
+    payload = {"to": [recipient], "subject": subject, "html": html, "from_name": email_from_name}
+    if email_reply_to:
+        payload["contact_email"] = email_reply_to
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(f"{EMAIL_BASE_URL}/api/v1/email/send", headers={"X-Email-Key": email_key}, json=payload)
+        response.raise_for_status()
+        return response.json().get("id")
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code in (402, 403, 409):
+            raise HTTPException(status_code=503, detail="Email sementara tidak tersedia.") from exc
+        raise HTTPException(status_code=502, detail="Tautan reset belum dapat dikirim.") from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="Tautan reset belum dapat dikirim.") from exc
 
 
 async def manager_required(
@@ -89,7 +174,8 @@ async def manager_required(
 ) -> str:
     try:
         payload = jwt.decode(credentials.credentials, jwt_secret, algorithms=["HS256"])
-        if payload.get("sub") != admin_email:
+        account = await manager_account()
+        if payload.get("sub") != account["email"]:
             raise JWTError("Akun tidak sesuai")
         return payload["sub"]
     except JWTError as exc:
@@ -298,9 +384,59 @@ async def root():
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(input_data: LoginInput):
-    if input_data.email.lower() != admin_email.lower() or input_data.password != admin_password:
+    account = await manager_account()
+    if input_data.email.lower() != account["email"] or not password_matches(input_data.password, account["password_hash"]):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email atau kata sandi tidak sesuai.")
-    return TokenResponse(access_token=create_token(admin_email), manager_name="Pengelola Jadiwangi")
+    return TokenResponse(access_token=create_token(account["email"]), manager_name=account["manager_name"])
+
+
+@api_router.get("/account", response_model=AccountResponse)
+async def get_account(_: str = Depends(manager_required)):
+    account = await manager_account()
+    return AccountResponse(email=account["email"], manager_name=account["manager_name"])
+
+
+@api_router.patch("/account/email", response_model=AccountResponse)
+async def update_account_email(payload: EmailUpdate, _: str = Depends(manager_required)):
+    account = await manager_account()
+    new_email = payload.email.lower()
+    await db.manager_accounts.update_one({"account_id": "primary"}, {"$set": {"email": new_email, "updated_at": datetime.now(timezone.utc).isoformat()}})
+    return AccountResponse(email=new_email, manager_name=account["manager_name"])
+
+
+@api_router.patch("/account/password")
+async def update_account_password(payload: PasswordUpdate, _: str = Depends(manager_required)):
+    await db.manager_accounts.update_one({"account_id": "primary"}, {"$set": {"password_hash": password_hash(payload.new_password), "updated_at": datetime.now(timezone.utc).isoformat()}})
+    return {"message": "Kata sandi berhasil diubah."}
+
+
+@api_router.post("/auth/request-password-reset")
+async def request_password_reset(payload: ResetRequest):
+    account = await manager_account()
+    response = {"message": "Jika email terdaftar, tautan atur ulang telah dikirim."}
+    if payload.email.lower() != account["email"]:
+        return response
+    recent = await db.password_resets.find_one({"account_id": "primary", "created_at": {"$gte": (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()}}, {"_id": 0})
+    if recent:
+        return response
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    await db.password_resets.insert_one({"account_id": "primary", "token_hash": token_hash, "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat(), "created_at": datetime.now(timezone.utc).isoformat(), "used_at": None})
+    reset_url = f"{app_frontend_url}/reset-password?token={quote(raw_token)}"
+    html = f'<table role="presentation" width="100%"><tr><td style="padding:24px;font-family:Arial,sans-serif;color:#16223c"><h2>Atur ulang kata sandi Backroom</h2><p>Kami menerima permintaan untuk mengatur ulang kata sandi Backroom Anda.</p><p><a href="{reset_url}" style="display:inline-block;padding:12px 18px;background:#1e3a8a;color:#ffffff;text-decoration:none">Atur ulang kata sandi</a></p><p>Tautan ini berlaku selama 30 menit dan hanya dapat digunakan satu kali.</p><p style="font-size:12px;color:#64748b">Dikirim oleh {escape(email_from_name)}. Kami tidak pernah meminta kata sandi melalui email.</p></td></tr></table>'
+    await send_email(recipient=account["email"], subject="Atur ulang kata sandi Backroom Jadiwangi", html=html)
+    return response
+
+
+@api_router.post("/auth/reset-password")
+async def reset_password(payload: ResetPassword):
+    token_hash = hashlib.sha256(payload.token.encode("utf-8")).hexdigest()
+    reset = await db.password_resets.find_one({"account_id": "primary", "token_hash": token_hash, "used_at": None}, {"_id": 0})
+    if not reset or datetime.fromisoformat(reset["expires_at"]) <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Tautan reset tidak valid atau sudah kedaluwarsa.")
+    await db.manager_accounts.update_one({"account_id": "primary"}, {"$set": {"password_hash": password_hash(payload.new_password), "updated_at": datetime.now(timezone.utc).isoformat()}})
+    await db.password_resets.update_one({"token_hash": token_hash}, {"$set": {"used_at": datetime.now(timezone.utc).isoformat()}})
+    return {"message": "Kata sandi berhasil diperbarui. Silakan masuk kembali."}
 
 
 @api_router.get("/dashboard", response_model=DashboardData)
