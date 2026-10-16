@@ -38,6 +38,9 @@ Ak ingin membuat dashboard untuk analisa pelanggan di jadiwangi. masuknya dari t
 - Pengaturan akun memungkinkan pengelola mengubah email dan kata sandi dari dashboard, serta mengirim tautan reset kata sandi satu kali berlaku selama 30 menit melalui email.
 - Draft WhatsApp diperbarui dengan gaya bahasa yang lebih santai, hangat, dan conversational.
 - Pengujian keamanan akun, reset password, login satu halaman, dan draft WhatsApp santai lulus 100% pada backend maupun frontend.
+- Unggahan CSV/XLS/XLSX kini membangun database pelanggan gabungan: pelanggan baru ditambahkan, sedangkan nomor WhatsApp yang sama hanya diperbarui apabila transaksi baru lebih terkini.
+- Analisa pelanggan kini menampilkan outlet transaksi. Kolom yang didukung saat impor: Outlet, Cabang, atau Lokasi.
+- Pengujian aturan gabungan file, tanggal ISO/timestamp, outlet, serta pemulihan data contoh lulus 24/24 tes.
 
 ## Backlog Prioritas
 ### P0

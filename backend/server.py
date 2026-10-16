@@ -71,6 +71,7 @@ class Customer(BaseModel):
     usual_day: str = "Belum cukup data"
     usual_time: str = "Waktu belum tercatat"
     promo_suggestion: str = "Promo Kangen 10%"
+    outlet: str = "Tidak tercatat"
     last_contacted_at: str | None = None
     can_draft_whatsapp: bool = True
     days_until_next_draft: int = 0
@@ -199,6 +200,7 @@ def normalize_columns(frame: pd.DataFrame) -> dict[str, str]:
         "date": ["tanggal", "tanggaltransaksi", "tanggalterakhir", "tanggalterakhircuci", "date", "transactiondate"],
         "value": ["total", "totalnilai", "totalnilaitransaksi", "nilai", "nominal", "omzet", "ltv", "harga"],
         "service": ["layanan", "service", "jenislaundry", "produk", "tipeservice"],
+        "outlet": ["outlet", "cabang", "lokasi", "lokasioutlet", "cabangoutlet"],
     }
     resolved = {}
     for key, options in aliases.items():
@@ -247,6 +249,7 @@ def make_customer(
     service: str,
     usual_day: str = "Belum cukup data",
     usual_time: str = "Waktu belum tercatat",
+    outlet: str = "Tidak tercatat",
 ) -> dict:
     days = max(0, (datetime.now(timezone.utc).date() - latest.date()).days)
     return {
@@ -263,6 +266,7 @@ def make_customer(
         "usual_day": usual_day,
         "usual_time": usual_time,
         "promo_suggestion": recommended_promo(service or "Laundry reguler", count, value, days),
+        "outlet": outlet or "Tidak tercatat",
         "last_contacted_at": None,
     }
 
@@ -273,12 +277,14 @@ def aggregate_transactions(frame: pd.DataFrame) -> list[dict]:
     for _, row in frame.iterrows():
         name = str(row.get(mapping["name"], "")).strip()
         phone = normalize_phone(row.get(mapping["phone"], ""))
-        date = pd.to_datetime(row.get(mapping["date"]), errors="coerce", dayfirst=True)
+        raw_date = str(row.get(mapping["date"], "")).strip()
+        date = pd.to_datetime(raw_date, errors="coerce", dayfirst=not bool(re.match(r"^\d{4}[-/]\d{1,2}[-/]\d{1,2}", raw_date)))
         if not name or not phone or pd.isna(date):
             continue
         raw_value = row.get(mapping["value"], 0) if mapping["value"] else 0
         value = pd.to_numeric(str(raw_value).replace("Rp", "").replace(".", "").replace(",", "."), errors="coerce")
         service = str(row.get(mapping["service"], "Laundry reguler")).strip() if mapping["service"] else "Laundry reguler"
+        outlet = str(row.get(mapping["outlet"], "Tidak tercatat")).strip() if mapping["outlet"] else "Tidak tercatat"
         timestamp = date.to_pydatetime()
         timestamp = timestamp.replace(tzinfo=timezone.utc) if timestamp.tzinfo is None else timestamp.astimezone(timezone.utc)
         time_label = f"{timestamp.hour:02d}.{timestamp.minute:02d}" if (timestamp.hour or timestamp.minute or timestamp.second) else "Waktu belum tercatat"
@@ -288,6 +294,7 @@ def aggregate_transactions(frame: pd.DataFrame) -> list[dict]:
             "service": service,
             "day": WEEKDAYS_ID[timestamp.weekday()],
             "time": time_label,
+            "outlet": outlet,
         })
 
     customers = []
@@ -297,9 +304,10 @@ def aggregate_transactions(frame: pd.DataFrame) -> list[dict]:
         usual_day = Counter(item["day"] for item in rows).most_common(1)[0][0]
         known_times = [item["time"] for item in rows if item["time"] != "Waktu belum tercatat"]
         usual_time = Counter(known_times).most_common(1)[0][0] if known_times else "Waktu belum tercatat"
+        usual_outlet = Counter(item["outlet"] for item in rows if item["outlet"]).most_common(1)
         customers.append(make_customer(
             f"CUST-{index:03d}", name, phone, latest, len(rows), sum(item["value"] for item in rows),
-            favorite[0][0] if favorite else "Laundry reguler", usual_day, usual_time,
+            favorite[0][0] if favorite else "Laundry reguler", usual_day, usual_time, usual_outlet[0][0] if usual_outlet else "Tidak tercatat",
         ))
     if not customers:
         raise HTTPException(status_code=422, detail="Tidak ada transaksi valid yang dapat dibaca dari file ini.")
@@ -309,27 +317,28 @@ def aggregate_transactions(frame: pd.DataFrame) -> list[dict]:
 def sample_customers() -> list[dict]:
     today = datetime.now(timezone.utc)
     rows = [
-        ("Ibu Ratna Sari", "081288921102", 138, 14, 845000, "Cuci Setrika Reguler", "Sabtu", "09.30"),
-        ("Pak Hendra Wijaya", "085691223450", 122, 9, 620000, "Cuci Kering Lipat Express", "Jumat", "18.00"),
-        ("dr. Maya Anggraini", "087781290311", 114, 22, 1450000, "Dry Clean & Jas Spesial", "Rabu", "17.30"),
-        ("Budi Santoso", "081399451209", 100, 18, 910000, "Paket Bulanan Kiloan", "Minggu", "10.00"),
-        ("Ibu Fenny Kusuma", "081804291823", 87, 7, 480000, "Bed Cover & Selimut", "Sabtu", "11.00"),
-        ("Reza Rahardian", "085718290034", 71, 11, 730000, "Cuci Sepatu & Setrika Uap", "Kamis", "19.00"),
-        ("Ibu Linda Maryani", "081219842231", 57, 15, 1120000, "Cuci Komplit", "Minggu", "09.00"),
-        ("Agus Prayitno", "081599823412", 47, 6, 340000, "Cuci Lipat Hemat", "Selasa", "18.30"),
-        ("Siti Nurhaliza", "087812904832", 39, 13, 890000, "Cuci Boneka & Gorden", "Sabtu", "13.00"),
-        ("Kevin Pratama", "081387654321", 33, 8, 520000, "Cuci Kiloan Express", "Jumat", "17.00"),
-        ("Nadia Putri", "081311222333", 10, 4, 215000, "Cuci Setrika Reguler", "Minggu", "10.30"),
+        ("Ibu Ratna Sari", "081288921102", 138, 14, 845000, "Cuci Setrika Reguler", "Sabtu", "09.30", "Pulomas"),
+        ("Pak Hendra Wijaya", "085691223450", 122, 9, 620000, "Cuci Kering Lipat Express", "Jumat", "18.00", "Ujungberung"),
+        ("dr. Maya Anggraini", "087781290311", 114, 22, 1450000, "Dry Clean & Jas Spesial", "Rabu", "17.30", "Kalimulya"),
+        ("Budi Santoso", "081399451209", 100, 18, 910000, "Paket Bulanan Kiloan", "Minggu", "10.00", "Pulomas"),
+        ("Ibu Fenny Kusuma", "081804291823", 87, 7, 480000, "Bed Cover & Selimut", "Sabtu", "11.00", "Kalimulya"),
+        ("Reza Rahardian", "085718290034", 71, 11, 730000, "Cuci Sepatu & Setrika Uap", "Kamis", "19.00", "Ujungberung"),
+        ("Ibu Linda Maryani", "081219842231", 57, 15, 1120000, "Cuci Komplit", "Minggu", "09.00", "Pulomas"),
+        ("Agus Prayitno", "081599823412", 47, 6, 340000, "Cuci Lipat Hemat", "Selasa", "18.30", "Ujungberung"),
+        ("Siti Nurhaliza", "087812904832", 39, 13, 890000, "Cuci Boneka & Gorden", "Sabtu", "13.00", "Kalimulya"),
+        ("Kevin Pratama", "081387654321", 33, 8, 520000, "Cuci Kiloan Express", "Jumat", "17.00", "Pulomas"),
+        ("Nadia Putri", "081311222333", 10, 4, 215000, "Cuci Setrika Reguler", "Minggu", "10.30", "Ujungberung"),
     ]
-    return [make_customer(f"CUST-{index:03d}", name, normalize_phone(phone), today - timedelta(days=days), count, value, service, usual_day, usual_time) for index, (name, phone, days, count, value, service, usual_day, usual_time) in enumerate(rows, start=1)]
+    return [make_customer(f"CUST-{index:03d}", name, normalize_phone(phone), today - timedelta(days=days), count, value, service, usual_day, usual_time, outlet) for index, (name, phone, days, count, value, service, usual_day, usual_time, outlet) in enumerate(rows, start=1)]
 
 
-async def save_customers(customers: list[dict], source_name: str) -> None:
+async def save_customers(customers: list[dict], source_name: str, upload_count: int = 0) -> None:
     await db.customer_sets.delete_many({"owner": admin_email})
     await db.customer_sets.insert_one({
         "owner": admin_email,
         "customers": customers,
         "source_name": source_name,
+        "upload_count": upload_count,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     })
 
@@ -340,7 +349,7 @@ async def get_dataset() -> dict:
         return document
     customers = sample_customers()
     await save_customers(customers, "Data contoh Jadiwangi")
-    return {"customers": customers, "source_name": "Data contoh Jadiwangi", "updated_at": datetime.now(timezone.utc).isoformat()}
+    return {"customers": customers, "source_name": "Data contoh Jadiwangi", "upload_count": 0, "updated_at": datetime.now(timezone.utc).isoformat()}
 
 
 def enrich_contact_window(customer: dict) -> dict:
@@ -449,7 +458,7 @@ async def get_dashboard(threshold: int = 30, _: str = Depends(manager_required))
 @api_router.post("/dashboard/sample", response_model=DashboardData)
 async def load_sample(_: str = Depends(manager_required)):
     customers = sample_customers()
-    await save_customers(customers, "Data contoh Jadiwangi")
+    await save_customers(customers, "Data contoh Jadiwangi", 0)
     return dashboard_response(await get_dataset(), 30)
 
 
@@ -463,8 +472,24 @@ async def upload_transactions(file: UploadFile = File(...), _: str = Depends(man
         frame = pd.read_csv(io.BytesIO(content)) if suffix == ".csv" else pd.read_excel(io.BytesIO(content))
     except Exception as exc:
         raise HTTPException(status_code=422, detail="File tidak dapat dibaca. Periksa format dan isi file.") from exc
-    customers = aggregate_transactions(frame)
-    await save_customers(customers, file.filename or "Data transaksi")
+    incoming_customers = aggregate_transactions(frame)
+    dataset = await get_dataset()
+    stored_customers = [] if dataset.get("source_name") == "Data contoh Jadiwangi" else dataset.get("customers", [])
+    existing_by_phone = {customer.get("phone"): customer for customer in stored_customers if customer.get("phone")}
+    merged_customers = stored_customers.copy()
+    for incoming in incoming_customers:
+        existing = existing_by_phone.get(incoming["phone"])
+        if existing:
+            if incoming["last_transaction"] >= existing.get("last_transaction", ""):
+                incoming["id"] = existing["id"]
+                incoming["contact_status"] = existing.get("contact_status", "Belum dihubungi")
+                incoming["last_contacted_at"] = existing.get("last_contacted_at")
+                merged_customers[merged_customers.index(existing)] = incoming
+        else:
+            incoming["id"] = f"CUST-{uuid.uuid4().hex[:8].upper()}"
+            merged_customers.append(incoming)
+    new_upload_count = int(dataset.get("upload_count", 0)) + 1
+    await save_customers(merged_customers, f"Database gabungan • {new_upload_count} file", new_upload_count)
     return dashboard_response(await get_dataset(), 30)
 
 

@@ -75,6 +75,14 @@ def auth_headers(auth_token):
     return {"Authorization": f"Bearer {auth_token}"}
 
 
+@pytest.fixture(autouse=True)
+def reset_sample_dataset(api_client, api_base_url, auth_headers):
+    """Keep each test isolated by resetting dashboard dataset to sample baseline."""
+    response = api_client.post(f"{api_base_url}/api/dashboard/sample", headers=auth_headers, timeout=30)
+    assert response.status_code == 200
+    yield
+
+
 # Auth module checks
 def test_login_success(api_client, api_base_url):
     for email, password in _credential_candidates():
@@ -206,7 +214,8 @@ def test_upload_valid_csv_replaces_dataset(api_client, api_base_url, auth_header
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["source_name"] == "test_transaksi.csv"
+    assert data["source_name"] == "Database gabungan • 1 file"
+    assert data["total_customers"] == 2
     names = [row["name"] for row in data["customers"]]
     assert "TEST Budi" in names
 
