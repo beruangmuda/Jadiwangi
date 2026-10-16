@@ -29,6 +29,7 @@ Ak ingin membuat dashboard untuk analisa pelanggan di jadiwangi. masuknya dari t
 - Header portal dashboard kini menggunakan logo Jadiwangi Laundry dengan label identitas “Backroom”.
 - Tombol login duplikat pada header dihapus; akses login kini hanya tersedia melalui CTA utama portal.
 - Label “Backroom” diperkuat dengan bobot huruf dan gaya huruf kapital.
+- Logo pada header portal dihapus sesuai arahan; header kini hanya menampilkan identitas “Backroom”.
 
 ## Backlog Prioritas
 ### P0
