@@ -81,7 +81,9 @@ export default function Footer() {
             <p className="font-mono-accent tracking-widest uppercase">Jakarta · Bandung · Depok</p>
             <a
               data-testid="footer-admin-login"
-              href="/admin"
+              href="https://customer-dashboard-41.preview.emergentagent.com/login"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 hover:text-white transition-colors"
             >
               <Lock className="w-3 h-3" />
