@@ -80,6 +80,9 @@ Landing page bisnis laundry Jadiwangi dengan 3 outlet (Pulomas - Jakarta, Ujungb
 - Link "Login Pengelola" di footer kini mengarah ke dashboard eksternal user: https://customer-dashboard-41.preview.emergentagent.com/login (tab baru). Halaman /admin internal tetap ada (tidak dihapus), hanya tidak tertaut dari footer.
 - ALAMAT LENGKAP 3 outlet terpasang di kartu outlet & footer: Pulomas = Jl. Angkur No. 26D (Ruko Biru), Kayu Putih, Pulogadung, Jakarta Timur; Ujungberung = Jl. Rumah Sakit No. 50 (Ruko Orange sebelah Alfamart), Ujungberung, Bandung; Kalimulya = Jl. Raya Kalimulya No. 86B (Depan Sekolah Tunas Bangsa Islamic School), Cilodong, Depok.
 
+## Update 16 Okt 2026 (iterasi 12)
+- Link "Login Pengelola" di footer dialihkan dari URL preview lama ke https://backroom.jadiwangilaundry.com (tab baru). Rute internal /admin tetap tersedia tetapi tidak ditautkan dari halaman publik.
+
 ## Backlog
 - P0: Kirim ulasan asli Google Maps ★5 untuk outlet Ujungberung & Kalimulya (format: link share ulasan seperti yang Pulomas) — tambahkan ke TESTIMONIALS di data/laundry.js.
 - P1: Embed Google Maps interaktif di kartu outlet.
