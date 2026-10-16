@@ -34,6 +34,7 @@ Ak ingin membuat dashboard untuk analisa pelanggan di jadiwangi. masuknya dari t
 - Analisa pelanggan kini menampilkan nilai pelanggan sebagai akumulasi nominal transaksi, kebiasaan hari/jam dominan, dan saran promo berbasis nilai, layanan favorit, serta masa tidak kembali.
 - Setelah Draft WA dibuka, pelanggan masuk jeda follow-up selama 7 hari; tombol Draft WA otomatis kembali setelah masa jeda berakhir.
 - Pengujian backend dan frontend untuk agregasi nilai, kebiasaan transaksi, promo, serta jeda follow-up telah lulus.
+- Form login pengelola kini menyatu dengan halaman portal utama; rute lama `/login` mengarah kembali ke portal agar tidak ada halaman login terpisah.
 
 ## Backlog Prioritas
 ### P0
