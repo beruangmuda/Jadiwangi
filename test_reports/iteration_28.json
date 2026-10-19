@@ -1,0 +1,51 @@
+{
+  "summary": "Retest Midtrans Snap non-secret paths for backend+frontend completed. Core safety path works (Snap returns 503 without secret, customer UI shows safe config error, no external redirect, order remains unpaid). One structural blocker found: public OpenAPI GET is not exposed via ingress for backend path verification.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "GET /openapi.json (public preview URL)",
+        "issue": "Returns frontend HTML (200 text/html) and /api/openapi.json returns 404, so OpenAPI path verification for Midtrans routes cannot be done from public endpoint.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter28_midtrans_nonsecret_paths.py",
+    "/app/test_reports/pytest/iter28_midtrans_nonsecret_paths.xml",
+    "/app/tests/iter28_seed_midtrans_customer_bill.py",
+    "/app/tests/iter28_cleanup_test_data.py",
+    "/app/test_reports/artifacts_iter28_t1/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter28_t1/iter28_customer_bayar_midtrans_safe.jpeg"
+  ],
+  "action_items": [
+    "Expose backend OpenAPI JSON on public preview ingress (or provide explicit backend-doc path) so structural route checks can run from public endpoint.",
+    "Keep MIDTRANS_* secrets empty until owner provides Sandbox keys; do not enable production keys.",
+    "After secrets are filled, run dedicated E2E for Snap creation + webhook settlement/capture over HTTPS callback."
+  ],
+  "critical_code_review_comments": [
+    "frontend/src/api.ts still hardcodes process.env.EXPO_PUBLIC_BACKEND_URL; testing policy expects EXPO_BACKEND_URL key to exist/align.",
+    "Backend Midtrans guards are correctly implemented in source: restricted enabled_payments list, server-side amount recomputation, SHA-512 signature + amount check, and idempotent transaction insert before paid update."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter28_midtrans_nonsecret_paths.py",
+    "/app/tests/iter28_seed_midtrans_customer_bill.py",
+    "/app/tests/iter28_cleanup_test_data.py",
+    "/app/test_reports/iteration_28.json"
+  ],
+  "success_rate": {
+    "backend": "67% (2/3 targeted tests passed; openapi public route check failed)",
+    "frontend": "100% (targeted customer Midtrans non-secret flow passed)"
+  },
+  "seed_data_creation": "Created one TEST_iter28 customer+order for Pelanggan Bayar tab validation; cleaned via /app/tests/iter28_cleanup_test_data.py and verified 0 remaining TEST_iter28 rows.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Auth credentials read from /app/memory/test_credentials.md before login. Customer flow validated on mobile viewport 375x667: Bayar card shows GoPay/QRIS + VA list, no Tunai inside Midtrans card, click 'Pilih Metode di Midtrans' with empty secret shows safe error and keeps page on /bayar. API check confirmed payment_status remains unpaid.",
+  "rca_of_issue": "RCA blocker: ingress routing sends /openapi.json to frontend shell and does not expose backend docs under /api/openapi.json, causing structural route verification via public endpoint to fail despite routes existing in backend source. Mitigation: map a backend docs path on ingress (e.g., /backend-openapi.json -> backend:8001/openapi.json) or allow /api/openapi.json passthrough."
+}

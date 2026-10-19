@@ -3,6 +3,8 @@ import uuid
 import json
 import random
 import logging
+import hashlib
+import hmac
 from pathlib import Path
 from datetime import datetime, timezone, timedelta, date
 from decimal import Decimal
@@ -11,8 +13,9 @@ from typing import Optional, List
 import asyncpg
 import bcrypt
 import requests
+import httpx
 from starlette.concurrency import run_in_threadpool
-from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -124,6 +127,38 @@ def now_utc():
     return datetime.now(timezone.utc)
 
 
+MIDTRANS_ENABLED_PAYMENTS = ["gopay", "bni_va", "bri_va", "cimb_va", "echannel", "permata_va"]
+MIDTRANS_SUCCESS = {"settlement", "capture"}
+MIDTRANS_FINAL_FAILURE = {"expire", "cancel", "failure", "deny"}
+
+
+def midtrans_config() -> dict:
+    server_key = os.getenv("MIDTRANS_SERVER_KEY", "").strip()
+    if not server_key:
+        raise HTTPException(503, "Pembayaran online sedang belum dikonfigurasi")
+    production = os.getenv("MIDTRANS_IS_PRODUCTION", "false").strip().lower() == "true"
+    return {
+        "server_key": server_key,
+        "snap_url": "https://app.midtrans.com/snap/v1/transactions" if production else "https://app.sandbox.midtrans.com/snap/v1/transactions",
+    }
+
+
+async def midtrans_amount_for_order(conn, row, promo_code: str = "") -> tuple[Decimal, Decimal]:
+    total = Decimal(str(row["total"]))
+    discount = Decimal(0)
+    code = promo_code.strip()
+    if code:
+        promo = await conn.fetchrow(
+            """select * from promos where lower(code)=lower($1) and active=true
+               and (valid_until is null or valid_until >= (now() at time zone 'Asia/Jakarta')::date)
+               and (outlet_id is null or outlet_id=$2) order by created_at desc limit 1""",
+            code, row["outlet_id"])
+        if not promo:
+            raise HTTPException(400, "Kode promo tidak valid")
+        discount = (total * Decimal(str(promo["discount_pct"])) / Decimal(100)).quantize(Decimal("1"))
+    return total - min(discount, total), discount
+
+
 @app.on_event("startup")
 async def startup():
     global pool
@@ -190,6 +225,14 @@ alter table orders add column if not exists address text default '';
 alter table orders add column if not exists express boolean not null default false;
 alter table orders add column if not exists discount numeric(12,2) not null default 0;
 alter table orders add column if not exists paid_amount numeric(12,2) not null default 0;
+alter table orders add column if not exists midtrans_order_id text;
+alter table orders add column if not exists midtrans_transaction_id text;
+alter table orders add column if not exists midtrans_token text;
+alter table orders add column if not exists midtrans_redirect_url text;
+alter table orders add column if not exists midtrans_transaction_status text;
+alter table orders add column if not exists midtrans_gross_amount numeric(12,2);
+alter table orders add column if not exists midtrans_paid_at timestamptz;
+create unique index if not exists orders_midtrans_order_id_uq on orders(midtrans_order_id) where midtrans_order_id is not null;
 update orders set express=true where express=false and exists (
   select 1 from order_items oi where oi.order_id=orders.id and oi.service_name ilike '%(Express)%'
 );
@@ -779,6 +822,10 @@ class PayBody(BaseModel):
     promo_code: Optional[str] = None
 
 
+class MidtransSnapBody(BaseModel):
+    promo_code: Optional[str] = None
+
+
 class TopupBody(BaseModel):
     customer_id: str
     outlet_id: Optional[str] = None
@@ -1343,7 +1390,7 @@ async def list_orders(outlet_id: Optional[str] = None, customer_id: Optional[str
         await expire_order_photos(conn)
         clauses, args = [], []
         if unpaid:
-            clauses.append("payment_status='unpaid' and status<>'cancelled' and total > 0")
+            clauses.append("payment_status in ('unpaid','pending','expire','cancel','failure','expired','failed','cancelled') and status<>'cancelled' and total > 0")
         if outlet_id:
             args.append(outlet_id); clauses.append(f"outlet_id=${len(args)}")
         if customer_id:
@@ -1653,6 +1700,122 @@ async def pay_order(oid: str, b: Optional[PayBody] = None):
                 oid, row["outlet_id"], charged, method)
         row = await conn.fetchrow("select * from orders where id=$1", oid)
         return (await enrich_orders(conn, [row]))[0]
+
+
+@api.post("/orders/{oid}/midtrans/snap")
+async def create_midtrans_snap(oid: str, b: MidtransSnapBody):
+    """Create a hosted Midtrans Snap payment from trusted order data only."""
+    config = midtrans_config()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow("select * from orders where id=$1 for update", oid)
+            if not row:
+                raise HTTPException(404, "Order tidak ditemukan")
+            if row["payment_status"] == "paid":
+                raise HTTPException(409, "Order sudah lunas")
+            if row["midtrans_transaction_status"] == "pending" and row["midtrans_redirect_url"]:
+                return {"order_id": str(row["id"]), "redirect_url": row["midtrans_redirect_url"], "status": "pending"}
+            gross_amount, discount = await midtrans_amount_for_order(conn, row, b.promo_code or "")
+            if gross_amount <= 0:
+                raise HTTPException(400, "Nominal pembayaran tidak valid")
+            customer = await conn.fetchrow("select name,email,phone from customers where id=$1", row["customer_id"])
+            midtrans_order_id = f"JW-{str(row['id']).replace('-', '')[:18]}-{uuid.uuid4().hex[:6]}"
+
+        payload = {
+            "transaction_details": {"order_id": midtrans_order_id, "gross_amount": int(gross_amount)},
+            "enabled_payments": MIDTRANS_ENABLED_PAYMENTS,
+            "customer_details": {
+                "first_name": (customer["name"] if customer else "Pelanggan") or "Pelanggan",
+                "email": (customer["email"] if customer else "") or None,
+                "phone": (customer["phone"] if customer else "") or None,
+            },
+            "item_details": [{"id": str(row["id"]), "price": int(gross_amount), "quantity": 1, "name": f"Laundry {row['code']}"}],
+            "expiry": {"unit": "minutes", "duration": 60},
+        }
+        payload["customer_details"] = {key: value for key, value in payload["customer_details"].items() if value}
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                response = await client.post(config["snap_url"], json=payload, auth=(config["server_key"], ""), headers={"Accept": "application/json"})
+        except httpx.HTTPError:
+            logger.warning("Midtrans Snap tidak dapat dihubungi untuk order %s", oid)
+            raise HTTPException(502, "Penyedia pembayaran tidak dapat dihubungi")
+        if response.status_code >= 400:
+            logger.warning("Midtrans Snap menolak transaksi order %s dengan status %s", oid, response.status_code)
+            raise HTTPException(502, "Penyedia pembayaran belum dapat membuat transaksi")
+        result = response.json()
+        token, redirect_url = result.get("token"), result.get("redirect_url")
+        if not token or not redirect_url:
+            logger.warning("Midtrans Snap memberi respons tanpa token untuk order %s", oid)
+            raise HTTPException(502, "Respons pembayaran tidak lengkap")
+        async with conn.transaction():
+            await conn.execute(
+                """update orders set payment_status='pending', payment_method='midtrans_snap', discount=$1,
+                   paid_amount=0, midtrans_order_id=$2, midtrans_token=$3, midtrans_redirect_url=$4,
+                   midtrans_transaction_status='pending', midtrans_gross_amount=$5, updated_at=now() where id=$6""",
+                discount, midtrans_order_id, token, redirect_url, gross_amount, oid)
+        return {"order_id": str(row["id"]), "redirect_url": redirect_url, "status": "pending"}
+
+
+@api.get("/orders/{oid}/payment-status")
+async def get_payment_status(oid: str):
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """select id,payment_status,payment_method,paid_amount,midtrans_transaction_status,
+               midtrans_paid_at from orders where id=$1""", oid)
+        if not row:
+            raise HTTPException(404, "Order tidak ditemukan")
+        result = row_to_dict(row)
+        result["is_paid"] = row["payment_status"] == "paid"
+        return result
+
+
+@api.post("/midtrans/webhook")
+async def midtrans_webhook(request: Request):
+    """Verify Midtrans SHA-512 notification, then apply payment exactly once."""
+    config = midtrans_config()
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "Notifikasi pembayaran tidak valid")
+    provider_order_id = str(body.get("order_id") or "")
+    status_code = str(body.get("status_code") or "")
+    gross_amount = str(body.get("gross_amount") or "")
+    provided_signature = str(body.get("signature_key") or "")
+    expected_signature = hashlib.sha512(f"{provider_order_id}{status_code}{gross_amount}{config['server_key']}".encode("utf-8")).hexdigest()
+    if not provided_signature or not hmac.compare_digest(provided_signature, expected_signature):
+        raise HTTPException(403, "Signature Midtrans tidak valid")
+
+    transaction_status = str(body.get("transaction_status") or "pending")
+    fraud_status = str(body.get("fraud_status") or "")
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow("select * from orders where midtrans_order_id=$1 for update", provider_order_id)
+            if not row:
+                raise HTTPException(404, "Order pembayaran tidak ditemukan")
+            expected_amount = Decimal(str(row["midtrans_gross_amount"] or 0))
+            try:
+                notified_amount = Decimal(gross_amount)
+            except Exception:
+                raise HTTPException(400, "Nominal notifikasi tidak valid")
+            if notified_amount != expected_amount:
+                raise HTTPException(400, "Nominal notifikasi tidak sesuai")
+            valid_success = status_code == "200" and transaction_status in MIDTRANS_SUCCESS and fraud_status in ("", "accept")
+            if valid_success:
+                if row["payment_status"] != "paid":
+                    exists = await conn.fetchval("select 1 from transactions where order_id=$1 and type='income' limit 1", row["id"])
+                    if not exists:
+                        await conn.execute("insert into transactions(order_id,outlet_id,amount,type,method) values($1,$2,$3,'income',$4)", row["id"], row["outlet_id"], expected_amount, body.get("payment_type") or "midtrans")
+                await conn.execute(
+                    """update orders set payment_status='paid', payment_method=$1, paid_amount=$2,
+                       midtrans_transaction_id=$3, midtrans_transaction_status=$4, midtrans_paid_at=coalesce(midtrans_paid_at,now()), updated_at=now() where id=$5""",
+                    body.get("payment_type") or "midtrans", expected_amount, body.get("transaction_id"), transaction_status, row["id"])
+            else:
+                state = transaction_status if transaction_status in MIDTRANS_FINAL_FAILURE else "pending"
+                await conn.execute(
+                    """update orders set payment_status=$1, midtrans_transaction_id=coalesce($2,midtrans_transaction_id),
+                       midtrans_transaction_status=$3, updated_at=now() where id=$4 and payment_status<>'paid'""",
+                    "unpaid" if state == "pending" else state, body.get("transaction_id"), state, row["id"])
+        return {"ok": True}
 
 
 @api.post("/orders/{oid}/cancel")
@@ -2447,6 +2610,12 @@ async def serve_file(path: str):
 @api.get("/")
 async def root():
     return {"app": "Jadiwangi App API", "status": "ok"}
+
+
+@api.get("/openapi.json", include_in_schema=False)
+async def api_openapi():
+    """Expose API schema behind the same /api ingress prefix for safe client verification."""
+    return app.openapi()
 
 
 app.include_router(api)

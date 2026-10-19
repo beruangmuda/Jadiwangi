@@ -402,10 +402,21 @@
 ##         -working: true
 ##         -agent: "main"
 ##         -comment: "Tahap Cuci/Pengering/Setrika/Packing langsung diberi nama pegawai login dan boleh berbeda per tahap. Ringkasan Dashboard, Gaji, dan Kasbon memakai cache hingga pukul 21.00 Asia/Jakarta; transaksi order/pembayaran tetap dikirim langsung. Indikator Dikerjakan dipindahkan menjadi pill ringkas terpisah."
+##   - task: "Pembayaran pelanggan Midtrans Snap Sandbox"
+##     implemented: true
+##     working: true
+##     file: "backend/server.py, backend/.env, frontend/app/(customer)/bayar.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Snap dibuat backend dari nominal order database; metode dibatasi gopay, bni_va, bri_va, cimb_va, echannel, permata_va. Webhook SHA-512 memverifikasi signature, nominal, settlement/capture, lalu memasukkan transaksi idempoten. Secret Sandbox masih kosong, sehingga live Sandbox E2E tertunda. Uji konfigurasi memastikan endpoint menolak aman HTTP 503 tanpa Secret dan data test dibersihkan."
 
 ## test_plan:
 ##   current_focus:
-##     - "Verifikasi pengguna pada perangkat native untuk hasil capture kamera fisik"
+##     - "Masukkan Secret Sandbox Midtrans dan lakukan pembayaran Sandbox E2E"
 ##   test_all: true
 ##   test_priority: "high_first"
 
@@ -452,3 +463,7 @@
 ##     -message: "ITERATION 27: Transaksi tetap realtime, sedangkan Dashboard Owner/Pegawai, Gaji, dan Kasbon memakai stale cache hingga 21.00 Asia/Jakarta. Label tahap petugas mendapat visual account-check yang lebih jelas dan indikator Dikerjakan menjadi pill ringkas terpisah. Perlu retest atribusi pekerja berbeda per tahap dan cache UI."
 ##     -agent: "main"
 ##     -message: "ITERATION 27 FIX VERIFIED: Retest 27 backend 3/3 dan frontend stage/queue/ready PASS. Owner Dashboard sempat skeleton intermittent saat login; login sekarang menyetel sesi langsung tanpa menunggu penyimpanan perangkat dan dashboard menunggu sesi siap sambil mempertahankan data cache. Screenshot login Owner menampilkan KPI dashboard PASS."
+##     -agent: "main"
+##     -message: "ITERATION 28: Midtrans Snap Sandbox disiapkan untuk pelanggan. Backend membuat Snap dari total server, menolak tanpa MIDTRANS_SERVER_KEY, menyimpan status provider, dan webhook HTTPS idempoten hanya menandai paid saat settlement/capture tervalidasi. UI pelanggan menampilkan GoPay/QRIS utama serta VA BNI/BRI/CIMB/Mandiri/Permata. Menunggu Secret Sandbox untuk uji E2E."
+##     -agent: "main"
+##     -message: "ITERATION 28 FIX VERIFIED: Testing agent menemukan OpenAPI backend tidak terbuka pada jalur publik. Ditambahkan /api/openapi.json tanpa informasi rahasia; curl lokal dan preview publik memverifikasi endpoint Snap, webhook, dan payment-status. Sandbox checkout/webhook E2E tetap menunggu Secret Sandbox sesuai rencana."

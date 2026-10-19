@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, Pressable, RefreshControl, Platform, TextInput } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
+import * as WebBrowser from "expo-web-browser";
 
 import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
@@ -29,6 +30,7 @@ export default function Bayar() {
   const [promoInput, setPromoInput] = useState("");
   const [promo, setPromo] = useState<any>(null);
   const [promoError, setPromoError] = useState("");
+  const [midtransPendingId, setMidtransPendingId] = useState<string | null>(null);
 
   const { data: bills, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["bills", customerId],
@@ -49,6 +51,19 @@ export default function Bayar() {
     enabled: !!customerId,
   });
   const coin = Number(wallet?.deposit ?? 0);
+  const { data: midtransStatus } = useQuery({
+    queryKey: ["midtrans-status", midtransPendingId],
+    queryFn: () => api.get(`/orders/${midtransPendingId}/payment-status`),
+    enabled: !!midtransPendingId,
+    refetchInterval: midtransPendingId ? 3000 : false,
+  });
+
+  useEffect(() => {
+    if (!midtransPendingId || !midtransStatus?.is_paid) return;
+    setMidtransPendingId(null); setOpenId(null); setPromo(null); setPromoInput("");
+    qc.invalidateQueries({ queryKey: ["bills"] });
+    qc.invalidateQueries({ queryKey: ["my-orders"] });
+  }, [midtransPendingId, midtransStatus?.is_paid, qc]);
 
   const pay = useMutation({
     mutationFn: (oid: string) => api.post(`/orders/${oid}/pay`, { method, promo_code: promo?.code || null }),
@@ -60,6 +75,21 @@ export default function Bayar() {
       qc.invalidateQueries({ queryKey: ["cust-detail"] });
     },
     onError: (e: any) => setError(e?.message || "Pembayaran gagal"),
+  });
+
+  const payMidtrans = useMutation({
+    mutationFn: (oid: string) => api.post(`/orders/${oid}/midtrans/snap`, { promo_code: promo?.code || null }),
+    onSuccess: async (payment: any, oid: string) => {
+      setMidtransPendingId(oid); setError("");
+      if (Platform.OS === "web") {
+        window.open(payment.redirect_url, "_blank", "noopener,noreferrer");
+      } else {
+        await WebBrowser.openBrowserAsync(payment.redirect_url);
+      }
+      qc.invalidateQueries({ queryKey: ["midtrans-status", oid] });
+      qc.invalidateQueries({ queryKey: ["bills"] });
+    },
+    onError: (e: any) => setError(e?.message || "Pembayaran Midtrans belum dapat dimulai"),
   });
 
   const checkPromo = useMutation({
@@ -220,62 +250,33 @@ export default function Bayar() {
                       <Icon name={method === "coin" ? "radiobox-marked" : "radiobox-blank"} size={20} color={method === "coin" ? colors.brandPrimary : colors.muted} />
                     </Pressable>
 
-                    {/* Opsi 2 — QRIS / Cash */}
-                    <Pressable
-                      testID={`method-qriscash-${o.id}`}
-                      onPress={() => { setMethod(method === "cash" ? "cash" : "qris"); setError(""); }}
-                      style={[styles.optCard, method !== "coin" && { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary }]}
-                    >
-                      <View style={[styles.optIcon, { backgroundColor: colors.brand }]}>
-                        <Icon name="qrcode-scan" size={22} color={colors.onBrand} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.optTitle}>Bayar QRIS / Cash</Text>
-                        <Text style={styles.optTotal}>{rupiah(afterPromo)}</Text>
-                        <Text style={styles.muted}>{promoCut ? `Sudah termasuk promo ${rupiah(promoCut)}` : "Bayar di outlet atau ke kurir, tanpa diskon"}</Text>
-                      </View>
-                      <Icon name={method !== "coin" ? "radiobox-marked" : "radiobox-blank"} size={20} color={method !== "coin" ? colors.brandPrimary : colors.muted} />
-                    </Pressable>
-
-                    {method !== "coin" ? (
-                      <View style={styles.methodRow}>
-                        {[{ key: "qris", label: "QRIS", icon: "qrcode-scan" }, { key: "cash", label: "Tunai", icon: "cash" }].map((m) => {
-                          const on = method === m.key;
-                          return (
-                            <Pressable
-                              key={m.key}
-                              testID={`method-${m.key}`}
-                              onPress={() => { setMethod(m.key); setError(""); }}
-                              style={[styles.methodCard, on && { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary }]}
-                            >
-                              <Icon name={m.icon} size={18} color={on ? colors.brandPrimary : colors.muted} />
-                              <Text style={[styles.methodLabel, on && { color: colors.brandPrimary }]}>{m.label}</Text>
-                            </Pressable>
-                          );
-                        })}
-                      </View>
-                    ) : null}
+                    <View testID={`midtrans-methods-${o.id}`} style={styles.midtransCard}>
+                      <View style={styles.midtransHead}><View style={[styles.optIcon, { backgroundColor: colors.brand }]}><Icon name="qrcode-scan" size={22} color={colors.onBrand} /></View><View style={{ flex: 1 }}><Text style={styles.optTitle}>Bayar lewat Midtrans</Text><Text style={styles.optTotal}>{rupiah(afterPromo)}</Text></View><Text style={styles.snapLabel}>SNAP</Text></View>
+                      <View style={styles.midtransPrimary}><Icon name="wallet" size={15} color={colors.brandPrimary} /><Text style={styles.midtransPrimaryText}>Utama: GoPay / QRIS</Text></View>
+                      <Text style={styles.midtransBanks}>Virtual Account: BNI • BRI • CIMB Niaga • Mandiri • PermataBank</Text>
+                      <Pressable testID={`pay-midtrans-${o.id}`} onPress={() => payMidtrans.mutate(o.id)} disabled={payMidtrans.isPending} style={[styles.midtransButton, payMidtrans.isPending && { opacity: 0.6 }]}><Icon name="open-in-new" size={17} color={colors.onBrandPrimary} /><Text style={styles.midtransButtonText}>{midtransPendingId === o.id ? "Lanjutkan Pembayaran Midtrans" : "Pilih Metode di Midtrans"}</Text></Pressable>
+                    </View>
 
                     <View style={styles.note}>
                       <Icon name="information-outline" size={16} color={colors.brand} />
                       <Text style={styles.noteText}>
                         {method === "coin"
                           ? `Coin terpakai ${coinCharge.toLocaleString("id-ID")} dari ${coin.toLocaleString("id-ID")} coin.`
-                          : method === "qris"
-                            ? "Scan QRIS Jadiwangi di outlet atau minta ke kasir, lalu tekan Bayar Sekarang."
-                            : "Bayar tunai diawal atau setelah pakaian ditimbang."}
+                          : "Pembayaran online diproses aman oleh Midtrans. Order menjadi lunas setelah Midtrans mengonfirmasi pembayaran."}
                       </Text>
                     </View>
 
+                    {midtransPendingId === o.id ? <View testID={`midtrans-pending-${o.id}`} style={styles.pendingNotice}><Icon name="progress-clock" size={17} color={colors.brand} /><Text style={styles.pendingText}>Menunggu konfirmasi pembayaran Midtrans. Halaman akan diperbarui otomatis.</Text></View> : null}
+
                     {error ? <Text style={styles.error} testID="pay-error">{error}</Text> : null}
 
-                    <PrimaryButton
+                    {method === "coin" ? <PrimaryButton
                       label={`Bayar Sekarang • ${rupiah(method === "coin" ? coinCharge : afterPromo)}`}
                       icon="check-circle"
                       onPress={() => pay.mutate(o.id)}
                       loading={pay.isPending}
                       testID={`pay-${o.id}`}
-                    />
+                    /> : null}
                   </View>
                 ) : null}
               </Card>
@@ -306,9 +307,16 @@ const useStyles = makeStyles((c) => ({
   totalLabel: { fontFamily: fonts.bodyBold, fontSize: 14, color: c.onSurfaceSecondary },
   totalValue: { fontFamily: fonts.displayBold, fontSize: 18, color: c.brandPrimary },
   label: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onSurfaceSecondary },
-  methodRow: { flexDirection: "row", gap: spacing.sm },
-  methodCard: { flex: 1, alignItems: "center", gap: 6, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface },
-  methodLabel: { fontFamily: fonts.bodyBold, fontSize: 12, color: c.onSurfaceSecondary, textAlign: "center" },
+  midtransCard: { gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, borderWidth: 1.5, borderColor: c.brandPrimary, backgroundColor: c.brandTertiary },
+  midtransHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  snapLabel: { fontFamily: fonts.bodyBold, fontSize: 10, color: c.brandPrimary, borderWidth: 1, borderColor: c.brandPrimary, borderRadius: radius.sm, paddingHorizontal: 6, paddingVertical: 3 },
+  midtransPrimary: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: c.surface, alignSelf: "flex-start", borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 5 },
+  midtransPrimaryText: { fontFamily: fonts.bodyBold, fontSize: 12, color: c.brandPrimary },
+  midtransBanks: { fontFamily: fonts.bodySemi, fontSize: 11, color: c.onBrandTertiary, lineHeight: 17 },
+  midtransButton: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, borderRadius: radius.md, backgroundColor: c.brandPrimary },
+  midtransButtonText: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.onBrandPrimary },
+  pendingNotice: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: c.surfaceSecondary, borderRadius: radius.md, padding: spacing.sm },
+  pendingText: { flex: 1, fontFamily: fonts.bodySemi, fontSize: 12, color: c.onSurfaceSecondary },
   note: { flexDirection: "row", gap: spacing.sm, backgroundColor: c.brandTertiary, borderRadius: radius.md, padding: spacing.md },
   noteText: { flex: 1, fontFamily: fonts.body, fontSize: 12, color: c.onBrandTertiary, lineHeight: 17 },
   error: { fontFamily: fonts.bodyBold, fontSize: 12, color: c.error, textAlign: "center" },

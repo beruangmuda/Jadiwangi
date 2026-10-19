@@ -210,6 +210,14 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] **Indikator Dikerjakan**: angka proses dipindahkan menjadi pill kecil di bawah statistik utama agar lebih seimbang dan tidak mengganggu dua kartu aksi utama.
 - [x] Login Owner dan Dashboard kini memulihkan sesi lebih cepat serta mempertahankan data terakhir saat konteks outlet berubah; screenshot KPI Owner PASS tanpa skeleton tertahan.
 
+## Update (2026-09, iterasi 28) — Midtrans Snap Sandbox untuk Pelanggan
+- [x] **Metode pelanggan Midtrans**: layar Bayar pelanggan menampilkan GoPay/QRIS sebagai pilihan utama serta Virtual Account BNI, BRI, CIMB Niaga, Mandiri, dan PermataBank. Pembayaran dibuka pada halaman Snap Midtrans; JW Coin tetap tersedia sebagai saldo internal.
+- [x] **Keamanan transaksi**: `POST /api/orders/{id}/midtrans/snap` menghitung nominal ulang dari order di PostgreSQL, memakai metode aktif yang diizinkan, dan hanya menyimpan URL pembayaran dari backend. Server Key tidak pernah dikirim ke aplikasi, log, atau respons API.
+- [x] **Webhook idempoten**: `POST /api/midtrans/webhook` memverifikasi SHA-512 signature, order ID, dan nominal. Hanya notifikasi Midtrans `settlement` atau `capture` valid yang mengubah order menjadi `paid` dan mencatat pendapatan tepat satu kali. Status `pending`, `expire`, `cancel`, dan `failure` disimpan untuk retry.
+- [x] Environment backend memiliki placeholder kosong: `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_MERCHANT_ID`, dan `MIDTRANS_IS_PRODUCTION=false`.
+- [ ] **P0 verifikasi Sandbox**: masukkan Secret Sandbox melalui menu Secrets dan uji notifikasi publik HTTPS sebelum memakai pembayaran nyata. Tanpa Secret, endpoint Snap menolak aman (HTTP 503)—ini telah diuji dengan order uji yang kemudian dibersihkan.
+- [x] Skema endpoint tersedia aman di `GET /api/openapi.json` melalui jalur publik untuk validasi integrasi, tanpa mengekspos kredensial.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).
