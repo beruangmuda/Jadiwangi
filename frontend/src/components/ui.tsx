@@ -85,7 +85,7 @@ export function SectionHeader({ title, action, onAction }: { title: string; acti
 // ---------------------------------------------------------------------------
 // Pill / Chip
 // ---------------------------------------------------------------------------
-export function Pill({ label, tone = "neutral" }: { label: string; tone?: "neutral" | "success" | "warning" | "error" | "brand" | "azure" }) {
+export function Pill({ label, tone = "neutral", testID }: { label: string; tone?: "neutral" | "success" | "warning" | "error" | "brand" | "azure"; testID?: string }) {
   const { colors } = useTheme();
   const map: Record<string, { bg: string; fg: string }> = {
     neutral: { bg: colors.surfaceTertiary, fg: colors.onSurfaceTertiary },
@@ -97,7 +97,7 @@ export function Pill({ label, tone = "neutral" }: { label: string; tone?: "neutr
   };
   const t = map[tone];
   return (
-    <View style={{ backgroundColor: t.bg, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 }}>
+    <View testID={testID} style={{ backgroundColor: t.bg, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 }}>
       <Text style={{ fontFamily: fonts.bodyBold, fontSize: 11, color: t.fg }}>{label}</Text>
     </View>
   );

@@ -219,6 +219,13 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [ ] **P1 simulasi pelanggan**: lakukan satu pembayaran lewat Midtrans Sandbox Simulator dari halaman Snap untuk mengonfirmasi kanal GoPay/QRIS atau VA yang aktif di dashboard.
 - [x] Skema endpoint tersedia aman di `GET /api/openapi.json` melalui jalur publik untuk validasi integrasi, tanpa mengekspos kredensial.
 
+## Update (2026-10, iterasi 29) — Status Pelanggan Konsisten Setelah Bayar
+- [x] **Sesudah timbang**: pelanggan melihat **Siap Dibayar**, sedangkan permintaan yang belum ditimbang tetap menampilkan **Menunggu Ditimbang**.
+- [x] **Sesudah pembayaran**: settlement Midtrans maupun JW Coin memindahkan nota dari `quoted` ke `received`, sehingga langsung masuk antrian produksi pegawai. Pelanggan melihat **Sedang Diproses** dan badge **Lunas** pada Pantau Ordermu, Riwayat, serta Detail Pesanan.
+- [x] **Kartu Bayar otomatis tertutup**: layar Bayar memeriksa status Midtrans setiap 3 detik termasuk saat aplikasi/browser kembali fokus. Begitu webhook menandai lunas, rincian pembayaran tertutup dan nota hilang dari daftar tagihan.
+- [x] Teruji lokal: timbang → Snap → webhook settlement menghasilkan `received/paid/Sedang Diproses`; uji layar pelanggan memverifikasi Pantau/Riwayat dan penutupan otomatis kartu. Data uji dibersihkan.
+- [x] Retest Iterasi 29 PASS: backend 3/3 dan alur mobile memastikan badge Riwayat, polling settlement, penutupan kartu Bayar, serta idempotensi pendapatan berjalan sesuai kebutuhan.
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).

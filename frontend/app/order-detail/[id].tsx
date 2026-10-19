@@ -81,7 +81,7 @@ export default function OrderDetail() {
         {/* Status */}
         <Card style={{ gap: spacing.md }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={styles.status} testID="order-status">{order.stage_label}</Text>
+            <Text style={styles.status} testID="order-status">{cust ? (order.customer_stage_label || order.stage_label) : order.stage_label}</Text>
             <Pill label={order.payment_status === "paid" ? "Lunas" : "Belum bayar"} tone={order.payment_status === "paid" ? "success" : "warning"} />
           </View>
           {order.status === "cancelled" ? (

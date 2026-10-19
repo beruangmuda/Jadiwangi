@@ -413,10 +413,21 @@
 ##         -working: true
 ##         -agent: "main"
 ##         -comment: "Snap dibuat backend dari nominal order database; metode dibatasi gopay, bni_va, bri_va, cimb_va, echannel, permata_va. Webhook SHA-512 memverifikasi signature, nominal, settlement/capture, lalu memasukkan transaksi idempoten. Secret Sandbox masih kosong, sehingga live Sandbox E2E tertunda. Uji konfigurasi memastikan endpoint menolak aman HTTP 503 tanpa Secret dan data test dibersihkan."
+##   - task: "Status pelanggan setelah timbang dan pembayaran Midtrans"
+##     implemented: true
+##     working: true
+##     file: "backend/server.py, frontend/app/(customer)/index.tsx, frontend/app/(customer)/riwayat.tsx, frontend/app/(customer)/bayar.tsx, frontend/app/order-detail/[id].tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Settlement Midtrans dan pembayaran coin kini memindahkan quoted ke received agar masuk antrean produksi. Label pelanggan dipisahkan: request=Menunggu Ditimbang, quoted unpaid=Siap Dibayar, paid/produksi=Sedang Diproses. Uji UI membuktikan Pantau Ordermu dan Riwayat menampilkan Sedang Diproses/Lunas; kartu Bayar otomatis tertutup setelah webhook settlement."
 
 ## test_plan:
 ##   current_focus:
-##     - "Verifikasi pengguna pada perangkat native untuk hasil capture kamera fisik"
+##     - "Status pelanggan setelah timbang/pay dan kartu Bayar otomatis tertutup"
 ##   test_all: true
 ##   test_priority: "high_first"
 
@@ -469,3 +480,7 @@
 ##     -message: "ITERATION 28 FIX VERIFIED: Testing agent menemukan OpenAPI backend tidak terbuka pada jalur publik. Ditambahkan /api/openapi.json tanpa informasi rahasia; curl lokal dan preview publik memverifikasi endpoint Snap, webhook, dan payment-status. Sandbox checkout/webhook E2E tetap menunggu Secret Sandbox sesuai rencana."
 ##     -agent: "main"
 ##     -message: "ITERATION 28 SANDBOX VERIFIED: Setelah Secret Sandbox diisi, POST Snap berhasil membentuk redirect URL app.sandbox.midtrans.com serta menyimpan pending. Notifikasi settlement bertanda tangan valid dikirim melalui URL webhook HTTPS publik dua kali; order menjadi paid dan transaksi pendapatan tetap satu (idempoten). Semua order/transaksi TEST dibersihkan."
+##     -agent: "main"
+##     -message: "ITERATION 29: Settlement/pembayaran langsung kini menggeser nota quoted ke received. Layar pelanggan memakai customer_stage_label agar hanya pelanggan melihat Sedang Diproses, sementara pegawai tetap melihat tahap teknis. Kartu Bayar merefresh status di background/focus dan menutup otomatis saat pembayaran paid. Uji lokal PASS; perlu retest." 
+##     -agent: "testing"
+##     -message: "ITERATION 29 VERIFIED: Backend 3/3 dan frontend mobile PASS. quoted→settlement menjadi received/paid/Sedang Diproses, webhook ulang tetap satu transaksi income, Riwayat menampilkan Sedang Diproses+Lunas, dan kartu Bayar menutup otomatis. Pill sekarang meneruskan testID untuk verifikasi badge; seluruh data TEST_iter29 dibersihkan."

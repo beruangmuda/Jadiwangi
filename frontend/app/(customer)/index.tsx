@@ -165,7 +165,7 @@ export default function CustomerHome() {
                       {o.delivery_type !== "self" ? ` • ${o.delivery_type === "pickup" ? "Dijemput" : "Diantar"}` : ""}
                     </Text>
                   </View>
-                  <View style={styles.statusPill}><Text style={styles.statusText}>{o.stage_label}</Text></View>
+                  <View testID={`customer-order-status-${o.id}`} style={styles.statusPill}><Text style={styles.statusText}>{o.customer_stage_label || o.stage_label}</Text></View>
                   <Icon name="chevron-right" size={18} color={colors.muted} />
                 </Pressable>
               ))}

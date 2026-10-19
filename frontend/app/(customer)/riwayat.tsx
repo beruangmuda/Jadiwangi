@@ -58,8 +58,8 @@ export default function Riwayat() {
               </View>
               <View style={{ alignItems: "flex-end", gap: 4 }}>
                 <Text style={styles.total}>{rupiah(o.total)}</Text>
-                <Pill label={o.stage_label} tone={o.status === "completed" ? "success" : o.status === "cancelled" ? "error" : "azure"} />
-                <Pill label={o.payment_status === "paid" ? "Lunas" : "Belum bayar"} tone={o.payment_status === "paid" ? "success" : "warning"} />
+                <Pill testID={`history-stage-${o.id}`} label={o.customer_stage_label || o.stage_label} tone={o.status === "completed" ? "success" : o.status === "cancelled" ? "error" : "azure"} />
+                <Pill testID={`history-payment-${o.id}`} label={o.payment_status === "paid" ? "Lunas" : "Belum bayar"} tone={o.payment_status === "paid" ? "success" : "warning"} />
               </View>
             </Pressable>
           ))

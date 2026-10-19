@@ -127,6 +127,16 @@ def now_utc():
     return datetime.now(timezone.utc)
 
 
+def customer_stage_label(status: str, payment_status: str, is_request: bool) -> str:
+    if is_request or status == "requested":
+        return "Menunggu Ditimbang"
+    if status == "quoted" and payment_status != "paid":
+        return "Siap Dibayar"
+    if status in ("quoted", "received", "washing", "drying", "ironing", "packing"):
+        return "Sedang Diproses"
+    return STAGE_LABELS.get(status, status)
+
+
 MIDTRANS_ENABLED_PAYMENTS = ["gopay", "bni_va", "bri_va", "cimb_va", "echannel", "permata_va"]
 MIDTRANS_SUCCESS = {"settlement", "capture"}
 MIDTRANS_FINAL_FAILURE = {"expire", "cancel", "failure", "deny"}
@@ -1375,6 +1385,7 @@ async def enrich_orders(conn, rows):
         d["customer_name"] = cust["name"] if cust else "-"
         d["customer_phone"] = cust["phone"] if cust else ""
         d["stage_label"] = STAGE_LABELS.get(r["status"], r["status"])
+        d["customer_stage_label"] = customer_stage_label(r["status"], r["payment_status"], bool(r["is_request"]))
         due = r["due_at"]
         d["overdue"] = bool(due and due < now_utc() and r["status"] not in ("completed", "cancelled"))
         d["items_summary"] = ", ".join(summaries.get(r["id"], []))
@@ -1693,7 +1704,8 @@ async def pay_order(oid: str, b: Optional[PayBody] = None):
                 await conn.execute("update vouchers set used=true, order_id=$1 where id=$2", oid, voucher["id"])
             await conn.execute(
                 """update orders set payment_status='paid', payment_method=$1, discount=$2,
-                   paid_amount=$3, updated_at=now() where id=$4""",
+                   paid_amount=$3, status=case when status='quoted' then 'received' else status end,
+                   updated_at=now() where id=$4""",
                 method, discount, charged, oid)
             await conn.execute(
                 "insert into transactions(order_id,outlet_id,amount,type,method) values($1,$2,$3,'income',$4)",
@@ -1813,6 +1825,7 @@ async def midtrans_webhook(request: Request):
                         await conn.execute("insert into transactions(order_id,outlet_id,amount,type,method) values($1,$2,$3,'income',$4)", row["id"], row["outlet_id"], expected_amount, body.get("payment_type") or "midtrans")
                 await conn.execute(
                     """update orders set payment_status='paid', payment_method=$1, paid_amount=$2,
+                       status=case when status='quoted' then 'received' else status end,
                        midtrans_transaction_id=$3, midtrans_transaction_status=$4, midtrans_paid_at=coalesce(midtrans_paid_at,now()), updated_at=now() where id=$5""",
                     body.get("payment_type") or "midtrans", expected_amount, body.get("transaction_id"), transaction_status, row["id"])
             else:

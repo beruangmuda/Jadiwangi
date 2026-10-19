@@ -56,13 +56,17 @@ export default function Bayar() {
     queryFn: () => api.get(`/orders/${midtransPendingId}/payment-status`),
     enabled: !!midtransPendingId,
     refetchInterval: midtransPendingId ? 3000 : false,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
 
   useEffect(() => {
     if (!midtransPendingId || !midtransStatus?.is_paid) return;
-    setMidtransPendingId(null); setOpenId(null); setPromo(null); setPromoInput("");
+    setMidtransPendingId(null); setOpenId(null); setPromo(null); setPromoInput(""); setPromoError(""); setError("");
     qc.invalidateQueries({ queryKey: ["bills"] });
     qc.invalidateQueries({ queryKey: ["my-orders"] });
+    qc.invalidateQueries({ queryKey: ["my-orders-all"] });
+    qc.invalidateQueries({ queryKey: ["order-detail"] });
   }, [midtransPendingId, midtransStatus?.is_paid, qc]);
 
   const pay = useMutation({

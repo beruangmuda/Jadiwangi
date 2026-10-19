@@ -1,0 +1,47 @@
+{
+  "summary": "Retest bug status pelanggan setelah timbang+bayar Midtrans PASS di backend dan frontend mobile. Alur quoted->settlement mengubah order ke received/paid dengan label pelanggan Sedang Diproses, badge Riwayat menjadi Sedang Diproses+Lunas, dan kartu Bayar menutup otomatis (order hilang dari tagihan) setelah webhook valid. Idempotensi income transaction saat webhook ulang juga PASS.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter29_customer_midtrans_labels.py",
+    "/app/test_reports/pytest/iter29_customer_midtrans_labels.xml",
+    "/app/tests/iter29_seed_customer_statuses.py",
+    "/app/tests/iter29_cleanup_test_data.py",
+    "/app/tests/iter29_cleanup_all_test_data.py",
+    "/app/test_reports/artifacts_iter29/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter29/iter29_bayar_settlement_pass.jpeg",
+    "/app/test_reports/artifacts_iter29/iter29_riwayat_testid_pass.jpeg"
+  ],
+  "action_items": [
+    "Tidak ada blocker fungsional untuk bug yang dilaporkan; lanjutkan monitoring regresi berkala pada alur Midtrans webhook + polling customer Bayar."
+  ],
+  "critical_code_review_comments": [
+    "frontend/src/components/ui.tsx: komponen Pill sebelumnya tidak meneruskan testID ke elemen root sehingga selector [data-testid=history-stage-*] tidak muncul di web; sudah diperbaiki dengan prop testID opsional.",
+    "frontend env masih memakai EXPO_PUBLIC_BACKEND_URL sebagai sumber base API; selaraskan dengan kebijakan EXPO_BACKEND_URL agar konsisten lintas environment testing."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter29_customer_midtrans_labels.py",
+    "/app/tests/iter29_seed_customer_statuses.py",
+    "/app/tests/iter29_cleanup_test_data.py",
+    "/app/tests/iter29_cleanup_all_test_data.py",
+    "/app/frontend/src/components/ui.tsx",
+    "/app/test_reports/iteration_29.json"
+  ],
+  "success_rate": {
+    "backend": "100% (3/3 targeted tests passed)",
+    "frontend": "100% (targeted mobile flows passed after testability fix)"
+  },
+  "seed_data_creation": "Membuat 2 order TEST_iter29_ui_* untuk pelanggan Pelanggan (1 paid untuk Home/Riwayat, 1 quoted-unpaid untuk Bayar Midtrans). Seluruh data TEST_iter29 dan transaksi terkait dibersihkan; verifikasi sisa TEST_iter29 = 0.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Auth kredensial diverifikasi dari /app/memory/test_credentials.md sebelum login. Public endpoint /api/openapi.json kini merespons 200 JSON. Flow Bayar customer tervalidasi: klik Midtrans -> pending badge -> webhook settlement valid -> polling update -> card menutup/hilang tanpa refresh manual.",
+  "rca_of_issue": "RCA minor saat automation: selector testID Riwayat badge sempat gagal karena komponen Pill tidak meneruskan testID prop ke DOM, bukan karena bug bisnis status. Setelah menambahkan prop testID pada Pill, selector history-stage/history-payment terbaca dan verifikasi Sedang Diproses + Lunas PASS."
+}
