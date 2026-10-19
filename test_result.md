@@ -408,7 +408,7 @@
 ##     file: "backend/server.py, backend/.env, frontend/app/(customer)/bayar.tsx"
 ##     stuck_count: 0
 ##     priority: "high"
-##     needs_retesting: true
+##     needs_retesting: false
 ##     status_history:
 ##         -working: true
 ##         -agent: "main"
@@ -416,7 +416,7 @@
 
 ## test_plan:
 ##   current_focus:
-##     - "Masukkan Secret Sandbox Midtrans dan lakukan pembayaran Sandbox E2E"
+##     - "Verifikasi pengguna pada perangkat native untuk hasil capture kamera fisik"
 ##   test_all: true
 ##   test_priority: "high_first"
 
@@ -467,3 +467,5 @@
 ##     -message: "ITERATION 28: Midtrans Snap Sandbox disiapkan untuk pelanggan. Backend membuat Snap dari total server, menolak tanpa MIDTRANS_SERVER_KEY, menyimpan status provider, dan webhook HTTPS idempoten hanya menandai paid saat settlement/capture tervalidasi. UI pelanggan menampilkan GoPay/QRIS utama serta VA BNI/BRI/CIMB/Mandiri/Permata. Menunggu Secret Sandbox untuk uji E2E."
 ##     -agent: "main"
 ##     -message: "ITERATION 28 FIX VERIFIED: Testing agent menemukan OpenAPI backend tidak terbuka pada jalur publik. Ditambahkan /api/openapi.json tanpa informasi rahasia; curl lokal dan preview publik memverifikasi endpoint Snap, webhook, dan payment-status. Sandbox checkout/webhook E2E tetap menunggu Secret Sandbox sesuai rencana."
+##     -agent: "main"
+##     -message: "ITERATION 28 SANDBOX VERIFIED: Setelah Secret Sandbox diisi, POST Snap berhasil membentuk redirect URL app.sandbox.midtrans.com serta menyimpan pending. Notifikasi settlement bertanda tangan valid dikirim melalui URL webhook HTTPS publik dua kali; order menjadi paid dan transaksi pendapatan tetap satu (idempoten). Semua order/transaksi TEST dibersihkan."

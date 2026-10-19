@@ -1792,6 +1792,12 @@ async def midtrans_webhook(request: Request):
             row = await conn.fetchrow("select * from orders where midtrans_order_id=$1 for update", provider_order_id)
             if not row:
                 raise HTTPException(404, "Order pembayaran tidak ditemukan")
+            if row["status"] == "cancelled":
+                await conn.execute(
+                    """update orders set midtrans_transaction_id=coalesce($1,midtrans_transaction_id),
+                       midtrans_transaction_status=$2, updated_at=now() where id=$3""",
+                    body.get("transaction_id"), transaction_status, row["id"])
+                return {"ok": True, "ignored": "order_cancelled"}
             expected_amount = Decimal(str(row["midtrans_gross_amount"] or 0))
             try:
                 notified_amount = Decimal(gross_amount)

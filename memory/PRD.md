@@ -215,7 +215,8 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] **Keamanan transaksi**: `POST /api/orders/{id}/midtrans/snap` menghitung nominal ulang dari order di PostgreSQL, memakai metode aktif yang diizinkan, dan hanya menyimpan URL pembayaran dari backend. Server Key tidak pernah dikirim ke aplikasi, log, atau respons API.
 - [x] **Webhook idempoten**: `POST /api/midtrans/webhook` memverifikasi SHA-512 signature, order ID, dan nominal. Hanya notifikasi Midtrans `settlement` atau `capture` valid yang mengubah order menjadi `paid` dan mencatat pendapatan tepat satu kali. Status `pending`, `expire`, `cancel`, dan `failure` disimpan untuk retry.
 - [x] Environment backend memiliki placeholder kosong: `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_MERCHANT_ID`, dan `MIDTRANS_IS_PRODUCTION=false`.
-- [ ] **P0 verifikasi Sandbox**: masukkan Secret Sandbox melalui menu Secrets dan uji notifikasi publik HTTPS sebelum memakai pembayaran nyata. Tanpa Secret, endpoint Snap menolak aman (HTTP 503)—ini telah diuji dengan order uji yang kemudian dibersihkan.
+- [x] **Verifikasi Sandbox teknis**: setelah Secret Sandbox diisi, Snap membuat URL `app.sandbox.midtrans.com` dan menyimpan status `pending`. Notifikasi `settlement` bertanda tangan valid berhasil diterima melalui webhook HTTPS publik dua kali tanpa menggandakan pendapatan. Semua data uji dibersihkan.
+- [ ] **P1 simulasi pelanggan**: lakukan satu pembayaran lewat Midtrans Sandbox Simulator dari halaman Snap untuk mengonfirmasi kanal GoPay/QRIS atau VA yang aktif di dashboard.
 - [x] Skema endpoint tersedia aman di `GET /api/openapi.json` melalui jalur publik untuk validasi integrasi, tanpa mengekspos kredensial.
 
 ## Backlog (prioritized)
