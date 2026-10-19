@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import Constants from "expo-constants";
 import { storage } from "@/src/utils/storage";
 import { api } from "@/src/api";
+import { queryClient } from "@/src/query-client";
 
 export type Role = "owner" | "pegawai" | "pelanggan";
 
@@ -96,7 +97,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    persist(null);
+    setSession(null);
+    queryClient.clear();
+    await Promise.all([storage.removeItem(SESSION_KEY), storage.removeItem(VERSION_KEY)]);
   };
 
   const setOutlet = (id: string | null) => {

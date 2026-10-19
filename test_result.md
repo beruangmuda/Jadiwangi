@@ -424,10 +424,35 @@
 ##         -working: true
 ##         -agent: "main"
 ##         -comment: "Settlement Midtrans dan pembayaran coin kini memindahkan quoted ke received agar masuk antrean produksi. Label pelanggan dipisahkan: request=Menunggu Ditimbang, quoted unpaid=Siap Dibayar, paid/produksi=Sedang Diproses. Uji UI membuktikan Pantau Ordermu dan Riwayat menampilkan Sedang Diproses/Lunas; kartu Bayar otomatis tertutup setelah webhook settlement."
+##   - task: "Login Android Expo Go berhenti di halaman login"
+##     implemented: true
+##     working: true
+##     file: "frontend/app/login.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "RCA: router.replace('/') dipanggil segera setelah login, sebelum pembaruan sesi React terlihat pada Android. Login/register kini menunggu perubahan session dari AuthProvider melalui useEffect lalu baru membuka root role route. Backend log menunjukkan auth login 200; screenshot dashboard Pelanggan sudah tampil setelah perbaikan."
+##   - task: "Root guard session dan akses route lintas peran"
+##     implemented: true
+##     working: true
+##     file: "frontend/app/_layout.tsx, frontend/src/auth.tsx, frontend/app/login.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         -working: true
+##         -agent: "testing"
+##         -comment: "Iterasi 31: fresh deep link tanpa sesi dialihkan ke Login; tiga role login/logout dan route mismatch PASS. Ditemukan Owner tidak bisa ke Buat Order karena guard salah mengklasifikasikan route."
+##         -working: true
+##         -agent: "main"
+##         -comment: "Perbaikan: order-baru menjadi route staf untuk Owner/Pegawai, pelanggan tetap ditolak. Screenshot Owner membuka modal Buat Order PASS. Root menahan Stack hingga hydration selesai; logout menghapus query cache + sesi/version storage."
 
 ## test_plan:
 ##   current_focus:
-##     - "Status pelanggan setelah timbang/pay dan kartu Bayar otomatis tertutup"
+##     - "Konfirmasi Android Expo Go membuka Login dengan tunnel Jadiwangi baru"
 ##   test_all: true
 ##   test_priority: "high_first"
 
@@ -484,3 +509,11 @@
 ##     -message: "ITERATION 29: Settlement/pembayaran langsung kini menggeser nota quoted ke received. Layar pelanggan memakai customer_stage_label agar hanya pelanggan melihat Sedang Diproses, sementara pegawai tetap melihat tahap teknis. Kartu Bayar merefresh status di background/focus dan menutup otomatis saat pembayaran paid. Uji lokal PASS; perlu retest." 
 ##     -agent: "testing"
 ##     -message: "ITERATION 29 VERIFIED: Backend 3/3 dan frontend mobile PASS. quoted→settlement menjadi received/paid/Sedang Diproses, webhook ulang tetap satu transaksi income, Riwayat menampilkan Sedang Diproses+Lunas, dan kartu Bayar menutup otomatis. Pill sekarang meneruskan testID untuk verifikasi badge; seluruh data TEST_iter29 dibersihkan."
+##     -agent: "main"
+##     -message: "ITERATION 30: Cache Metro server dihapus dan Expo dimulai ulang. RCA login Android menemukan race navigation: login memanggil router.replace sebelum sesi aktif. Navigasi dipindah ke effect yang bereaksi pada session AuthProvider. Screenshot dashboard pelanggan tampil setelah login; perlu retest." 
+##     -agent: "testing"
+##     -message: "ITERATION 30 VERIFIED: Backend auth 100% dan frontend mobile-web login/logout Owner, Pegawai, serta Pelanggan 100% PASS. Tidak ada redirect loop; handler login/register tidak lagi melakukan router.replace langsung. Android fisik tetap membutuhkan konfirmasi pengguna."
+##     -agent: "testing"
+##     -message: "ITERATION 31: Root AuthGate menguji fresh deep link, role login/logout, dan mismatch route. 8/9 PASS; owner FAB Buat Order ditemukan terblokir karena order-baru salah dianggap pegawai-only."
+##     -agent: "main"
+##     -message: "ITERATION 31 FIX: order-baru kini route bersama Owner/Pegawai; screenshot menunjukkan Owner dapat membuka modal Buat Order. Android fisik masih perlu menguji exp://wangi-dashboard.ngrok.io agar bundel baru termuat."

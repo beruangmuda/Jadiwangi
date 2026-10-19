@@ -2,7 +2,7 @@
 // Colors mirror the "color" block of /app/design_guidelines.json.
 
 import { useMemo } from "react";
-import { Appearance, StyleSheet, useColorScheme } from "react-native";
+import { Appearance, Platform, StyleSheet, useColorScheme } from "react-native";
 
 export type ColorScheme = "light" | "dark";
 
@@ -59,20 +59,8 @@ export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, "2xl": 32, "3xl":
 export const radius = { sm: 12, md: 16, lg: 24, pill: 999 } as const;
 
 export const shadow = {
-  soft: {
-    shadowColor: "#5B4B9E",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  card: {
-    shadowColor: "#5B4B9E",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
-  },
+  soft: Platform.select({ web: { boxShadow: "0px 6px 16px rgba(91, 75, 158, 0.12)" }, default: { shadowColor: "#5B4B9E", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 4 } })!,
+  card: Platform.select({ web: { boxShadow: "0px 4px 10px rgba(91, 75, 158, 0.08)" }, default: { shadowColor: "#5B4B9E", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 3 } })!,
 };
 
 export function setColorScheme(scheme: ColorScheme | null) {

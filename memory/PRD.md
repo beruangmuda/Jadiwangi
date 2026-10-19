@@ -226,6 +226,18 @@ Aplikasi POS untuk Jadiwangi Laundry ("Jadiwangi App") dengan 3 peran: Owner (ak
 - [x] Teruji lokal: timbang → Snap → webhook settlement menghasilkan `received/paid/Sedang Diproses`; uji layar pelanggan memverifikasi Pantau/Riwayat dan penutupan otomatis kartu. Data uji dibersihkan.
 - [x] Retest Iterasi 29 PASS: backend 3/3 dan alur mobile memastikan badge Riwayat, polling settlement, penutupan kartu Bayar, serta idempotensi pendapatan berjalan sesuai kebutuhan.
 
+## Update (2026-10, iterasi 30) — Stabilitas Login Expo Go Android
+- [x] Cache Metro server dibersihkan dan Expo dimulai ulang untuk menghilangkan bundel Android lama.
+- [x] Login/register tidak lagi memaksa navigasi sebelum konteks sesi React aktif. Halaman Login kini menunggu `session` dari AuthProvider, lalu mengarahkan ke dashboard sesuai peran—menghindari redirect kembali ke Login pada Android yang penyimpanan lokalnya lebih lambat.
+- [x] Retest otomatis: login/logout Owner, Pegawai, dan Pelanggan lulus tanpa loop. Bundel Expo terbaru telah dibuat setelah cache Metro dibersihkan; menunggu konfirmasi akhir perangkat Android fisik.
+
+## Update (2026-10, iterasi 31) — Root Auth Guard & Route Peran
+- [x] Root `AuthGate` menahan Stack dan Splash sampai pemeriksaan session selesai. Tidak ada session berarti semua route—termasuk direct/deep link—dialihkan ke Login sebelum layar terlindungi dirender.
+- [x] Validasi role pada root: pelanggan hanya Customer tabs; pegawai hanya Employee routes; owner hanya Owner/manage routes. Route **Buat Order** adalah route staf yang dapat dipakai Owner dan Pegawai, tetapi ditolak untuk pelanggan.
+- [x] Logout menghapus session/version storage dan React Query cache sebelum guard mengarahkan kembali ke Login.
+- [x] Retest Iterasi 31: fresh direct route, tiga role login/logout, serta role mismatch PASS. Regresi FAB Owner Buat Order terdeteksi dan diperbaiki; screenshot modal Buat Order PASS.
+- [ ] Konfirmasi akhir perangkat Android melalui tunnel Expo Jadiwangi (`exp://wangi-dashboard.ngrok.io`).
+
 ## Backlog (prioritized)
 - P1: Filter tanggal pada Laporan (rentang custom), export/print laporan.
 - P1: Saldo deposit pelanggan (pakai untuk bayar).

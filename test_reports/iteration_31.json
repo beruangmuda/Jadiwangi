@@ -1,0 +1,57 @@
+{
+  "summary": "Frontend auth-guard regression test executed on public Expo preview URL. Fresh-session guards, role logins, role mismatch redirects, and logout protections mostly pass; one critical owner flow regression found.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Owner dashboard FAB Buat Order",
+        "issue": "Owner tapping testID=fab-buat-order does not navigate to /order-baru; user remains on owner dashboard due guard redirect.",
+        "testID": "fab-buat-order",
+        "priority": "CRITICAL"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Owner login -> tap Buat Order",
+        "issue": "Role guard in app/_layout.tsx classifies 'order-baru' as employee-only route, conflicting with owner dashboard action that pushes /order-baru.",
+        "affected_testIDs": [
+          "fab-buat-order"
+        ]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/artifacts_iter31/frontend_load_mobile.jpeg",
+    "/app/test_reports/artifacts_iter31/iter31_fresh_routes_pass.jpeg",
+    "/app/test_reports/artifacts_iter31/iter31_auth_guard_final.jpeg",
+    "/app/test_reports/artifacts_iter31/iter31_owner_diagnostic.jpeg"
+  ],
+  "action_items": [
+    "Fix guard route classification in frontend/app/_layout.tsx so owner can access /order-baru (or remove owner FAB route if not intended).",
+    "Retest owner create-order flow after guard update: login owner -> tap fab-buat-order -> confirm order-baru screen opens.",
+    "Keep current login redirect strategy (session-driven) in frontend/app/login.tsx; no eager router.replace in submit handler."
+  ],
+  "critical_code_review_comments": [
+    "frontend/app/_layout.tsx correctly waits auth hydration/loading and renders auth-session-loading before protected stack.",
+    "frontend/app/login.tsx no longer forces router.replace in doLogin/doRegister; redirect is session-driven via useEffect.",
+    "frontend/src/auth.tsx logout clears query cache and removes SESSION_KEY + VERSION_KEY as required.",
+    "frontend/src/api.ts still uses EXPO_PUBLIC_BACKEND_URL instead of EXPO_BACKEND_URL policy key (consistency risk across environments)."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_31.json"
+  ],
+  "success_rate": {
+    "backend": "N/A (frontend-only scope)",
+    "frontend": "89% (8/9 targeted checks passed)"
+  },
+  "seed_data_creation": "No seed data created.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Use public URL https://wangi-dashboard.preview.emergentagent.com. For owner dashboard assertion use testID=fab-buat-order (notif-topup may not render). Credentials were read from /app/memory/test_credentials.md before testing.",
+  "rca_of_issue": "RCA: app/_layout.tsx sets employeeRoutes={...(employee),hari-ini,order-baru,siap-diambil,...}. AuthGate computes roleMismatch when firstRoute='order-baru' and session.role!='pegawai'. Owner dashboard button (app/(owner)/index.tsx) pushes '/order-baru', causing immediate redirect back to owner home. Repro: login owner -> tap fab-buat-order -> URL remains '/' and order form never opens. Mitigation: allow owner for order-baru route or move owner order creation to owner-scoped route."
+}

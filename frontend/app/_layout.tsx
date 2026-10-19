@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
-import { LogBox, View } from "react-native";
+import { Stack, useRouter, useSegments } from "expo-router";
+import { ActivityIndicator, LogBox, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -10,7 +10,8 @@ import * as SplashScreen from "expo-splash-screen";
 
 import { ErrorBoundary } from "@/src/components/error-boundary";
 import { queryClient } from "@/src/query-client";
-import { AuthProvider } from "@/src/auth";
+import { AuthProvider, Role, useAuth } from "@/src/auth";
+import { useTheme } from "@/src/theme";
 import { flushOrderSync } from "@/src/orderSync";
 
 LogBox.ignoreAllLogs(true);
@@ -29,10 +30,6 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (loaded) SplashScreen.hideAsync().catch(() => {});
-  }, [loaded]);
-
-  useEffect(() => {
     void flushOrderSync();
     const timer = setInterval(() => void flushOrderSync(), 30000);
     return () => clearInterval(timer);
@@ -47,9 +44,11 @@ export default function RootLayout() {
           <QueryClientProvider client={queryClient}>
             <KeyboardProvider>
               <AuthProvider>
-                <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#FAFAFF" } }}>
-                  <Stack.Screen name="order-baru" options={{ presentation: "modal" }} />
-                </Stack>
+                <AuthGate fontsLoaded={loaded}>
+                  <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#FAFAFF" } }}>
+                    <Stack.Screen name="order-baru" options={{ presentation: "modal" }} />
+                  </Stack>
+                </AuthGate>
               </AuthProvider>
             </KeyboardProvider>
           </QueryClientProvider>
@@ -57,4 +56,34 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+const roleHome: Record<Role, string> = { owner: "/(owner)", pegawai: "/(employee)", pelanggan: "/(customer)" };
+const employeeRoutes = new Set(["(employee)", "hari-ini", "siap-diambil", "timbang", "proses"]);
+const ownerRoutes = new Set(["(owner)", "manage", "topup"]);
+const customerRoutes = new Set(["(customer)"]);
+const staffRoutes = new Set(["order-baru"]);
+
+function AuthGate({ children, fontsLoaded }: { children: React.ReactNode; fontsLoaded: boolean }) {
+  const { session, loading } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
+  const { colors } = useTheme();
+  const firstRoute = segments[0] || "index";
+  const isLogin = firstRoute === "login";
+  const roleMismatch = !!session && ((employeeRoutes.has(firstRoute) && session.role !== "pegawai") || (ownerRoutes.has(firstRoute) && session.role !== "owner") || (customerRoutes.has(firstRoute) && session.role !== "pelanggan") || (staffRoutes.has(firstRoute) && !["owner", "pegawai"].includes(session.role)));
+  const mustRedirectToLogin = !loading && !session && !isLogin;
+  const mustRedirectToRoleHome = !loading && !!session && (isLogin || firstRoute === "index" || roleMismatch);
+
+  useEffect(() => {
+    if (!fontsLoaded || loading) return;
+    SplashScreen.hideAsync().catch(() => {});
+    if (mustRedirectToLogin) router.replace("/login");
+    if (mustRedirectToRoleHome && session) router.replace(roleHome[session.role] as any);
+  }, [fontsLoaded, loading, mustRedirectToLogin, mustRedirectToRoleHome, router, session]);
+
+  if (!fontsLoaded || loading || mustRedirectToLogin || mustRedirectToRoleHome) {
+    return <View testID="auth-session-loading" style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface }}><ActivityIndicator size="large" color={colors.brandPrimary} /></View>;
+  }
+  return <>{children}</>;
 }

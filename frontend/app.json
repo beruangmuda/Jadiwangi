@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "Jadiwangi App",
+    "slug": "jadiwangi-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "jadiwangi",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,

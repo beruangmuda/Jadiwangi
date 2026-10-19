@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, TextInput, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
@@ -18,7 +18,7 @@ export default function Login() {
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { login, register } = useAuth();
+  const { login, register, session } = useAuth();
   const router = useRouter();
 
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -31,6 +31,10 @@ export default function Login() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    if (session) router.replace("/");
+  }, [session, router]);
+
   const fail = (msg: string) => {
     setError(msg);
     if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -42,7 +46,6 @@ export default function Login() {
     try {
       await login(username.trim(), password);
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace("/");
     } catch (e: any) {
       fail(e?.message || "Gagal masuk");
     } finally { setBusy(false); }
@@ -56,7 +59,6 @@ export default function Login() {
     try {
       await register(name.trim(), phone.trim(), password, outletId);
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace("/");
     } catch (e: any) {
       fail(e?.message || "Gagal mendaftar");
     } finally { setBusy(false); }
